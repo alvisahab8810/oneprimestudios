@@ -1652,25 +1652,47 @@ const { slug } = router.query;
     return price * effectiveQty;
   }, [product, selectedAttrs, qty]);
 
-  const placeOrder = async () => {
-    if (!product) return;
-    try {
-      const orderPayload = {
-        product: product._id,
-        quantity: qty,
-        selectedOptions: selectedAttrs,
-        files: uploadedFiles,
-        cost: finalPrice,
-        amountPayable: finalPrice,
-      };
-      await axios.post("/api/orders", orderPayload, {
-        headers: { "Content-Type": "application/json" },
-      });
-      toast.success("Order placed successfully");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Order failed");
-    }
-  };
+  // const placeOrder = async () => {
+  //   if (!product) return;
+  //   try {
+  //     const orderPayload = {
+  //       product: product._id,
+  //       quantity: qty,
+  //       selectedOptions: selectedAttrs,
+  //       files: uploadedFiles,
+  //       cost: finalPrice,
+  //       amountPayable: finalPrice,
+  //     };
+  //     await axios.post("/api/orders", orderPayload, {
+  //       headers: { "Content-Type": "application/json" },
+  //     });
+  //     toast.success("Order placed successfully");
+  //   } catch (err) {
+  //     toast.error(err.response?.data?.message || "Order failed");
+  //   }
+  // };
+
+
+const placeOrder = () => {
+  if (!product) {
+    alert("Something is wrong. Please try again."); // optional simple message
+    return;
+  }
+
+  try {
+    // Prepare WhatsApp message
+    const msg = `Hi, I want to place an order for ${product.name}. Quantity: ${qty}`;
+    const url = `https://wa.me/${
+      product.b2cOptions?.whatsappNumber || "919236090098"
+    }?text=${encodeURIComponent(msg)}`;
+
+    // Open WhatsApp in new tab
+    window.open(url, "_blank");
+  } catch (err) {
+    alert("Something went wrong. Please try again."); // fallback error
+  }
+};
+
 
   if (loading) return <p>Loading...</p>;
   if (!product) return <p>Product not found</p>;

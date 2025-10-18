@@ -142,6 +142,14 @@ const ProductSchema = new mongoose.Schema(
       default: "both",
     },
 
+
+    status: {
+  type: String,
+  enum: ["published", "draft"],
+  default: "draft",
+},
+
+
     attributes: [AttributeSchema], // ✅ restored
     pricingTiers: [PricingTierSchema], // ✅ restored
 

@@ -171,7 +171,7 @@ export default function Topbar() {
             </ul>
 
             <div className="d-flex align-items-center gap-3">
-              <Link href="#" className="cart-btn position-relative">
+              <Link href="/cart" className="cart-btn position-relative">
                 <img
                   src="/assets/images/icons/cart.png "
                   alt="Cart Icon"
@@ -179,7 +179,7 @@ export default function Topbar() {
                 Cart
                 <span className="items-count">2</span>
               </Link>
-              <Link href="#" className="top-btn">
+              <Link href="/wishlist" className="top-btn">
                 <img
                   src="/assets/images/icons/wishlist.png "
                   alt="Wishlist Icon"

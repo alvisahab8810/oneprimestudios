@@ -1481,3 +1481,8 @@ ease;
 }
 
 
+.select-status{
+  max-width: fit-content;
+  margin-right: 5px;;
+
+}
