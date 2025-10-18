@@ -207,7 +207,9 @@ export default function AdminProductList() {
                       <option value="draft">Draft</option>
                     </select>
                     <Link
-                      href={`/dashboard/products/edit/${p._id}`}
+                    //   href={`/dashboard/products/edit/${p._id}`}
+                      href={`#`}
+
                       className="btn btn-sm btn-outline-secondary me-1"
                     >
                       Edit

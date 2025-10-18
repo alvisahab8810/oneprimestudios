@@ -1683,7 +1683,7 @@ const placeOrder = () => {
     // Prepare WhatsApp message
     const msg = `Hi, I want to place an order for ${product.name}. Quantity: ${qty}`;
     const url = `https://wa.me/${
-      product.b2cOptions?.whatsappNumber || "919236090098"
+      product.b2cOptions?.whatsappNumber || "87370 38342"
     }?text=${encodeURIComponent(msg)}`;
 
     // Open WhatsApp in new tab
@@ -1721,7 +1721,7 @@ const placeOrder = () => {
   const msg = `*${product.name}*\n\nCheck this product: ${productUrl}\n${imageUrl ? imageUrl : ""}`;
 
   const url = `https://wa.me/${
-    product.b2cOptions?.whatsappNumber || "919236090098"
+    product.b2cOptions?.whatsappNumber || "87370 38342"
   }?text=${encodeURIComponent(msg)}`;
 
   window.open(url, "_blank");
