@@ -28,7 +28,7 @@ const ContactForm = () => {
             <span className="icon">
                 <img src="/assets/images/icons/contact.svg" alt="contact icon"></img>
             </span>
-            <p>+087370 38342</p>
+            <p>+91 87370 38342</p>
           </div>
 
           <div className="info-item">

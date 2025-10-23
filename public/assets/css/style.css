@@ -1038,14 +1038,14 @@ a{
 
 /* Page Wrapper */
 .add-product-page {
-  max-width: 1200px;
+  /* max-width: 1200px;
   margin: 2rem auto;
   font-family: 'Inter', sans-serif;
   color: #2d3748;
   background: #f5f7fa;
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 6px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 25px rgba(0,0,0,0.08); */
 }
 
 .add-product-page .page-title {
