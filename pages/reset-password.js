@@ -43,9 +43,9 @@ export default function ResetPasswordPage() {
   return (
     <div className="auth-container">
       <div className="auth-image-section"></div>
-        
+
       <div className="auth-form-section">
-          <div className="logo">
+        <div className="logo">
           <img src="/assets/images/logo.png" alt="Logo" />
         </div>
         <h3 className="form-heading">Reset Your Password</h3>

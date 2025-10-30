@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import Head from "next/head";
 import Script from "next/script";
 import { Toaster } from "react-hot-toast";
+
 import "react-quill/dist/quill.snow.css"; // if using react-quill
 
 export default function App({ Component, pageProps }) {

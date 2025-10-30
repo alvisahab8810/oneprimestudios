@@ -128,21 +128,17 @@ export default function AdminProductList() {
 
         {/* Dashboard content */}
         <div className="container-fluid p-4">
-
-            <div className="d-flex justify-content-between align-items-center ">
-              <h1 className="mb-4">Products</h1>
-              <Link
-                href="/dashboard/admin/add-product"
-                className="btn btn-primary"
-              >
-                + Add Product
-              </Link>
-            </div>
-          
+          <div className="d-flex justify-content-between align-items-center ">
+            <h1 className="mb-4">Products</h1>
+            <Link
+              href="/dashboard/admin/add-product"
+              className="btn btn-primary"
+            >
+              + Add Product
+            </Link>
+          </div>
 
           <div className="products-list-area ">
-          
-
             {/* Filters */}
             <div className="row mb-3">
               <div className="col-md-3 mb-2">

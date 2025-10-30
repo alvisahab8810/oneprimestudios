@@ -1,118 +1,350 @@
-"use client";
-import Footer from "@/components/footer/Footer";
-import Topbar from "@/components/header/Topbar";
-import React from "react";
+// import { useEffect, useState } from "react";
+// import Link from "next/link";
+// import { FaHeart } from "react-icons/fa";
+// import { toast } from "sonner";
 
-export default function WishList() {
-  return (
-   <div>
-    <div className="container">
-          <Topbar/>
-     <div className="cart-wip-page d-flex justify-content-center align-items-center">
-      <div className="cart-wip-card text-center p-5 shadow-lg rounded-4">
-        {/* Animated PNG Image */}
-        <div className="wip-image mb-4">
-          <img
-            src="/assets/images/under.png" // <-- replace with your PNG illustration
-            alt="Work in Progress"
-          />
+// export default function WishlistPage() {
+//   const [items, setItems] = useState([]);
+
+//   useEffect(() => {
+//     const wishlistIds = JSON.parse(localStorage.getItem("wishlist")) || [];
+//     if (wishlistIds.length === 0) return;
+//     fetch(`/api/products/byIds?ids=${wishlistIds.join(",")}`)
+//       .then((res) => res.json())
+//       .then((data) => setItems(data))
+//       .catch(() => toast.error("Failed to load wishlist"));
+//   }, []);
+
+//   const removeFromWishlist = (id) => {
+//     const updated = items.filter((p) => p._id !== id);
+//     setItems(updated);
+//     localStorage.setItem("wishlist", JSON.stringify(updated.map((p) => p._id)));
+//     toast.success("Removed from wishlist ❤️");
+//   };
+
+//   // ✅ FIXED: Matches your working cart structure
+//   const moveToBag = (product) => {
+//     const cart = JSON.parse(localStorage.getItem("cartItems")) || [];
+
+//     const existingIndex = cart.findIndex(
+//       (item) => item.product._id === product._id
+//     );
+
+//     if (existingIndex > -1) {
+//       cart[existingIndex].quantity += product.minOrderQty || 1;
+//     } else {
+//       cart.push({
+//         product: {
+//           _id: product._id,
+//           name: product.name,
+//           mainImage: product.mainImage,
+//           basePrice: product.basePrice,
+//           salePrice: product.salePrice,
+//           slug: product.slug,
+//           minOrderQty: product.minOrderQty,
+//         },
+//         quantity: product.minOrderQty || 1,
+//       });
+//     }
+
+//     localStorage.setItem("cartItems", JSON.stringify(cart));
+//     toast.success("Moved to Bag 🛒");
+
+//     // Remove from wishlist after adding
+//     removeFromWishlist(product._id);
+//   };
+
+//   if (!items.length)
+//     return (
+//       <div className="container text-center py-5">
+//         <h3>Your wishlist is empty ❤️</h3>
+//         <Link href="/products" className="btn btn-primary mt-3">
+//           Browse Products
+//         </Link>
+//       </div>
+//     );
+
+//   return (
+//     <div className="container py-5">
+//       <h3 className="mb-4">My Wishlist ❤️</h3>
+//       <div className="row">
+//         {items.map((p) => (
+//           <div className="col-md-3 col-6 mb-4" key={p._id}>
+//             <div className="wishlist-card position-relative shadow-sm border rounded-4 overflow-hidden">
+//               {/* Remove button */}
+//               <button
+//                 className="wishlist-remove-btn position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2"
+//                 onClick={() => removeFromWishlist(p._id)}
+//               >
+//                 <FaHeart color="red" size={18} />
+//               </button>
+
+//               {/* Product image */}
+//               <Link href={`/products/${p.slug}`}>
+//                 <img
+//                   src={p.mainImage || "/assets/images/products/placeholder.png"}
+//                   alt={p.name}
+//                   className="w-100"
+//                   style={{
+//                     height: "220px",
+//                     objectFit: "cover",
+//                     borderBottom: "1px solid #eee",
+//                   }}
+//                 />
+//               </Link>
+
+//               <div className="text-center p-3">
+//                 <h6 className="fw-semibold mb-2">{p.name}</h6>
+//                 <button
+//                   onClick={() => moveToBag(p)}
+//                   className="btn btn-primary rounded-pill px-4 py-2"
+//                 >
+//                   Move to Bag
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+
+//       <style jsx>{`
+//         .wishlist-card {
+//           transition: all 0.3s ease;
+//           background: #fff;
+//         }
+//         .wishlist-card:hover {
+//           transform: translateY(-5px);
+//           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+//         }
+//         .wishlist-remove-btn {
+//           background: white !important;
+//           border: none;
+//           box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+//         }
+//         .wishlist-remove-btn:hover {
+//           transform: scale(1.1);
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+// pages/wishlist.js
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { FaHeart } from "react-icons/fa";
+import { toast } from "react-hot-toast"; // or "sonner" — whichever you finalized
+
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import Topbar from "@/components/header/Topbar";
+import Footer from "@/components/footer/Footer";
+
+export default function WishlistPage() {
+  const [items, setItems] = useState([]);
+  const router = useRouter();
+
+  const loadWishlist = async () => {
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      let res;
+      if (token)
+        res = await axios.get("/api/wishlist", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      else res = await axios.get("/api/wishlist", { withCredentials: true });
+      setItems(res.data.items || []);
+    } catch (err) {
+      setItems([]);
+      // don't spam toasts on page load; show when action fails
+    }
+  };
+
+  useEffect(() => {
+    loadWishlist();
+  }, []);
+
+  const removeFromWishlist = async (productId) => {
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      // 🟢 Optimistically remove from UI first
+      setItems((prev) =>
+        prev.filter((it) => String(it._id) !== String(productId))
+      );
+
+      // 🟡 Then call API in background
+      if (token) {
+        await axios.post(
+          "/api/wishlist",
+          { productId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await axios.post(
+          "/api/wishlist",
+          { productId },
+          { withCredentials: true }
+        );
+      }
+
+      toast.success("Removed from wishlist ❤️");
+    } catch (err) {
+      toast.error("Error removing from wishlist");
+      console.error(err);
+      // 🛑 Optional: revert UI if API failed
+      loadWishlist();
+    }
+  };
+
+  // const removeFromWishlist = async (productId) => {
+  //   try {
+  //     const token =
+  //       typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  //     let res;
+  //     if (token)
+  //       res = await axios.post(
+  //         "/api/wishlist",
+  //         { productId },
+  //         { headers: { Authorization: `Bearer ${token}` } }
+  //       );
+  //     else
+  //       res = await axios.post(
+  //         "/api/wishlist",
+  //         { productId },
+  //         { withCredentials: true }
+  //       );
+
+  //     setItems(res.data.items || []);
+  //     toast.success("Removed from wishlist ❤️");
+  //   } catch (err) {
+  //     toast.error("Error removing from wishlist");
+  //     console.error(err);
+  //   }
+  // };
+
+  const moveToBag = async (product) => {
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      // 1) Add to cart
+      let cartRes;
+      if (token) {
+        cartRes = await axios.post(
+          "/api/cart",
+          { productId: product._id, quantity: 1 },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        cartRes = await axios.post(
+          "/api/cart",
+          { productId: product._id, quantity: 1 },
+          { withCredentials: true }
+        );
+      }
+
+      // 2) Remove from wishlist in backend & update UI immediately
+      if (token) {
+        await axios.post(
+          "/api/wishlist",
+          { productId: product._id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await axios.post(
+          "/api/wishlist",
+          { productId: product._id },
+          { withCredentials: true }
+        );
+      }
+
+      setItems((prev) =>
+        prev.filter((it) => String(it._id) !== String(product._id))
+      );
+      toast.success("Moved to bag 🛒");
+
+      // 3) redirect to cart
+      setTimeout(() => router.push("/cart"), 300);
+    } catch (err) {
+      if (err.response?.status === 401)
+        toast.error("Please login to move items to cart");
+      else toast.error("Failed to move to bag");
+      console.error(err);
+    }
+  };
+
+  if (!items.length)
+    return (
+      <div>
+        <div className="container">
+          <Topbar />
         </div>
 
-        <h1 className="wip-title mb-3">Wishlist Page Under Development</h1>
-        <p className="wip-text mb-0">
-          We're working hard to bring you a fully functional Wishlist. Please check back soon!
-        </p>
+        <div className="container text-center py-5">
+          <h3>Your wishlist is empty ❤️</h3>
+          <Link href="/products" className="btn btn-primary mt-3">
+            Browse Products
+          </Link>
+        </div>
+
+        <Footer />
+      </div>
+    );
+
+  return (
+    <div>
+      <div className="container">
+        <Topbar />
       </div>
 
-      <style jsx>{`
-        .cart-wip-page {
-          min-height: 80vh;
-          background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-          padding: 40px 20px;
-          border-radius:10px;
-          
-        }
+      <div className="container py-5">
+        <h3 className="mb-4">My Wishlist ❤️</h3>
+        <div className="row">
+          {items.map((p) => (
+            <div className="col-md-3 col-6 mb-4" key={p._id}>
+              <div className="wishlist-card position-relative shadow-sm border rounded-4 overflow-hidden">
+                <button
+                  className="wishlist-remove-btn position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2 d-flex bg-none"
+                  onClick={() => removeFromWishlist(p._id)}
+                >
+                  {/* <FaHeart color="red" size={18} /> */}
+                  <img src="/assets/images/icons/cross.svg"></img>
+                </button>
 
-        .cart-wip-card {
-          max-width: 500px;
-          background: #ffffff;
-          animation: fadeUp 1s ease-in-out;
-          border-radius:10px
-        }
+                <Link href={`/products/${p.slug}`}>
+                  <img
+                    src={
+                      p.mainImage || "/assets/images/products/placeholder.png"
+                    }
+                    alt={p.name}
+                    className="w-100"
+                    style={{
+                      height: "220px",
+                      objectFit: "cover",
+                      borderBottom: "1px solid #eee",
+                    }}
+                  />
+                </Link>
 
-        .wip-image img {
-          width: 150px;
-          animation: bounce 2s infinite;
-        }
+                <div className="text-center p-3">
+                  <h6 className="fw-semibold mb-2">{p.name}</h6>
+                  <button
+                    onClick={() => moveToBag(p)}
+                    className="btn btn-primary rounded-pill px-4 py-2"
+                  >
+                    Move to Bag
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        .wip-title {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #343a40;
-          animation: fadeIn 1s ease-in-out;
-        }
-
-        .wip-text {
-          font-size: 1.1rem;
-          color: #6c757d;
-          animation: fadeIn 1.5s ease-in-out;
-        }
-
-        @keyframes bounce {
-          0%, 20%, 50%, 80%, 100% {
-            transform: translateY(0);
-          }
-          40% {
-            transform: translateY(-15px);
-          }
-          60% {
-            transform: translateY(-7px);
-          }
-        }
-
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .wip-image img {
-            width: 120px;
-          }
-
-          .wip-title {
-            font-size: 1.6rem;
-          }
-
-          .wip-text {
-            font-size: 1rem;
-          }
-
-          .cart-wip-card {
-            padding: 30px 20px;
-          }
-        }
-      `}</style>
+      <Footer />
     </div>
-    </div>
-    <Footer/>
-   </div>
   );
 }
