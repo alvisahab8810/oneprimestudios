@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
-import { toast } from "sonner";
 import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
 
