@@ -93,7 +93,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       success: true,
       message: "Login successful",
-      redirect: "/dashboard/admin",
+      redirect: "/dashboard/",
     });
   } catch (err) {
     console.error("Login Error:", err);

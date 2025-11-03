@@ -7,9 +7,15 @@ export default function DesignUploads({ productId }) {
   const [designs, setDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (productId) fetchDesigns();
-  }, [productId]);
+useEffect(() => {
+  if (!productId) {
+    console.warn("⚠️ No productId passed to DesignUploads");
+    return;
+  }
+  console.log("🟢 Fetching designs for productId:", productId);
+  fetchDesigns();
+}, [productId]);
+
 
   const fetchDesigns = async () => {
     try {

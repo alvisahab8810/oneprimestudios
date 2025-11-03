@@ -623,7 +623,9 @@ export default function AdminOrderDetail() {
             </div>
 
 
-                  <DesignUploads productId={order.productId} />
+                  {/* <DesignUploads productId={order.productId} /> */}
+              <DesignUploads productId={order.items?.[0]?.product?._id || order.items?.[0]?.product} />
+
 
             {/* Items Table */}
             <h6 className="fw-semibold mb-3">

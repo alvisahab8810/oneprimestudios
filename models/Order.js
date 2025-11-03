@@ -103,7 +103,7 @@ const OrderSchema = new mongoose.Schema(
       city: String,
       state: String,
       zip: String,
-    },
+    },  
     paymentMethod: { type: String, default: "Cash on Delivery" },
     total: { type: Number, required: true },
     status: {

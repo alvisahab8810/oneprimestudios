@@ -729,53 +729,90 @@ export default function ProductDetails() {
 
   const handleFiles = (e) => setFiles(Array.from(e.target.files));
 
-const uploadFiles = async () => {
+  const uploadFiles = async () => {
   if (!files.length) return toast.error("Select files to upload");
 
   const fd = new FormData();
-  files.forEach((f) => fd.append("files", f));
+  files.forEach((f) => fd.append("file", f)); // ✅ single field name = "file"
+  fd.append("productId", product._id);
 
   try {
-    // 1️⃣ Upload the files to /api/upload (saves to /public/uploads/orders)
-    const res = await axios.post("/api/upload", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
+    const token = localStorage.getItem("token");
+    if (!token) return toast.error("Please login first");
+
+    // 1️⃣ Upload to /api/upload/save-design (saves file physically + DB entry)
+    const res = await axios.post("/api/upload/save-design", fd, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     console.log("Upload response:", res.data);
 
-    // Normalize uploaded file data
-    const uploadedRaw = res.data.files || [];
-    const uploaded = uploadedRaw.map((file) => ({
-      url:
-        file.url ||
-        file.path ||
-        `/uploads/orders/${file.filename}`, // fallback for local
-      name: file.name || file.filename || file.originalname || "design-file",
+    // 2️⃣ Save uploaded URLs locally for add-to-cart
+    const uploaded = (res.data.data || []).map((file) => ({
+      url: file.fileUrl,
+      name: file.fileName,
     }));
 
     setUploadedFiles(uploaded);
-
-    // 2️⃣ Save uploaded file info to MongoDB (DesignUpload collection)
-    const token = localStorage.getItem("token");
-    if (!token) return toast.error("Please login first");
-
-    await axios.post(
-      "/api/upload/save-design",
-      {
-        productId: product._id,
-        files: uploaded, // ✅ now each file has { url, name }
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    toast.success("Files uploaded & saved!");
+    toast.success("Design files uploaded successfully!");
   } catch (err) {
-    console.error("Upload failed:", err);
-    toast.error("Upload failed");
+    console.error("Upload failed:", err.response?.data || err.message);
+    toast.error(err.response?.data?.message || "Upload failed");
   }
 };
+
+
+// const uploadFiles = async () => {
+//   if (!files.length) return toast.error("Select files to upload");
+
+//   const fd = new FormData();
+//   files.forEach((f) => fd.append("files", f));
+
+//   try {
+//     // 1️⃣ Upload the files to /api/upload (saves to /public/uploads/orders)
+//     const res = await axios.post("/api/upload", fd, {
+//       headers: { "Content-Type": "multipart/form-data" },
+//     });
+
+//     console.log("Upload response:", res.data);
+
+//     // Normalize uploaded file data
+//     const uploadedRaw = res.data.files || [];
+//     const uploaded = uploadedRaw.map((file) => ({
+//       url:
+//         file.url ||
+//         file.path ||
+//         `/uploads/orders/${file.filename}`, // fallback for local
+//       name: file.name || file.filename || file.originalname || "design-file",
+//     }));
+
+//     setUploadedFiles(uploaded);
+
+//     // 2️⃣ Save uploaded file info to MongoDB (DesignUpload collection)
+//     const token = localStorage.getItem("token");
+//     if (!token) return toast.error("Please login first");
+
+//     await axios.post(
+//       "/api/upload/save-design",
+//       {
+//         productId: product._id,
+//         files: uploaded, // ✅ now each file has { url, name }
+        
+//       },
+//       {
+//         headers: { Authorization: `Bearer ${token}` },
+//       }
+//     );
+
+//     toast.success("Files uploaded & saved!");
+//   } catch (err) {
+//     console.error("Upload failed:", err);
+//     toast.error("Upload failed");
+//   }
+// };
 
 
   // const uploadFiles = async () => {
@@ -889,33 +926,64 @@ const uploadFiles = async () => {
   };
 
   const addToCart = async () => {
-    if (!product) return toast.error("Product not loaded");
+  if (!product) return toast.error("Product not loaded");
 
-    const token = localStorage.getItem("token");
-    if (!token) return toast.error("Please login first");
+  const token = localStorage.getItem("token");
+  if (!token) return toast.error("Please login first");
 
-    try {
-      const res = await axios.post(
-        "/api/cart",
-        {
-          productId: product._id,
-          quantity: qty,
-          selectedAttrs,
-          uploadedFiles,
-          price: finalPrice,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  try {
+    const res = await axios.post(
+      "/api/cart",
+      {
+        productId: product._id,
+        quantity: qty,
+        selectedAttrs,
+        uploadedFiles: uploadedFiles.map((f) => f.url), // ✅ clean URLs only
+        price: finalPrice,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
-      toast.success("Added to cart");
-      router.push("/cart"); // optional
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Failed to add to cart");
-    }
-  };
+    toast.success("Added to cart");
+    router.push("/cart");
+  } catch (err) {
+    console.error(err);
+    toast.error(err.response?.data?.message || "Failed to add to cart");
+  }
+};
+
+
+  // const addToCart = async () => {
+  //   if (!product) return toast.error("Product not loaded");
+
+  //   const token = localStorage.getItem("token");
+  //   if (!token) return toast.error("Please login first");
+
+  //   try {
+  //     const res = await axios.post(
+  //       "/api/cart",
+  //       {
+  //         productId: product._id,
+  //         quantity: qty,
+  //         selectedAttrs,
+  //         // uploadedFiles,
+  //          uploadedFiles: uploadedFiles.map((f) => f.url), // ✅ only send the URLs
+  //         price: finalPrice,
+  //       },
+  //       {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       }
+  //     );
+
+  //     toast.success("Added to cart");
+  //     router.push("/cart"); // optional
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error(err.response?.data?.message || "Failed to add to cart");
+  //   }
+  // };
 
   return (
     <div className="product-details">
