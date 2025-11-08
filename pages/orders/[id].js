@@ -424,6 +424,15 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
+
+               <button
+  onClick={() => router.push(`/track-order/${order._id}`)}
+  className="btn btn-primary ms-3"
+>
+  🚚 Track Your Order
+</button>
+
+
         {/* SHIPPING + BILLING INFO */}
         <div className="card border-0 shadow-sm mb-4 p-4">
           <div className="row">

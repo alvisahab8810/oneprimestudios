@@ -623,8 +623,13 @@ export default function AdminOrderDetail() {
             </div>
 
 
-                  {/* <DesignUploads productId={order.productId} /> */}
               <DesignUploads productId={order.items?.[0]?.product?._id || order.items?.[0]?.product} />
+              {/* <DesignUploads
+                productId={order?.product?._id || order?.productId}
+                userId={order?.user?._id || order?.userId}
+              /> */}
+
+
 
 
             {/* Items Table */}

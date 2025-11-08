@@ -416,7 +416,7 @@ const AuthForm = () => {
       localStorage.setItem("name", res.data.name);
       localStorage.setItem("email", res.data.email);
 
-      setTimeout(() => router.push("/login/"), 1500);
+      setTimeout(() => router.push("/"), 1500);
     } catch (err) {
       console.error("Auth error:", err.response?.data || err.message);
       toast.error(

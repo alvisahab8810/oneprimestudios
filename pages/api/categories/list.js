@@ -14,6 +14,7 @@
 
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
+import Category from "@/models/Category";
 
 export default async function handler(req, res) {
   await dbConnect();

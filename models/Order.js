@@ -29,11 +29,6 @@
 
 // export default mongoose.models.Order || mongoose.model("Order", OrderSchema);
 
-
-
-
-
-
 // // models/Order.js
 // import mongoose from "mongoose";
 
@@ -82,8 +77,6 @@
 
 // export default mongoose.models.Order || mongoose.model("Order", OrderSchema);
 
-
-
 import mongoose from "mongoose";
 
 const OrderSchema = new mongoose.Schema(
@@ -91,7 +84,11 @@ const OrderSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: [
       {
-        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
         quantity: { type: Number, default: 1 },
         price: { type: Number, required: true },
       },
@@ -103,18 +100,23 @@ const OrderSchema = new mongoose.Schema(
       city: String,
       state: String,
       zip: String,
-    },  
+    },
     paymentMethod: { type: String, default: "Cash on Delivery" },
     total: { type: Number, required: true },
+
     status: {
       type: String,
       enum: [
         "Pending",
-        "Processing",
+        "Order Received",
+        "In Packaging",
         "In Progress",
         "Design Approved",
-        "Design Rejected", // ✅ Added this
+        "Design Rejected",
         "Printing",
+        "Order Dispatched",
+        "Order Delivered",
+        "Processing",
         "Shipped",
         "Delivered",
         "Cancelled",
@@ -123,7 +125,24 @@ const OrderSchema = new mongoose.Schema(
       default: "Pending",
     },
 
-      uploadedFiles: [{ type: String }],
+    // status: {
+    //   type: String,
+    //   enum: [
+    //     "Pending",
+    //     "Processing",
+    //     "In Progress",
+    //     "Design Approved",
+    //     "Design Rejected", // ✅ Added this
+    //     "Printing",
+    //     "Shipped",
+    //     "Delivered",
+    //     "Cancelled",
+    //     "Rejected",
+    //   ],
+    //   default: "Pending",
+    // },
+
+    uploadedFiles: [{ type: String }],
     remarks: { type: String, default: "" }, // ✅ Added remarks
     orderNumber: { type: String, unique: true },
   },
