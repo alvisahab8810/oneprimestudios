@@ -140,6 +140,11 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
+import GoogleReviews from "@/components/home-page/GoogleReviews";
+import ProductSlider from "@/components/home-page/ProductSlider";
+import DealBanner from "@/components/home-page/Cta";
+import FaqAccordion from "@/components/home-page/Faq";
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function WishlistPage() {
   const [items, setItems] = useState([]);
@@ -278,15 +283,14 @@ export default function WishlistPage() {
 
   if (!items.length)
     return (
-      <div>
-        <div className="container">
-          <Topbar />
-        </div>
+      <div className="wishlist-main-page">
+        <Topbar />
 
-        <div className="container text-center py-5">
-          <h3>Your wishlist is empty ❤️</h3>
-          <Link href="/products" className="btn btn-primary mt-3">
-            Browse Products
+        <div className="container text-center empty-wishlist-area">
+          <img src="/assets/images/wishlist_empty.svg" alt="Empty Wishlist Image"></img>
+          <h3>You haven’t saved any items yet</h3>
+          <Link href="/products" className="continue-shoppin-btn">
+           Continue Shopping
           </Link>
         </div>
 
@@ -295,55 +299,64 @@ export default function WishlistPage() {
     );
 
   return (
-    <div>
-      <div className="container">
-        <Topbar />
-      </div>
+    <div className="wishlist-main-page">
+      <Topbar />
+      <Offcanvas/>
 
-      <div className="container py-5">
-        <h3 className="mb-4">My Wishlist ❤️</h3>
-        <div className="row">
-          {items.map((p) => (
-            <div className="col-md-3 col-6 mb-4" key={p._id}>
-              <div className="wishlist-card position-relative shadow-sm border rounded-4 overflow-hidden">
-                <button
-                  className="wishlist-remove-btn position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2 d-flex bg-none"
-                  onClick={() => removeFromWishlist(p._id)}
-                >
-                  {/* <FaHeart color="red" size={18} /> */}
-                  <img src="/assets/images/icons/cross.svg"></img>
-                </button>
-
-                <Link href={`/products/${p.slug}`}>
-                  <img
-                    src={
-                      p.mainImage || "/assets/images/products/placeholder.png"
-                    }
-                    alt={p.name}
-                    className="w-100"
-                    style={{
-                      height: "220px",
-                      objectFit: "cover",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  />
-                </Link>
-
-                <div className="text-center p-3">
-                  <h6 className="fw-semibold mb-2">{p.name}</h6>
+      <div className="wishlist-page-container padding-top-40">
+        <div className="container">
+          {/* <h3 className="main-w-heading mb-4">My Wishlist ❤️</h3> */}
+          <div className="row">
+            {items.map((p) => (
+              <div className="col-md-3 col-6 mb-4" key={p._id}>
+                <div className="wishlist-card position-relative shadow-sm border rounded-4 overflow-hidden">
                   <button
-                    onClick={() => moveToBag(p)}
-                    className="btn btn-primary rounded-pill px-4 py-2"
+                    className="wishlist-remove-btn position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2 d-flex bg-none"
+                    onClick={() => removeFromWishlist(p._id)}
                   >
-                    Move to Bag
+                    {/* <FaHeart color="red" size={18} /> */}
+                    <img src="/assets/images/icons/cross.svg"></img>
                   </button>
+
+                  <Link href={`/products/${p.slug}`}>
+                    <img
+                      src={
+                        p.mainImage || "/assets/images/products/placeholder.png"
+                      }
+                      alt={p.name}
+                      className="w-100"
+                      style={{
+                        height: "220px",
+                        objectFit: "cover",
+                        borderBottom: "1px solid #eee",
+                      }}
+                    />
+                  </Link>
+
+                  <div className="text-center p-3">
+                    <h6 className="fw-semibold mb-2">{p.name}</h6>
+                    <button
+                      onClick={() => moveToBag(p)}
+                      className="btn btn-primary rounded-pill px-4 py-2"
+                    >
+                      Move to Bag
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
+
+         <GoogleReviews />
+            <ProductSlider />
+            <div className="container mb-5">
+              <DealBanner />
+              <FaqAccordion />
+
+            </div>
       <Footer />
     </div>
   );

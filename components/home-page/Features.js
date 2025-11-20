@@ -3,7 +3,7 @@ import React from "react";
 export default function Features() {
   return (
     <>
-      <div className="features-container">
+      <div className="features-container mobile-none">
         <div className="feature-box">
           <img src="/assets/images/icons/features/google.png" alt="Google" className="feature-icon" />
           <div>

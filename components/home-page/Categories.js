@@ -84,7 +84,7 @@ export default function Categories() {
         <div className="categories-header">
           <h3 className="categories-title">Explore all categories</h3>
           <Link href="/categories" className="view-all-link">
-            View All →
+            View All <img src="/assets/images/icons/arrow.svg"></img>
           </Link>
         </div>
 
@@ -101,7 +101,7 @@ export default function Categories() {
         modules={[FreeMode]}
         className="categories-swiper"
         breakpoints={{
-          320: { slidesPerView: 2, spaceBetween: 10 },
+          320: { slidesPerView: 4, spaceBetween: 5 },
           640: { slidesPerView: 3, spaceBetween: 15 },
           1024: { slidesPerView: 6.5, spaceBetween: 30 },
         }}

@@ -292,8 +292,19 @@ export default function ProductSlider() {
 
   return (
     <div className="product-slider">
-      <h2>Our Most Popular Products</h2>
-      <Swiper modules={[Navigation]} spaceBetween={20} grabCursor slidesPerView={4.3} breakpoints={{ 320: { slidesPerView: 1 }, 640: { slidesPerView: 2 }, 1024: { slidesPerView: 4.3 } }}>
+      <h2 className="mobile-none">Our Most Popular Products</h2>
+      <div className="desktop-none">
+         <div className="categories-header mobile-products">
+          <h3 className="categories-title">Our Most Popular Products</h3>
+          <Link href="/products" className="view-all-link">
+            View All <img src="/assets/images/icons/arrow.svg"></img>
+          </Link>
+        </div>
+
+        </div>
+      <Swiper modules={[Navigation]} spaceBetween={20} grabCursor slidesPerView={4.3} breakpoints={{ 320: { slidesPerView: 2,
+         spaceBetween: 10,
+       }, 640: { slidesPerView: 2 }, 1024: { slidesPerView: 4.3 } }}>
         {products.map((product) => (
           <SwiperSlide key={product._id}>
             <Link href={`/products/${product.slug}`} passHref>

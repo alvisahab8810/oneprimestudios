@@ -15,6 +15,7 @@ import {
   FaThumbsUp,
   FaPrint,
 } from "react-icons/fa";
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function TrackOrderPage() {
   const router = useRouter();
@@ -97,7 +98,7 @@ export default function TrackOrderPage() {
   if (loading)
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-primary" />
+        <div className="spinner-border primary-c" />
       </div>
     );
 
@@ -127,11 +128,12 @@ export default function TrackOrderPage() {
       : 0; // fallback 0 if unknown
 
   return (
-    <>
+    <div className="order-details-area">
       <Topbar />
-      <div className="container py-5">
+      <Offcanvas/>
+      <div className="container padding-top-40">
         {/* Header */}
-        <div className="card shadow-sm border-0 p-4 mb-4">
+        <div className="card  p-4 mb-4">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
               <h5 className="fw-bold mb-1">Track Your Order</h5>
@@ -147,7 +149,7 @@ export default function TrackOrderPage() {
                   ? "bg-danger"
                   : (mappedStage === "Delivered" || (order.status || "").toLowerCase().includes("deliver"))
                   ? "bg-success"
-                  : "bg-primary"
+                  : "bg-brand"
               }`}
             >
               {order.status}
@@ -156,8 +158,8 @@ export default function TrackOrderPage() {
         </div>
 
         {/* Tracking Progress */}
-        <div className="card shadow-sm border-0 p-4 mb-5">
-          <h6 className="fw-semibold mb-4 text-primary">Tracking Progress</h6>
+        <div className="card  p-4 mb-5">
+          <h6 className="fw-semibold mb-4 primary-c tracking-margin">Tracking Progress</h6>
 
           {!isTerminal ? (
             <div className="timeline-container position-relative">
@@ -182,7 +184,7 @@ export default function TrackOrderPage() {
                       </div>
                       <div
                         className={`timeline-title ${
-                          isCompleted ? "text-success fw-semibold" : "text-muted"
+                          isCompleted ? "primary-c fw-semibold" : "text-muted"
                         }`}
                       >
                         {step.title}
@@ -204,8 +206,8 @@ export default function TrackOrderPage() {
         {/* Customer & Shipping */}
         <div className="row g-4 mb-4">
           <div className="col-md-6">
-            <div className="card shadow-sm border-0 p-4">
-              <h6 className="fw-semibold text-primary mb-2">Customer Details</h6>
+            <div className="card  p-4">
+              <h6 className="fw-semibold primary-c mb-2">Customer Details</h6>
               <p className="mb-1 fw-medium">{order.shipping?.name || order.user?.name}</p>
               <p className="mb-1">{order.shipping?.phone || order.user?.phone}</p>
               {order.user?.email && <p className="mb-0 text-muted">{order.user.email}</p>}
@@ -213,8 +215,8 @@ export default function TrackOrderPage() {
           </div>
 
           <div className="col-md-6">
-            <div className="card shadow-sm border-0 p-4">
-              <h6 className="fw-semibold text-primary mb-2">Shipping Address</h6>
+            <div className="card  p-4">
+              <h6 className="fw-semibold primary-c mb-2">Shipping Address</h6>
               <p className="mb-0">{order.shipping?.street || order.shipping?.address || "—"}</p>
               <p className="mb-0">
                 {order.shipping?.city || ""}{order.shipping?.city ? ", " : ""}{order.shipping?.state || ""}{" "}
@@ -225,8 +227,8 @@ export default function TrackOrderPage() {
         </div>
 
         {/* Order Summary */}
-        <div className="card shadow-sm border-0 p-4">
-          <h6 className="fw-semibold mb-3 text-primary">Order Summary</h6>
+        <div className="card  p-4">
+          <h6 className="fw-semibold mb-3 primary-c">Order Summary</h6>
           {order.items?.map((item, i) => (
             <div key={i} className="d-flex justify-content-between mb-2">
               <span>{item.product?.name || "Product"} × {item.quantity}</span>
@@ -236,13 +238,13 @@ export default function TrackOrderPage() {
           <hr />
           <div className="d-flex justify-content-between">
             <strong>Total</strong>
-            <strong className="text-primary fs-5">₹{order.total}</strong>
+            <strong className="primary-c fs-5">₹{order.total}</strong>
           </div>
         </div>
 
         {/* Back */}
-        <div className="text-center mt-4">
-          <button onClick={() => router.push("/orders")} className="btn btn-outline-primary px-4">
+        <div className="text-center mt-4 mb-4">
+          <button onClick={() => router.push("/orders")} className="view-orders-btn">
             ← Back to My Orders
           </button>
         </div>
@@ -253,14 +255,14 @@ export default function TrackOrderPage() {
       <style jsx>{`
         .timeline-container { position: relative; padding-top: 40px; }
         .progress-bar-bg { position: absolute; top: 25px; left: 0; right: 0; height: 6px; background-color: #e9ecef; border-radius: 4px; }
-        .progress-bar-fill { position: absolute; top: 25px; left: 0; height: 6px; background: linear-gradient(90deg,#b5179e,#7209b7); border-radius: 4px; transition: width 0.9s ease-in-out; }
+        .progress-bar-fill { position: absolute; top: 25px; left: 0; height: 6px;    background: linear-gradient(90deg, #6c5dd4, #837cb8); border-radius: 4px; transition: width 0.9s ease-in-out; }
         .timeline-steps { position: relative; z-index: 2; }
         .timeline-icon { width: 50px; height: 50px; border-radius: 50%; background-color: #e9ecef; display: flex; justify-content: center; align-items: center; margin: 0 auto 10px; font-size: 22px; color: #888; transition: all 0.4s ease; }
-        .timeline-icon.completed { background: linear-gradient(135deg,#b5179e,#7209b7); color: #fff; transform: scale(1.08); box-shadow: 0 4px 10px rgba(114,9,183,0.25); }
+        .timeline-icon.completed { background: #6C5DD4; color: #fff; transform: scale(1.08); box-shadow: 0 4px 10px rgba(114,9,183,0.25); }
         .timeline-title { font-size: 14px; font-weight: 600; }
         @media (max-width: 576px) { .timeline-icon { width: 40px; height: 40px; font-size: 18px; } .timeline-title { font-size: 12px; } }
       `}</style>
-    </>
+    </div>
   );
 }
 
@@ -354,7 +356,7 @@ export default function TrackOrderPage() {
 //   if (loading)
 //     return (
 //       <div className="d-flex justify-content-center align-items-center vh-100">
-//         <div className="spinner-border text-primary" />
+//         <div className="spinner-border primary-c" />
 //       </div>
 //     );
 
@@ -392,7 +394,7 @@ export default function TrackOrderPage() {
 //       <Topbar />
 //       <div className="container py-5">
 //         {/* HEADER */}
-//         <div className="card shadow-sm border-0 p-4 mb-4">
+//         <div className="card  p-4 mb-4">
 //           <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
 //             <div>
 //               <h5 className="fw-bold mb-1">Track Your Order</h5>
@@ -417,8 +419,8 @@ export default function TrackOrderPage() {
 //         </div>
 
 //         {/* PROGRESS TRACKER */}
-//         <div className="card shadow-sm border-0 p-4 mb-5">
-//           <h6 className="fw-semibold mb-4 text-primary">Tracking Progress</h6>
+//         <div className="card  p-4 mb-5">
+//           <h6 className="fw-semibold mb-4 primary-c">Tracking Progress</h6>
 
 //           {!isTerminal ? (
 //             <div className="timeline-container position-relative">
@@ -468,8 +470,8 @@ export default function TrackOrderPage() {
 //         {/* CUSTOMER & SHIPPING */}
 //         <div className="row g-4 mb-4">
 //           <div className="col-md-6">
-//             <div className="card shadow-sm border-0 p-4">
-//               <h6 className="fw-semibold text-primary mb-2">
+//             <div className="card  p-4">
+//               <h6 className="fw-semibold primary-c mb-2">
 //                 Customer Details
 //               </h6>
 //               <p className="mb-1 fw-medium">
@@ -485,8 +487,8 @@ export default function TrackOrderPage() {
 //           </div>
 
 //           <div className="col-md-6">
-//             <div className="card shadow-sm border-0 p-4">
-//               <h6 className="fw-semibold text-primary mb-2">
+//             <div className="card  p-4">
+//               <h6 className="fw-semibold primary-c mb-2">
 //                 Shipping Address
 //               </h6>
 //               <p className="mb-0">
@@ -502,8 +504,8 @@ export default function TrackOrderPage() {
 //         </div>
 
 //         {/* ORDER SUMMARY */}
-//         <div className="card shadow-sm border-0 p-4">
-//           <h6 className="fw-semibold mb-3 text-primary">Order Summary</h6>
+//         <div className="card  p-4">
+//           <h6 className="fw-semibold mb-3 primary-c">Order Summary</h6>
 //           {order.items?.map((item, i) => (
 //             <div key={i} className="d-flex justify-content-between mb-2">
 //               <span>
@@ -515,7 +517,7 @@ export default function TrackOrderPage() {
 //           <hr />
 //           <div className="d-flex justify-content-between">
 //             <strong>Total</strong>
-//             <strong className="text-primary fs-5">₹{order.total}</strong>
+//             <strong className="primary-c fs-5">₹{order.total}</strong>
 //           </div>
 //         </div>
 

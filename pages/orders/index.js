@@ -268,6 +268,7 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function OrdersListPage() {
   const [orders, setOrders] = useState([]);
@@ -362,8 +363,9 @@ export default function OrdersListPage() {
   return (
     <>
       <Topbar />
+      <Offcanvas/>
 
-      <div className="orders-page container py-5">
+      <div className="orders-page container padding-top-40 ">
         <h3 className="mb-4 fw-semibold">My Orders</h3>
  
 
@@ -382,9 +384,14 @@ export default function OrdersListPage() {
 
         {/* ✅ Orders */}
         {filteredOrders.length === 0 ? (
-          <div className="empty-state text-center py-5">
+          <div className="empty-state text-center py-5 empty-wishlist-area">
+
+             {/* <img
+              src="/assets/images/empty-cart.png"
+              alt="Empty Cart"
+            /> */}
             <img
-              src="/no-orders.svg"
+              src="/assets/images/empty-cart.png"
               alt="No orders"
               width={120}
               className="mb-3 opacity-75"
@@ -393,7 +400,7 @@ export default function OrdersListPage() {
             <p className="text-muted small mb-3">
               Looks like you don't have any {activeTab.toLowerCase()} orders yet.
             </p>
-            <Link href="/products" className="btn btn-primary px-4 py-2">
+            <Link href="/products" className="continue-shoppin-btn">
               Browse Products
             </Link>
           </div>
@@ -463,7 +470,7 @@ export default function OrdersListPage() {
           gap: 6px;
         }
         .tab-btn.active {
-          background: linear-gradient(90deg, #b5179e, #7209b7);
+          background: #6C5DD4;
           color: #fff;
           border-color: transparent;
           box-shadow: 0 2px 6px rgba(114, 9, 183, 0.3);

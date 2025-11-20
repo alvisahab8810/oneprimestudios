@@ -42,7 +42,7 @@
 //   if (!order)
 //     return (
 //       <div className="d-flex justify-content-center align-items-center vh-100">
-//         <div className="spinner-border text-primary" role="status">
+//         <div className="spinner-border primary-c" role="status">
 //           <span className="visually-hidden">Loading...</span>
 //         </div>
 //       </div>
@@ -79,7 +79,7 @@
 //           <div className="col-lg-4">
 //             <div className="card shadow-sm border-0 h-100">
 //               <div className="card-body">
-//                 <h5 className="fw-bold mb-3 text-primary">Shipping Details</h5>
+//                 <h5 className="fw-bold mb-3 primary-c">Shipping Details</h5>
 //                 <p className="mb-1 fw-semibold">{order.shipping?.name}</p>
 //                 <p className="mb-1">{order.shipping?.phone}</p>
 //                 <p className="text-muted small mb-0">
@@ -94,7 +94,7 @@
 //           <div className="col-lg-8">
 //             <div className="card shadow-sm border-0 h-100">
 //               <div className="card-body">
-//                 <h5 className="fw-bold mb-3 text-primary">Order Items</h5>
+//                 <h5 className="fw-bold mb-3 primary-c">Order Items</h5>
 //                 {order.items.length > 0 ? (
 //                   order.items.map((it) => (
 //                     <div
@@ -134,7 +134,7 @@
 //         {/* Order Summary */}
 //         <div className="card shadow-sm border-0 mt-4">
 //           <div className="card-body">
-//             <h5 className="fw-bold text-primary mb-3">Order Summary</h5>
+//             <h5 className="fw-bold primary-c mb-3">Order Summary</h5>
 //             <div className="row">
 //               <div className="col-md-6">
 //                 <p className="mb-1">
@@ -237,7 +237,7 @@
 //   if (!order)
 //     return (
 //       <div className="d-flex justify-content-center align-items-center vh-100">
-//         <div className="spinner-border text-primary" role="status" />
+//         <div className="spinner-border primary-c" role="status" />
 //       </div>
 //     );
 
@@ -319,6 +319,7 @@ import {
   FaMapMarkerAlt,
   FaFileInvoice,
 } from "react-icons/fa";
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -349,8 +350,103 @@ export default function OrderDetailPage() {
 
   if (loading)
     return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-primary" role="status"></div>
+      <div className="cart-loader-wrapper">
+        <div className="cart-loader-box">
+          <div className="cart-loader-animation"></div>
+
+          <h4 className="cart-loader-text">Loading your cart...</h4>
+        </div>
+
+        <style jsx>{`
+          .cart-loader-wrapper {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f7f9fc;
+          }
+
+          .cart-loader-box {
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+          }
+
+          .cart-loader-animation {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 6px solid #d9d9ff;
+            border-top-color: #6a5cff;
+            border-right-color: #6a5cff;
+            animation: cart-spin 1s linear infinite,
+              pulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(106, 92, 255, 0.3);
+          }
+
+          @keyframes cart-spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.15);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+
+          .cart-loader-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #555;
+            letter-spacing: 0.3px;
+            animation: blinkFade 1.6s infinite ease-in-out;
+          }
+
+          @keyframes blinkFade {
+            0% {
+              opacity: 0.7;
+            }
+            50% {
+              opacity: 1;
+            }
+            100% {
+              opacity: 0.7;
+            }
+          }
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          /* Mobile responsive */
+          @media (max-width: 480px) {
+            .cart-loader-animation {
+              width: 55px;
+              height: 55px;
+            }
+            .cart-loader-text {
+              font-size: 16px;
+            }
+          }
+        `}</style>
       </div>
     );
 
@@ -381,16 +477,17 @@ export default function OrderDetailPage() {
   };
 
   return (
-    <>
+    <div className="order-details-area">
       <Topbar />
+      <Offcanvas />
 
-      <div className="container py-5">
+      <div className="container  padding-top-40">
         {/* HEADER */}
-        <div className="card border-0 shadow-sm mb-4 p-4">
-          <div className="d-flex justify-content-between flex-wrap gap-3 align-items-center">
+        <div className="card mb-4 p-4">
+          <div className="d-flex justify-content-between gap-3 ">
             <div>
-              <h4 className="fw-bold mb-0">
-                <FaFileInvoice className="me-2 text-primary" />
+              <h4 className="fw-bold mb-2">
+                <FaFileInvoice className="me-2 primary-c" />
                 Order #{order.orderNumber || id.slice(-6)}
               </h4>
               <small className="text-muted">
@@ -424,21 +521,19 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-
-               <button
-  onClick={() => router.push(`/track-order/${order._id}`)}
-  className="btn btn-primary ms-3"
->
-  🚚 Track Your Order
-</button>
-
+        <button
+          onClick={() => router.push(`/track-order/${order._id}`)}
+          className="track-order-btn"
+        >
+           Track Your Order
+        </button>
 
         {/* SHIPPING + BILLING INFO */}
-        <div className="card border-0 shadow-sm mb-4 p-4">
+        <div className="card mb-4 p-4">
           <div className="row">
-            <div className="col-md-6 mb-3">
+            <div className="col-md-6 mb-3 customer-details">
               <h6 className="fw-semibold mb-2">
-                <FaUser className="me-2 text-primary" />
+                <FaUser className="me-2 primary-c" />
                 Customer Details
               </h6>
               <p className="mb-1">
@@ -464,7 +559,7 @@ export default function OrderDetailPage() {
 
             <div className="col-md-6 mb-3">
               <h6 className="fw-semibold mb-2">
-                <FaMapMarkerAlt className="me-2 text-primary" />
+                <FaMapMarkerAlt className="me-2 primary-c" />
                 Shipping Address
               </h6>
               <p className="mb-1">{order.shipping?.street}</p>
@@ -481,9 +576,9 @@ export default function OrderDetailPage() {
         </div>
 
         {/* ORDER ITEMS */}
-        <div className="card border-0 shadow-sm mb-4 p-4">
+        <div className="card mb-4 p-4">
           <h6 className="fw-semibold mb-3">
-            <FaBoxOpen className="me-2 text-primary" />
+            <FaBoxOpen className="me-2 primary-c" />
             Ordered Items
           </h6>
           <div className="table-responsive">
@@ -510,7 +605,7 @@ export default function OrderDetailPage() {
                           style={{ objectFit: "cover" }}
                         />
                         <div>
-                          <div className="fw-semibold">
+                          <div className="fw-semibold product-name-area">
                             {item.product?.name || "Unnamed Product"}
                           </div>
                           <div className="text-muted small">
@@ -530,9 +625,9 @@ export default function OrderDetailPage() {
         </div>
 
         {/* SUMMARY */}
-        <div className="card border-0 shadow-sm p-4">
+        <div className="summary-card card p-3">
           <h6 className="fw-semibold mb-3">
-            <FaCreditCard className="me-2 text-primary" />
+            <FaCreditCard className="me-2 primary-c" />
             Payment Summary
           </h6>
           <div className="d-flex justify-content-end">
@@ -550,19 +645,17 @@ export default function OrderDetailPage() {
               <hr />
               <div className="d-flex justify-content-between">
                 <span className="fw-semibold">Total:</span>
-                <strong className="text-primary fs-5">₹{order.total}</strong>
+                <strong className="primary-c fs-5">₹{order.total}</strong>
               </div>
             </div>
           </div>
         </div>
 
-
-
         {/* BACK BUTTON */}
-        <div className="text-center mt-4">
+        <div className="text-center mt-4 mb-4">
           <button
             onClick={() => router.push("/orders")}
-            className="btn btn-outline-primary px-4"
+            className="view-orders-btn"
           >
             ← Back to My Orders
           </button>
@@ -570,6 +663,6 @@ export default function OrderDetailPage() {
       </div>
 
       <Footer />
-    </>
+    </div>
   );
 }

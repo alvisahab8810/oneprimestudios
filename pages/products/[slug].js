@@ -676,9 +676,13 @@ import Footer from "@/components/footer/Footer";
 import styles from "@/styles/ProductDetails.module.css";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import CustomAccordion from "@/components/products/Features";
+import Offcanvas from "@/components/header/Offcanvas";
+import ProductFileUpload from "@/components/ProductFileUpload";
 // import { toast } from "sonner";
 
 export default function ProductDetails() {
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+
   const router = useRouter();
   // const { id } = router.query;
 
@@ -730,90 +734,88 @@ export default function ProductDetails() {
   const handleFiles = (e) => setFiles(Array.from(e.target.files));
 
   const uploadFiles = async () => {
-  if (!files.length) return toast.error("Select files to upload");
+    if (!files.length) return toast.error("Select files to upload");
 
-  const fd = new FormData();
-  files.forEach((f) => fd.append("file", f)); // ✅ single field name = "file"
-  fd.append("productId", product._id);
+    const fd = new FormData();
+    files.forEach((f) => fd.append("file", f)); // ✅ single field name = "file"
+    fd.append("productId", product._id);
 
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return toast.error("Please login first");
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return toast.error("Please login first");
 
-    // 1️⃣ Upload to /api/upload/save-design (saves file physically + DB entry)
-    const res = await axios.post("/api/upload/save-design", fd, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      // 1️⃣ Upload to /api/upload/save-design (saves file physically + DB entry)
+      const res = await axios.post("/api/upload/save-design", fd, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    console.log("Upload response:", res.data);
+      console.log("Upload response:", res.data);
 
-    // 2️⃣ Save uploaded URLs locally for add-to-cart
-    const uploaded = (res.data.data || []).map((file) => ({
-      url: file.fileUrl,
-      name: file.fileName,
-    }));
+      // 2️⃣ Save uploaded URLs locally for add-to-cart
+      const uploaded = (res.data.data || []).map((file) => ({
+        url: file.fileUrl,
+        name: file.fileName,
+      }));
 
-    setUploadedFiles(uploaded);
-    toast.success("Design files uploaded successfully!");
-  } catch (err) {
-    console.error("Upload failed:", err.response?.data || err.message);
-    toast.error(err.response?.data?.message || "Upload failed");
-  }
-};
+      setUploadedFiles(uploaded);
+      toast.success("Design files uploaded successfully!");
+    } catch (err) {
+      console.error("Upload failed:", err.response?.data || err.message);
+      toast.error(err.response?.data?.message || "Upload failed");
+    }
+  };
 
+  // const uploadFiles = async () => {
+  //   if (!files.length) return toast.error("Select files to upload");
 
-// const uploadFiles = async () => {
-//   if (!files.length) return toast.error("Select files to upload");
+  //   const fd = new FormData();
+  //   files.forEach((f) => fd.append("files", f));
 
-//   const fd = new FormData();
-//   files.forEach((f) => fd.append("files", f));
+  //   try {
+  //     // 1️⃣ Upload the files to /api/upload (saves to /public/uploads/orders)
+  //     const res = await axios.post("/api/upload", fd, {
+  //       headers: { "Content-Type": "multipart/form-data" },
+  //     });
 
-//   try {
-//     // 1️⃣ Upload the files to /api/upload (saves to /public/uploads/orders)
-//     const res = await axios.post("/api/upload", fd, {
-//       headers: { "Content-Type": "multipart/form-data" },
-//     });
+  //     console.log("Upload response:", res.data);
 
-//     console.log("Upload response:", res.data);
+  //     // Normalize uploaded file data
+  //     const uploadedRaw = res.data.files || [];
+  //     const uploaded = uploadedRaw.map((file) => ({
+  //       url:
+  //         file.url ||
+  //         file.path ||
+  //         `/uploads/orders/${file.filename}`, // fallback for local
+  //       name: file.name || file.filename || file.originalname || "design-file",
+  //     }));
 
-//     // Normalize uploaded file data
-//     const uploadedRaw = res.data.files || [];
-//     const uploaded = uploadedRaw.map((file) => ({
-//       url:
-//         file.url ||
-//         file.path ||
-//         `/uploads/orders/${file.filename}`, // fallback for local
-//       name: file.name || file.filename || file.originalname || "design-file",
-//     }));
+  //     setUploadedFiles(uploaded);
 
-//     setUploadedFiles(uploaded);
+  //     // 2️⃣ Save uploaded file info to MongoDB (DesignUpload collection)
+  //     const token = localStorage.getItem("token");
+  //     if (!token) return toast.error("Please login first");
 
-//     // 2️⃣ Save uploaded file info to MongoDB (DesignUpload collection)
-//     const token = localStorage.getItem("token");
-//     if (!token) return toast.error("Please login first");
+  //     await axios.post(
+  //       "/api/upload/save-design",
+  //       {
+  //         productId: product._id,
+  //         files: uploaded, // ✅ now each file has { url, name }
 
-//     await axios.post(
-//       "/api/upload/save-design",
-//       {
-//         productId: product._id,
-//         files: uploaded, // ✅ now each file has { url, name }
-        
-//       },
-//       {
-//         headers: { Authorization: `Bearer ${token}` },
-//       }
-//     );
+  //       },
+  //       {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       }
+  //     );
 
-//     toast.success("Files uploaded & saved!");
-//   } catch (err) {
-//     console.error("Upload failed:", err);
-//     toast.error("Upload failed");
-//   }
-// };
-
+  //     toast.success("Files uploaded & saved!");
+  //   } catch (err) {
+  //     console.error("Upload failed:", err);
+  //     toast.error("Upload failed");
+  //   }
+  // };
 
   // const uploadFiles = async () => {
   //   if (!files.length) return toast.error("Select files to upload");
@@ -919,41 +921,40 @@ export default function ProductDetails() {
     }`;
 
     const url = `https://wa.me/${
-      product.b2cOptions?.whatsappNumber || "8081815141"
+      product.b2cOptions?.whatsappNumber || "+91 8081815141"
     }?text=${encodeURIComponent(msg)}`;
 
     window.open(url, "_blank");
   };
 
   const addToCart = async () => {
-  if (!product) return toast.error("Product not loaded");
+    if (!product) return toast.error("Product not loaded");
 
-  const token = localStorage.getItem("token");
-  if (!token) return toast.error("Please login first");
+    const token = localStorage.getItem("token");
+    if (!token) return toast.error("Please login first");
 
-  try {
-    const res = await axios.post(
-      "/api/cart",
-      {
-        productId: product._id,
-        quantity: qty,
-        selectedAttrs,
-        uploadedFiles: uploadedFiles.map((f) => f.url), // ✅ clean URLs only
-        price: finalPrice,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    try {
+      const res = await axios.post(
+        "/api/cart",
+        {
+          productId: product._id,
+          quantity: qty,
+          selectedAttrs,
+          uploadedFiles: uploadedFiles.map((f) => f.url), // ✅ clean URLs only
+          price: finalPrice,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    toast.success("Added to cart");
-    router.push("/cart");
-  } catch (err) {
-    console.error(err);
-    toast.error(err.response?.data?.message || "Failed to add to cart");
-  }
-};
-
+      toast.success("Added to cart");
+      router.push("/cart");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to add to cart");
+    }
+  };
 
   // const addToCart = async () => {
   //   if (!product) return toast.error("Product not loaded");
@@ -987,12 +988,6 @@ export default function ProductDetails() {
 
   return (
     <div className="product-details">
-      {/* <Head>
-        <title>{product.name} || Product Details</title>
-        <meta name="description" content={product.shortDescription || ""} />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head> */}
-
       <Head>
         {product && (
           <>
@@ -1025,9 +1020,9 @@ export default function ProductDetails() {
           </>
         )}
       </Head>
-
-      <div className="container">
-        <Topbar />
+      <Topbar />
+      <Offcanvas />
+      <div className="container padding-top-40">
         <div
           className={`product-page ${
             product.b2bOptions?.enabled ? "b2b" : "b2c"
@@ -1042,8 +1037,12 @@ export default function ProductDetails() {
                 setLightboxIndex(allImages.indexOf(activeImage));
               }}
             >
-              <img src={activeImage} alt={product.name} />
-              <div className={styles.gallery}>
+              <img
+                src={activeImage}
+                alt={product.name}
+                className="pr-details-main-img"
+              />
+              <div className={styles.gallery} id="product-gallery">
                 {allImages.map((img, i) => (
                   <img
                     key={i}
@@ -1058,7 +1057,7 @@ export default function ProductDetails() {
           </div>
 
           {/* Right: Details */}
-          <aside className={styles.sidebar}>
+          <aside className={styles.sidebar} id="side-bar">
             <h1 className={styles.title}>{product.name}</h1>
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
             <p className="product-min-order">
@@ -1068,56 +1067,54 @@ export default function ProductDetails() {
             {/* B2B Section */}
             {product.b2bOptions?.enabled ? (
               <div className={styles.b2bForm}>
-                <div className="mt-4 mb-4 d-flex align-items-center">
-                  {/* <button
-                    className={styles.whatsappBtn}
-                    onClick={handleWhatsapp}
-                  >
-                    <img
-                      src="/assets/images/icons/whatsapp.svg"
-                      alt="whatsapp icon"
-                    />{" "}
-                    Chat on WhatsApp
-                  </button> */}
+                <div className="mobile-none">
+                  {/* <div className="mt-4 mb-4 d-flex align-items-center">
+                    {product.b2bOptions.allowFileUpload && (
+                      <div className={styles.fileUpload}>
+                     
+                        <input
+                          type="file"
+                          id="b2bFileUpload"
+                          multiple
+                          onChange={handleFiles}
+                          style={{ display: "none" }}
+                        />
 
-                  {product.b2bOptions.allowFileUpload && (
-                    <div className={styles.fileUpload}>
-                      {/* Hidden native input */}
-                      <input
-                        type="file"
-                        id="b2bFileUpload"
-                        multiple
-                        onChange={handleFiles}
-                        style={{ display: "none" }}
-                      />
+                        <label
+                          htmlFor="b2bFileUpload"
+                          className={styles.secondaryBtn}
+                        >
+                          <img
+                            src="/assets/images/icons/upload.svg"
+                            alt="upload icon"
+                          />{" "}
+                          {selectedFiles?.length > 0
+                            ? `${selectedFiles.length} file(s) selected`
+                            : "Upload your Design "}
+                        </label>
 
-                      {/* Styled label acting as button */}
-                      <label
-                        htmlFor="b2bFileUpload"
-                        className={styles.secondaryBtn}
-                      >
-                        <img
-                          src="/assets/images/icons/upload.svg"
-                          alt="upload icon"
-                        />{" "}
-                        {selectedFiles?.length > 0
-                          ? `${selectedFiles.length} file(s) selected`
-                          : "Upload your Design "}
-                      </label>
+                      
+                        <button
+                          type="button"
+                          className="upload-btn"
+                          onClick={uploadFiles}
+                        >
+                          Submit
+                        </button>
+                      </div>
+                    )}
+                  </div> */}
 
-                      {/* Upload button */}
-                      <button
-                        type="button"
-                        className="upload-btn"
-                        onClick={uploadFiles}
-                      >
-                        Submit
-                      </button>
-                    </div>
-                  )}
+                  <ProductFileUpload
+                    product={product}
+                    selectedFiles={selectedFiles}
+                    setSelectedFiles={setSelectedFiles}
+                    setFiles={setFiles} // REQUIRED
+                    uploadFiles={uploadFiles}
+                  />
                 </div>
-                {/* <h4>Order Options (B2B)</h4> */}
-                <div className={styles.b2bOrderSection}>
+
+                <div className={styles.b2bOrderSection} id="b2border-section">
                   {/* Quantity */}
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Quantity</label>
@@ -1137,7 +1134,7 @@ export default function ProductDetails() {
 
                   {/* Attributes */}
                   {/* Product Attributes Section */}
-                  {/* Product Attributes Section */}
+
                   {product.attributes?.length ? (
                     product.attributes.map((attr, i) => (
                       <div key={i} className={styles.inputGroup}>
@@ -1230,45 +1227,31 @@ export default function ProductDetails() {
                   )}
                 </div>
 
-                <div className={styles.b2bOrderActions}>
-                  {/* WhatsApp */}
-                  {/* <button className={styles.whatsappBtn} onClick={handleWhatsapp}>
-                      <img src="/assets/images/icons/whatsapp.svg" alt="whatsapp icon" /> Chat on WhatsApp
-                    </button> */}
+                <div className="mobile-none">
+                  <div className={styles.b2bOrderActions}>
+                    {!product.b2bOptions.allowFileUpload ||
+                    uploadedFiles.length > 0 ? (
+                      <button className={styles.primaryBtn} onClick={addToCart}>
+                        <img
+                          src="/assets/images/icons/shopping-cart.svg"
+                          alt="cart icon"
+                        />{" "}
+                        Add to Cart
+                      </button>
+                    ) : (
+                      <p className="text-muted mt-2">
+                        Please upload your design before adding to cart.
+                      </p>
+                    )}
 
-                  {/* Add to Cart */}
-                  {/* <button className={styles.primaryBtn} onClick={addToCart}>
-                    <img
-                      src="/assets/images/icons/shopping-cart.svg"
-                      alt="cart icon"
-                    />{" "}
-                    Add to Cart
-
-
-                    
-                  </button> */}
-
-                  {!product.b2bOptions.allowFileUpload ||
-                  uploadedFiles.length > 0 ? (
-                    <button className={styles.primaryBtn} onClick={addToCart}>
-                      <img
-                        src="/assets/images/icons/shopping-cart.svg"
-                        alt="cart icon"
-                      />{" "}
-                      Add to Cart
-                    </button>
-                  ) : (
-                    <p className="text-muted mt-2">
-                      Please upload your design before adding to cart.
-                    </p>
-                  )}
-
-                  {/* <h3 className={styles.price}>₹{finalPrice.toFixed(2)}</h3> */}
+                    {/* <h3 className={styles.price}>₹{finalPrice.toFixed(2)}</h3> */}
+                  </div>
                 </div>
               </div>
             ) : (
               // B2C Section
-              <div className={styles.b2cActions}>
+              <div className="mobile-none">
+                <div className={styles.b2cActions}>
                 <div className="d-flex  align-items-center">
                   {product.b2cOptions?.whatsappSupport && (
                     <button
@@ -1284,40 +1267,48 @@ export default function ProductDetails() {
                   )}
 
                   {product.b2cOptions?.designUpload && (
-                    <div className={styles.fileUpload}>
-                      {/* hide native input */}
-                      <input
-                        type="file"
-                        id="fileUpload"
-                        multiple
-                        onChange={handleFiles}
-                        style={{ display: "none" }}
-                      />
+                    <ProductFileUpload
+                      product={product}
+                      selectedFiles={selectedFiles}
+                      setSelectedFiles={setSelectedFiles}
+                      setFiles={setFiles} // REQUIRED
+                      uploadFiles={uploadFiles}
+                    />
 
-                      {/* your existing button design but now works as file picker */}
-                      <label
-                        htmlFor="fileUpload"
-                        className={styles.secondaryBtn}
-                      >
-                        <img
-                          src="/assets/images/icons/upload.svg"
-                          alt="upload icon"
-                        />{" "}
-                        {selectedFiles?.length > 0
-                          ? `${selectedFiles.length} file(s) selected`
-                          : "Upload Your Design"}
-                      </label>
+                    // <div className={styles.fileUpload}>
+                    //   {/* hide native input */}
+                    //   <input
+                    //     type="file"
+                    //     id="fileUpload"
+                    //     multiple
+                    //     onChange={handleFiles}
+                    //     style={{ display: "none" }}
+                    //   />
 
-                      {/* keep your upload button */}
+                    //   {/* your existing button design but now works as file picker */}
+                    //   <label
+                    //     htmlFor="fileUpload"
+                    //     className={styles.secondaryBtn}
+                    //   >
+                    //     <img
+                    //       src="/assets/images/icons/upload.svg"
+                    //       alt="upload icon"
+                    //     />{" "}
+                    //     {selectedFiles?.length > 0
+                    //       ? `${selectedFiles.length} file(s) selected`
+                    //       : "Upload Your Design"}
+                    //   </label>
 
-                      <button
-                        type="button"
-                        className="upload-btn"
-                        onClick={uploadFiles}
-                      >
-                        Submit
-                      </button>
-                    </div>
+                    //   {/* keep your upload button */}
+
+                    //   <button
+                    //     type="button"
+                    //     className="upload-btn"
+                    //     onClick={uploadFiles}
+                    //   >
+                    //     Submit
+                    //   </button>
+                    // </div>
                   )}
                 </div>
 
@@ -1354,6 +1345,7 @@ export default function ProductDetails() {
                     __html: product.description || product.shortDescription,
                   }}
                 />
+              </div>
               </div>
             )}
           </aside>
@@ -1486,6 +1478,57 @@ export default function ProductDetails() {
             }
           `}</style>
         </div>
+      </div>
+      {/* for b2b users mobile version */}
+
+      {/* MOBILE BOTTOM STICKY BAR */}
+      <div className="ops-mobile-sticky">
+        {/* BUTTON AREA  */}
+        {!mobilePanelOpen && uploadedFiles.length === 0 && (
+
+          
+            <div className="desktop-none">
+
+               <div className="mobile-whtasapp d-flex  align-items-center justify-between">
+                  {product.b2cOptions?.whatsappSupport && (
+                    <button
+                      className={styles.whatsappBtn}
+                      onClick={handleWhatsapp}
+                    >
+                      <img
+                        src="/assets/images/icons/whatsapp.svg"
+                        alt="whatsapp icon"
+                      />{" "}
+                      WhatsApp
+                    </button>
+                  )}
+
+                 <ProductFileUpload
+                    product={product}
+                    selectedFiles={selectedFiles}
+                    setSelectedFiles={setSelectedFiles}
+                    setFiles={setFiles} // REQUIRED
+                    uploadFiles={uploadFiles}
+                  />
+                </div>
+
+                
+                 
+
+                
+                </div>
+        )}
+
+        {!mobilePanelOpen && uploadedFiles.length > 0 && (
+          <button className="ops-mobile-main-btn cart" onClick={addToCart}>
+            <img src="/assets/images/icons/shopping-cart.svg" />
+            Add to Cart
+          </button>
+        )}
+
+
+          
+
       </div>
 
       <ProductSlider />

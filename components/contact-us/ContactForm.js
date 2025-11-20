@@ -7,11 +7,13 @@ const ContactForm = () => {
       <div className="contact-container">
         {/* Left Info Section */}
         <div className="contact-info">
-          <h2>Let's talk with us</h2>
+          <div className="mobile-none">
+              <h2>Let's talk with us</h2>
           <p>
             Questions, comments, or suggestions? <br />
             Simply fill in the form and we'll be in touch shortly.
           </p>
+          </div>
 
           <div className="info-item">
             <span className="icon">
@@ -36,6 +38,15 @@ const ContactForm = () => {
                 <img src="/assets/images/icons/email.svg" alt="email icon"></img>
             </span>
             <p>Contact@oneprimestudios.in</p>
+          </div>
+
+
+          <div className="mobile-text-contact desktop-none">
+              <h2>Let's talk with us</h2>
+          <p>
+            Questions, comments, or suggestions? <br />
+            Simply fill in the form and we'll be in touch shortly.
+          </p>
           </div>
         </div>
 

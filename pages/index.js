@@ -12,12 +12,14 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 
 import Head from "next/head";
+import HeroSectionMobile from "@/components/home-page/HeroSectionMobile.";
+import MobileFeatures from "@/components/home-page/MobileFeatures";
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function Home() {
+  const [products, setProducts] = useState([]);
 
-   const [products, setProducts] = useState([]);
-
-   useEffect(() => {
+  useEffect(() => {
     const userType = localStorage.getItem("userType"); // 👈 get from login
     let url = "/api/products";
     if (userType) url += `?userType=${userType}`;
@@ -33,10 +35,13 @@ export default function Home() {
         <link rel="icon" href="/assets/images/logo.png" />
       </Head>
       <div className="main-page">
+        <Topbar />
+        <Offcanvas/>
         <div className="container">
-          <Topbar />
           <HeroSection />
+          <HeroSectionMobile/>
           <Features />
+          <MobileFeatures/>
         </div>
         <Categories />
         <GoogleReviews />

@@ -4,6 +4,7 @@ import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/pagination";
+import Link from "next/link";
 import { Pagination } from "swiper/modules";
 
 const reviews = [
@@ -65,7 +66,17 @@ const reviews = [
 export default function GoogleReviews() {
   return (
     <div className="reviews-section">
-      <h3 className="reviews-title">Google Reviews</h3>
+      <h3 className="reviews-title mobile-none">Google Reviews</h3>
+
+        <div className="desktop-none">
+         <div className="categories-header mobile-products">
+          <h3 className="categories-title">Google Reviews</h3>
+          <Link href="#" className="view-all-link">
+            View All <img src="/assets/images/icons/arrow.svg"></img>
+          </Link>
+        </div>
+
+        </div>
 
       <Swiper
         slidesPerView={3.3}
@@ -75,7 +86,12 @@ export default function GoogleReviews() {
         // pagination={{ clickable: true }}
         modules={[Pagination]}
         breakpoints={{
-          320: { slidesPerView: 1 },
+          320: { slidesPerView: 1.3 ,
+
+               spaceBetween: 10,
+
+           },
+          
           768: { slidesPerView: 2 },
           1024: { slidesPerView: 3.3 },
         }}

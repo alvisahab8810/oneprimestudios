@@ -3,7 +3,7 @@ import React from "react";
 export default function HeroSection() {
   return (
     <>
-      <section className="hero">
+      <section className="hero mobile-none">
         <div className="hero-left">
           <div className="hero-text">
             <p className="welcome">Welcome to</p>

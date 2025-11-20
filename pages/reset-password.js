@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="auth-container">
-      <div className="auth-image-section"></div>
+      <div className="auth-image-section mobile-none"></div>
 
       <div className="auth-form-section">
         <div className="logo">

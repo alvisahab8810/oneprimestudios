@@ -698,14 +698,13 @@
 //   );
 // }
 
-
-
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
 import DealBanner from "@/components/home-page/Cta";
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState([]);
@@ -938,70 +937,165 @@ export default function CheckoutPage() {
   //   }
   // };
 
-
-
   // 📦 Place Order
-const placeOrder = async (method, paymentInfo = {}) => {
-  if (!validateForm()) return;
+  const placeOrder = async (method, paymentInfo = {}) => {
+    if (!validateForm()) return;
 
-  try {
-    setSubmitting(true);
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please log in again.");
-      return;
+    try {
+      setSubmitting(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in again.");
+        return;
+      }
+
+      // Prepare payload matching backend fields
+      const orderPayload = {
+        items: cartItems.map((item) => ({
+          product: item.product?._id || item.product,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        subtotal: cartItems.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        ),
+        shippingCharge: 0, // or your shipping logic
+        total: total,
+        paymentMethod: method,
+      };
+
+      const res = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Order failed");
+
+      // Redirect to success page
+      router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
+    } catch (err) {
+      console.error("Order error:", err);
+      alert(err.message || "Failed to place order.");
+    } finally {
+      setSubmitting(false);
     }
-
-    // Prepare payload matching backend fields
-    const orderPayload = {
-      items: cartItems.map((item) => ({
-        product: item.product?._id || item.product,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-      subtotal: cartItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      ),
-      shippingCharge: 0, // or your shipping logic
-      total: total,
-      paymentMethod: method,
-    };
-
-    const res = await fetch("/api/orders/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(orderPayload),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Order failed");
-
-    // Redirect to success page
-    router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
-  } catch (err) {
-    console.error("Order error:", err);
-    alert(err.message || "Failed to place order.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+  };
 
   if (loading)
-    return <div className="text-center my-5">Loading your cart...</div>;
+    return (
+      <div className="cart-loader-wrapper">
+        <div className="cart-loader-box">
+          <div className="cart-loader-animation"></div>
+
+          <h4 className="cart-loader-text">Loading your cart...</h4>
+        </div>
+
+        <style jsx>{`
+          .cart-loader-wrapper {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f7f9fc;
+          }
+
+          .cart-loader-box {
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+          }
+
+          .cart-loader-animation {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 6px solid #d9d9ff;
+            border-top-color: #6a5cff;
+            border-right-color: #6a5cff;
+            animation: cart-spin 1s linear infinite,
+              pulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(106, 92, 255, 0.3);
+          }
+
+          @keyframes cart-spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.15);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+
+          .cart-loader-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #555;
+            letter-spacing: 0.3px;
+            animation: blinkFade 1.6s infinite ease-in-out;
+          }
+
+          @keyframes blinkFade {
+            0% {
+              opacity: 0.7;
+            }
+            50% {
+              opacity: 1;
+            }
+            100% {
+              opacity: 0.7;
+            }
+          }
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          /* Mobile responsive */
+          @media (max-width: 480px) {
+            .cart-loader-animation {
+              width: 55px;
+              height: 55px;
+            }
+            .cart-loader-text {
+              font-size: 16px;
+            }
+          }
+        `}</style>
+      </div>
+    );
 
   return (
-    <>
-      <div className="container">
-        <Topbar />
-      </div>
+    <div className="checkout-area-page">
+      <Topbar />
+      <Offcanvas />
 
-      <div className="container my-5">
-        <h2 className="mb-4 fw-bold text-center">🛍️ Checkout</h2>
+      <div className="container padding-top-40 padding-b-50">
+        {/* <h2 className="mb-4 fw-bold text-center">Checkout</h2> */}
 
         {cartItems.length === 0 ? (
           <p className="text-center">Your cart is empty.</p>
@@ -1009,7 +1103,7 @@ const placeOrder = async (method, paymentInfo = {}) => {
           <div className="row g-4">
             {/* Shipping Details */}
             <div className="col-md-8">
-              <div className="card shadow-sm p-4 border-0">
+              <div className="card p-4 ">
                 <h4 className="mb-3 fw-semibold">Shipping Details</h4>
 
                 {/* Name & Phone */}
@@ -1029,7 +1123,10 @@ const placeOrder = async (method, paymentInfo = {}) => {
                       readOnly={!!prefilled.name}
                       style={
                         prefilled.name
-                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                          ? {
+                              backgroundColor: "#f5f5f5",
+                              cursor: "not-allowed",
+                            }
                           : {}
                       }
                     />
@@ -1052,7 +1149,10 @@ const placeOrder = async (method, paymentInfo = {}) => {
                       readOnly={!!prefilled.phone}
                       style={
                         prefilled.phone
-                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                          ? {
+                              backgroundColor: "#f5f5f5",
+                              cursor: "not-allowed",
+                            }
                           : {}
                       }
                     />
@@ -1099,7 +1199,10 @@ const placeOrder = async (method, paymentInfo = {}) => {
                       readOnly={!!prefilled.city}
                       style={
                         prefilled.city
-                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                          ? {
+                              backgroundColor: "#f5f5f5",
+                              cursor: "not-allowed",
+                            }
                           : {}
                       }
                     />
@@ -1120,7 +1223,10 @@ const placeOrder = async (method, paymentInfo = {}) => {
                       readOnly={!!prefilled.state}
                       style={
                         prefilled.state
-                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                          ? {
+                              backgroundColor: "#f5f5f5",
+                              cursor: "not-allowed",
+                            }
                           : {}
                       }
                     />
@@ -1142,7 +1248,10 @@ const placeOrder = async (method, paymentInfo = {}) => {
                       readOnly={!!prefilled.zip}
                       style={
                         prefilled.zip
-                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                          ? {
+                              backgroundColor: "#f5f5f5",
+                              cursor: "not-allowed",
+                            }
                           : {}
                       }
                     />
@@ -1156,9 +1265,9 @@ const placeOrder = async (method, paymentInfo = {}) => {
                 {userType === "partner" && (
                   <>
                     <hr />
-                    <h5 className="fw-semibold mb-3 text-primary">
+                    <h4 className="fw-semibold mb-3 ">
                       Partner Business Details
-                    </h5>
+                    </h4>
 
                     <div className="mb-3">
                       <label className="form-label fw-semibold">
@@ -1224,12 +1333,12 @@ const placeOrder = async (method, paymentInfo = {}) => {
 
             {/* Order Summary */}
             <div className="col-md-4">
-              <div className="card shadow-sm p-4 border-0">
+              <div className="card p-4">
                 <h4 className="mb-3 fw-semibold">Order Summary</h4>
                 {cartItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="d-flex align-items-center border-bottom py-3"
+                    className="d-flex align-items-center border-bottom py-3 mob-padding"
                   >
                     <img
                       src={getImageUrl(item.product?.mainImage)}
@@ -1270,7 +1379,7 @@ const placeOrder = async (method, paymentInfo = {}) => {
                 </div>
 
                 <button
-                  className="btn btn-success w-100 mt-4"
+                  className="place-order-btn mt-4"
                   onClick={() => {
                     if (!validateForm()) return;
                     if (cartItems.length === 0)
@@ -1298,6 +1407,6 @@ const placeOrder = async (method, paymentInfo = {}) => {
         <DealBanner />
       </div>
       <Footer />
-    </>
+    </div>
   );
 }

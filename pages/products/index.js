@@ -8,6 +8,7 @@ import ProductSlider from "@/components/home-page/ProductSlider";
 import GoogleReviews from "@/components/home-page/GoogleReviews";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { toast } from "react-hot-toast"; // or "sonner" — whichever you finalized
+import Offcanvas from "@/components/header/Offcanvas";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -76,12 +77,15 @@ export default function Products() {
   }, []);
 
   return (
-    <>
-      <div className="container mb-5">
+    <div className="products-main-page">
         <Topbar />
+        <Offcanvas/>
+         <div className="products-main-row padding-top-40">
+           <div className="container">
+      
 
-        <div style={{ padding: "20px" }}>
-          <div
+        <div className="mobile-products-container">
+          <div className="mobile-products-row"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(4, 1fr)",
@@ -99,6 +103,7 @@ export default function Products() {
               >
                 {/* ❤️ Wishlist button */}
                 <div
+                className="products-wishlist"
                   onClick={(e) => toggleWishlist(product._id, e)}
                   style={{
                     position: "absolute",
@@ -122,6 +127,7 @@ export default function Products() {
 
                 {/* 🛒 Product Card */}
                 <Link
+                className="products-image-card"
                   href={`/products/${product.slug}`}
                   style={{
                     display: "block",
@@ -147,6 +153,7 @@ export default function Products() {
           </div>
         </div>
       </div>
+         </div>
 
       <GoogleReviews />
       <ProductSlider />
@@ -154,6 +161,6 @@ export default function Products() {
         <DealBanner />
       </div>
       <Footer />
-    </>
+    </div>
   );
 }

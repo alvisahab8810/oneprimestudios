@@ -74,7 +74,11 @@ export default function Client() {
         slidesPerView={7}
         // navigation
         breakpoints={{
-          320: { slidesPerView: 1 },
+          320: { slidesPerView: 4 ,
+             spaceBetween: 10,
+
+
+          },
           640: { slidesPerView: 2 },
           1024: { slidesPerView: 7 },
         }}
