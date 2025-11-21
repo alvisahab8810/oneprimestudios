@@ -902,32 +902,16 @@ export default function ProductDetails() {
     Boolean
   );
 
-  const handleWhatsapp = () => {
-    if (!product) return; // ✅ check product exists
+ const handleWhatsapp = () => {
+  const message = "Hi, I want to know more about this product."; 
+  
+  const url = `https://wa.me/${
+    product?.b2cOptions?.whatsappNumber || "918081815141"
+  }?text=${encodeURIComponent(message)}`;
 
-    const baseUrl =
-      typeof window !== "undefined"
-        ? window.location.origin
-        // : "http://localhost:3000/";
-        : "https://oneprimestudios.com/";
+  window.open(url, "_blank");
+};
 
-
-    // safe access
-    const imageUrl = product.mainImage ? `${baseUrl}${product.mainImage}` : "";
-
-    const productUrl = window.location.href;
-
-    // create a WhatsApp message with name, url, and image
-    const msg = `*${product.name}*\n\nCheck this product: ${productUrl}\n${
-      imageUrl ? imageUrl : ""
-    }`;
-
-    const url = `https://wa.me/${
-      product.b2cOptions?.whatsappNumber || "+91 8081815141"
-    }?text=${encodeURIComponent(msg)}`;
-
-    window.open(url, "_blank");
-  };
 
   const addToCart = async () => {
     if (!product) return toast.error("Product not loaded");
