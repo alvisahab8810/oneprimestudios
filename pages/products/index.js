@@ -155,7 +155,7 @@ export default function Products() {
       </div>
          </div>
 
-      <GoogleReviews />
+      {/* <GoogleReviews /> */}
       <ProductSlider />
       <div className="container mb-5">
         <DealBanner />

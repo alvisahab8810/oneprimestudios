@@ -10,58 +10,55 @@ import { Pagination } from "swiper/modules";
 const reviews = [
   {
     id: 1,
-    name: "Chloe Patterson",
-    date: "May 5, 2023",
-    avatar: "/reviews/user1.jpg",
+    name: "Vaibhav Dosar",
+    date: "5 years ago",
+    avatar: "/assets/images/reviews/v.png",
     rating: 4,
-    text: "Great quality and attention to detail. Their designs elevated my brand. I just wish they had a more flexible payment plan for small businesses.",
+    text: "Their team handled our projects across multiple cities with great professionalism. The quality of work was impressive and completely worth appreciating. Highly recommended for creative shoots.",
   },
   {
     id: 2,
-    name: "Ethan Morris",
-    date: "May 5, 2023",
-
-    avatar: "/reviews/user2.jpg",
+    name: "Dinesh Sharma",
+    date: "5 years ago",
+    avatar: "/assets/images/reviews/d.png",
     rating: 5,
-    text: "They are skilled professionals and the service was exceptional. Their structures eliminated unexpected costs upfront.",
+    text: "A very dedicated and skilled team. The service quality was excellent, and the clarity in their process helped avoid any surprises. Truly reliable professionals for all kinds of shoots.",
   },
   {
     id: 3,
-    name: "Sophia Williams",
-    date: "May 5, 2023",
-
-    avatar: "/reviews/user3.jpg",
+    name: "Ravi Kumar",
+    date: "5 years ago",
+    avatar: "/assets/images/reviews/r.png",
     rating: 5,
-    text: "Absolutely loved working with them! The designs exceeded expectations and delivery was right on time. exceeded expectations and ",
+    text: "One of the best photography teams I’ve worked with. Their behavior, creativity, and commitment made the experience outstanding. Would strongly recommend them for weddings and events.",
   },
 
   {
     id: 1,
-    name: "Chloe Patterson",
-    date: "May 5, 2023",
-    avatar: "/reviews/user1.jpg",
+    name: "Anmol Malik",
+    date: "5 years ago",
+    avatar: "/assets/images/reviews/c.png",
     rating: 4,
-    text: "Great quality and attention to detail. Their designs elevated my brand. I just wish they had a more flexible payment plan for small businesses.",
+    text: "A great place for wedding shoots and portfolios. The overall experience was smooth and they delivered everything on time. Really happy with the quality and professionalism of the team.",
   },
   {
     id: 2,
-    name: "Ethan Morris",
-    date: "May 5, 2023",
-
-    avatar: "/reviews/user2.jpg",
+    name: "Shubham Mishra",
+    date: "3 months ago",
+    avatar: "/assets/images/reviews/s.png",
     rating: 5,
-    text: "They are skilled professionals and the service was exceptional. Their structures eliminated unexpected costs upfront.",
+    text: "Amazing work and a very friendly team. They treat every client with care and deliver fantastic results. The overall experience was wonderful and truly worth appreciating.",
   },
   {
     id: 3,
-    name: "Sophia Williams",
-    date: "May 5, 2023",
-
-    avatar: "/reviews/user3.jpg",
+    name: "Priyanshi Dosar",
+    date: "5 years ago",
+    avatar: "/assets/images/reviews/priyanshi.png",
     rating: 5,
-    text: "Absolutely loved working with them! The designs exceeded expectations and delivery was right on time. exceeded expectations and ",
+    text: "Excellent service and great quality work. Completely satisfied with the results. The team was polite, creative, and made the entire process very comfortable. Highly recommended.",
   },
 ];
+
 
 export default function GoogleReviews() {
   return (
@@ -82,6 +79,7 @@ export default function GoogleReviews() {
         slidesPerView={3.3}
         spaceBetween={30}
         grabCursor={true}
+        loop={true}
 
         // pagination={{ clickable: true }}
         modules={[Pagination]}
@@ -103,7 +101,7 @@ export default function GoogleReviews() {
               <div className="review-header">
                 <div className="review-user">
                   <img
-                    src={"/assets/images/reviews/user-profile.png"}
+                    src={review.avatar}
                     alt={review.name}
                     className="review-avatar"
                   />

@@ -258,7 +258,10 @@ export default function Topbar() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [openProfileCard, setOpenProfileCard] = useState(false);
 
-  const dropdownRef = useRef(null);
+
+  // const dropdownRef = useRef(null);x
+  const desktopDropdownRef = useRef(null);
+const mobileDropdownRef = useRef(null);
 
   useEffect(() => {
     const name = localStorage.getItem("name");
@@ -271,11 +274,17 @@ export default function Topbar() {
     fetchWishlistCount();
 
     // OUTSIDE CLICK HANDLER — FIXED TO IGNORE INTERNAL CLICKS
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpenProfileCard(false);
-      }
-    };
+  const handleClickOutside = (e) => {
+  if (
+    (desktopDropdownRef.current && desktopDropdownRef.current.contains(e.target)) ||
+    (mobileDropdownRef.current && mobileDropdownRef.current.contains(e.target))
+  ) {
+    return; // Clicked inside → do nothing
+  }
+
+  setOpenProfileCard(false);
+};
+
 
     document.addEventListener("mousedown", handleClickOutside);
 
@@ -377,7 +386,8 @@ export default function Topbar() {
               </Link>
 
               {/* PROFILE DROPDOWN */}
-              <div ref={dropdownRef} className="ops-dropdown-wrapper ">
+             <div ref={desktopDropdownRef} className="ops-dropdown-wrapper ">
+
                 {!user ? (
                   <Link href="/login" className="top-btn  ">
                     <img src="/assets/images/icons/user.png" alt="User" />
@@ -461,7 +471,8 @@ export default function Topbar() {
               </Link>
 
                {/* PROFILE DROPDOWN */}
-              <div ref={dropdownRef} className="ops-dropdown-wrapper ">
+             <div ref={mobileDropdownRef} className="ops-dropdown-wrapper ">
+
                 {!user ? (
                   <Link href="/login" className="top-btn  ">
                     <img src="/assets/images/icons/profile.svg" alt="User" />
@@ -474,9 +485,11 @@ export default function Topbar() {
                     >
                       <img src="/assets/images/icons/profile.svg" alt="Profile" />
                     </button>
-
-                    {openProfileCard && (
-                      <div className="ops-profile-card ops-animate">
+{openProfileCard && (
+  <div
+    className="ops-profile-card ops-animate"
+    onClick={(e) => e.stopPropagation()}
+  >
                         {/* Banner */}
                         <div className="ops-card-banner">
                           <img src="/assets/images/banner-girl.png" alt="Offer" />

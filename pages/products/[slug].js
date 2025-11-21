@@ -908,7 +908,9 @@ export default function ProductDetails() {
     const baseUrl =
       typeof window !== "undefined"
         ? window.location.origin
-        : "http://localhost:3000/";
+        // : "http://localhost:3000/";
+        : "https://oneprimestudios.com/";
+
 
     // safe access
     const imageUrl = product.mainImage ? `${baseUrl}${product.mainImage}` : "";
@@ -1252,69 +1254,69 @@ export default function ProductDetails() {
               // B2C Section
               <div className="mobile-none">
                 <div className={styles.b2cActions}>
-                <div className="d-flex  align-items-center">
-                  {product.b2cOptions?.whatsappSupport && (
-                    <button
-                      className={styles.whatsappBtn}
-                      onClick={handleWhatsapp}
-                    >
-                      <img
-                        src="/assets/images/icons/whatsapp.svg"
-                        alt="whatsapp icon"
-                      />{" "}
-                      Chat on WhatsApp
-                    </button>
-                  )}
+                  <div className="d-flex  align-items-center">
+                    {product.b2cOptions?.whatsappSupport && (
+                      <button
+                        className={styles.whatsappBtn}
+                        onClick={handleWhatsapp}
+                      >
+                        <img
+                          src="/assets/images/icons/whatsapp.svg"
+                          alt="whatsapp icon"
+                        />{" "}
+                        Chat on WhatsApp
+                      </button>
+                    )}
 
-                  {product.b2cOptions?.designUpload && (
-                    <ProductFileUpload
-                      product={product}
-                      selectedFiles={selectedFiles}
-                      setSelectedFiles={setSelectedFiles}
-                      setFiles={setFiles} // REQUIRED
-                      uploadFiles={uploadFiles}
-                    />
+                    {product.b2cOptions?.designUpload && (
+                      <ProductFileUpload
+                        product={product}
+                        selectedFiles={selectedFiles}
+                        setSelectedFiles={setSelectedFiles}
+                        setFiles={setFiles} // REQUIRED
+                        uploadFiles={uploadFiles}
+                      />
 
-                    // <div className={styles.fileUpload}>
-                    //   {/* hide native input */}
-                    //   <input
-                    //     type="file"
-                    //     id="fileUpload"
-                    //     multiple
-                    //     onChange={handleFiles}
-                    //     style={{ display: "none" }}
-                    //   />
+                      // <div className={styles.fileUpload}>
+                      //   {/* hide native input */}
+                      //   <input
+                      //     type="file"
+                      //     id="fileUpload"
+                      //     multiple
+                      //     onChange={handleFiles}
+                      //     style={{ display: "none" }}
+                      //   />
 
-                    //   {/* your existing button design but now works as file picker */}
-                    //   <label
-                    //     htmlFor="fileUpload"
-                    //     className={styles.secondaryBtn}
-                    //   >
-                    //     <img
-                    //       src="/assets/images/icons/upload.svg"
-                    //       alt="upload icon"
-                    //     />{" "}
-                    //     {selectedFiles?.length > 0
-                    //       ? `${selectedFiles.length} file(s) selected`
-                    //       : "Upload Your Design"}
-                    //   </label>
+                      //   {/* your existing button design but now works as file picker */}
+                      //   <label
+                      //     htmlFor="fileUpload"
+                      //     className={styles.secondaryBtn}
+                      //   >
+                      //     <img
+                      //       src="/assets/images/icons/upload.svg"
+                      //       alt="upload icon"
+                      //     />{" "}
+                      //     {selectedFiles?.length > 0
+                      //       ? `${selectedFiles.length} file(s) selected`
+                      //       : "Upload Your Design"}
+                      //   </label>
 
-                    //   {/* keep your upload button */}
+                      //   {/* keep your upload button */}
 
-                    //   <button
-                    //     type="button"
-                    //     className="upload-btn"
-                    //     onClick={uploadFiles}
-                    //   >
-                    //     Submit
-                    //   </button>
-                    // </div>
-                  )}
-                </div>
+                      //   <button
+                      //     type="button"
+                      //     className="upload-btn"
+                      //     onClick={uploadFiles}
+                      //   >
+                      //     Submit
+                      //   </button>
+                      // </div>
+                    )}
+                  </div>
 
-                {/* b2c add to cart button  */}
+                  {/* b2c add to cart button  */}
 
-                {/* <button className={styles.primaryBtn} onClick={addToCart}>
+                  {/* <button className={styles.primaryBtn} onClick={addToCart}>
                   <img
                     src="/assets/images/icons/shopping-cart.svg"
                     alt="cart icon"
@@ -1323,29 +1325,29 @@ export default function ProductDetails() {
                   
                 </button> */}
 
-                {!product.b2cOptions?.designUpload ||
-                uploadedFiles.length > 0 ? (
-                  <button className={styles.primaryBtn} onClick={addToCart}>
-                    <img
-                      src="/assets/images/icons/shopping-cart.svg"
-                      alt="cart icon"
-                    />{" "}
-                    Add to Cart
-                  </button>
-                ) : (
-                  <p className="text-muted mt-2">
-                    Please upload your design before adding to cart.
-                  </p>
-                )}
+                  {!product.b2cOptions?.designUpload ||
+                  uploadedFiles.length > 0 ? (
+                    <button className={styles.primaryBtn} onClick={addToCart}>
+                      <img
+                        src="/assets/images/icons/shopping-cart.svg"
+                        alt="cart icon"
+                      />{" "}
+                      Add to Cart
+                    </button>
+                  ) : (
+                    <p className="text-muted mt-2">
+                      Please upload your design before adding to cart.
+                    </p>
+                  )}
 
-                <h4 className="product-description">Product Description</h4>
-                <div
-                  className={styles.description}
-                  dangerouslySetInnerHTML={{
-                    __html: product.description || product.shortDescription,
-                  }}
-                />
-              </div>
+                  <h4 className="product-description">Product Description</h4>
+                  <div
+                    className={styles.description}
+                    dangerouslySetInnerHTML={{
+                      __html: product.description || product.shortDescription,
+                    }}
+                  />
+                </div>
               </div>
             )}
           </aside>
@@ -1485,38 +1487,27 @@ export default function ProductDetails() {
       <div className="ops-mobile-sticky">
         {/* BUTTON AREA  */}
         {!mobilePanelOpen && uploadedFiles.length === 0 && (
+          <div className="desktop-none">
+            <div className="mobile-whtasapp d-flex  align-items-center justify-between">
+              {product.b2cOptions?.whatsappSupport && (
+                <button className={styles.whatsappBtn} onClick={handleWhatsapp}>
+                  <img
+                    src="/assets/images/icons/whatsapp.svg"
+                    alt="whatsapp icon"
+                  />{" "}
+                  WhatsApp
+                </button>
+              )}
 
-          
-            <div className="desktop-none">
-
-               <div className="mobile-whtasapp d-flex  align-items-center justify-between">
-                  {product.b2cOptions?.whatsappSupport && (
-                    <button
-                      className={styles.whatsappBtn}
-                      onClick={handleWhatsapp}
-                    >
-                      <img
-                        src="/assets/images/icons/whatsapp.svg"
-                        alt="whatsapp icon"
-                      />{" "}
-                      WhatsApp
-                    </button>
-                  )}
-
-                 <ProductFileUpload
-                    product={product}
-                    selectedFiles={selectedFiles}
-                    setSelectedFiles={setSelectedFiles}
-                    setFiles={setFiles} // REQUIRED
-                    uploadFiles={uploadFiles}
-                  />
-                </div>
-
-                
-                 
-
-                
-                </div>
+              <ProductFileUpload
+                product={product}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                setFiles={setFiles} // REQUIRED
+                uploadFiles={uploadFiles}
+              />
+            </div>
+          </div>
         )}
 
         {!mobilePanelOpen && uploadedFiles.length > 0 && (
@@ -1525,10 +1516,6 @@ export default function ProductDetails() {
             Add to Cart
           </button>
         )}
-
-
-          
-
       </div>
 
       <ProductSlider />

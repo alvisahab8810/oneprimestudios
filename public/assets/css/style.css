@@ -391,6 +391,7 @@ a{
    border: 1px solid #DCE2EE;
    flex-direction: column;
    justify-content: space-between;
+   height:283px;
 }
 
 .review-header {

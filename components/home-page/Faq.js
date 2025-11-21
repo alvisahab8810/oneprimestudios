@@ -44,7 +44,7 @@ const FaqAccordion = () => {
                 onClick={() => toggle(index)}
               >
                 <span className="question-text">{faq.question}</span>
-                <span className="toggle-icon">{openIndex === index ? '×' : '+'}</span>
+                <span className="toggle-icon">{openIndex === index ? '-' : '+'}</span>
               </button>
             </h2>
             <div className={`accordion-collapse collapse ${openIndex === index ? 'show' : ''}`}>
