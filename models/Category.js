@@ -21,6 +21,15 @@ const CategorySchema = new mongoose.Schema(
     name: { type: String, required: true, unique: true },
     // type: { type: String, enum: ["b2b", "b2c", "both"], default: "both" }, // NEW field
     slug: { type: String, required: true, unique: true },
+    
+    // ADD THIS 👇
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+    },
+
+    
   },
   { timestamps: true }
 );

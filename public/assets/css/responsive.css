@@ -1251,6 +1251,58 @@
     border-radius: 8px;
     font-weight: 600;
   }
+  .footer-container {
+    flex-wrap: wrap;
+}
+.footer-item {
+    max-width: 100%;
+}
+
+.footer-info {
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.footer-info {
+    padding-top: 20px;
+}
+
+.footer-icon {
+    width: 25px;
+}
+.footer-item h4 {
+    font-size: 15px;
+    margin-bottom: 5px;
+}
+.footer-item p {
+    font-size: 13px;
+}
+
+.footer-logo-section .footer-logo {
+    height: 50px;
+}
+
+.raj-footer {
+    background: #1c2430;
+    padding: 30px 0 20px;
+}
+
+.footer-bottom1 {
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+.footer-bottom1 p {
+    margin: 0;
+}
+
+
+.footer-divider {
+    margin: 20px 0;
+}
+
+.footer-logo {
+    margin-bottom: 10px;
+}
 }
 
 

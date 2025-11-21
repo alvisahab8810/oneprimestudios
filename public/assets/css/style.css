@@ -289,7 +289,7 @@ a{
 }
 
 .categories-title {
-  font-size: 25px;
+  font-size: 30px;
   font-weight: 600;
   margin: 0;
   color: #0D0C0D;
@@ -372,7 +372,7 @@ a{
 }
 
 .reviews-title {
-    font-size: 25px;
+    font-size: 30px;
     font-weight: 600;
     color: #0D0C0D;
     margin-bottom: 25px;
@@ -471,7 +471,7 @@ a{
 }
 
 .product-slider h2 {
-    font-size: 25px;
+    font-size: 30px;
     font-weight: 600;
     color: #0D0C0D;
     margin-bottom: 25px;
@@ -533,7 +533,7 @@ a{
 }
 
 .client-slider h2{
-    font-size: 25px;
+    font-size: 30px;
     font-weight: 600;
     color: #0D0C0D;
     margin-bottom: 25px;
@@ -716,7 +716,7 @@ a{
 
 .custom-accrodion-bx > h2{
   color:#262626;
-  font-size: 25px;
+  font-size: 30px;
   margin-bottom: 40px;
 }
 
@@ -2463,4 +2463,143 @@ ease;
 .bg-brand{
   background: #4a37c0;;
 
+}
+
+.b2c-purchase-row{
+  gap: 10px;
+}
+
+.b2c-purchase-row  .ops-file-uploader{
+  margin-bottom: 0!important;
+}
+
+
+
+.ops-file-uploader {
+  display: inline-block;
+}
+
+.ops-panel-full {
+  width: 100%;
+  margin-top: 15px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.b2c-purchase-row .cart-png {
+  width: 22px;
+    margin-right: 7px;
+}
+
+.ops-file-uploader {
+  width: 100%;
+}
+/* Keep WhatsApp + Upload button always in one row */
+.b2c-purchase-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
+/* Upload button stays inline */
+.b2c-purchase-row .ops-file-uploader {
+  width: auto;
+}
+
+/* When panel open → push drawer below */
+.b2c-purchase-row .ops-file-uploader.expanded {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100% !important;
+  margin-top: 15px;
+  z-index: 10;
+}
+
+/* Drawer UI full width */
+.b2c-purchase-row .ops-panel {
+  width: 100%;
+}
+
+.b2b-add-to-cart .cart-b2b{
+      width: 20px;
+    margin-right: 5px;
+}
+
+
+
+
+.raj-footer {
+  background: #1c2430;
+  padding: 60px 0 20px;
+  color: #fff;
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  /* flex-wrap: wrap; */
+}
+
+.footer-logo-section .footer-logo {
+  height: 70px;
+}
+.footer-info {
+    display: flex;
+    gap: 38px;
+    justify-content: space-between;
+}
+.footer-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    max-width: 33.33%;
+}
+
+.footer-icon {
+  font-size: 40px;
+  color: #6C5DD4;
+}
+
+.footer-item h4 {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.footer-item p {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 0;
+}
+
+.footer-divider {
+  height: 1px;
+  background: #2b3442;
+  border: 0;
+  margin: 40px 0;
+}
+
+.footer-bottom1 {
+  text-align: center;
+  color: #c9c9c9;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-bottom1 a {
+  margin-left: 5px;
+  color: #6c5dd4;
+}
+
+
+
+.footer-item > div {
+    border-left: 1px solid #dddd;
+    padding-left: 15px;
 }

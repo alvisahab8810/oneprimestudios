@@ -33,7 +33,13 @@ export default async function handler(req, res) {
       const exists = await Category.findOne({ $or: [{ name }, { slug }] });
       if (exists) return res.status(400).json({ message: "Category already exists" });
 
-      const category = await Category.create({ name, slug });
+      // const category = await Category.create({ name, slug });
+      const category = await Category.create({
+  name,
+  slug,
+  parent: req.body.parent || null,   // ← SAVE THE PARENT
+});
+
       return res.status(201).json(category);
     } catch (err) {
       return res.status(500).json({ message: err.message });

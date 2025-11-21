@@ -37,7 +37,8 @@ export default function ProductFileUpload({
   };
 
   return (
-    <div className="ops-file-uploader">
+    // <div className="ops-file-uploader">
+      <div className={`ops-file-uploader ${openPanel ? "expanded" : ""}`}>
 
       {/* REAL Hidden File Input (old system) */}
       <input
@@ -131,7 +132,12 @@ export default function ProductFileUpload({
               <button
                 className="ops-btn-primary"
                 disabled={selectedFiles.length === 0}
-                onClick={uploadFiles}
+                // onClick={uploadFiles}
+                onClick={async () => {
+                await uploadFiles();
+                setOpenPanel(false);        // <-- auto-close drawer
+              }}
+
               >
                 Attach File
               </button>
