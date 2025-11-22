@@ -63,8 +63,24 @@ export default function Client() {
   ];
 
   return (
+
+
+    <>
+
+    <div className="container ">
+      <div className="categories-header">
+          <h3 className="categories-title">Our Happy Clients</h3>
+
+          {/* <Link href="/categories" className="view-all-link">
+            View All <img src="/assets/images/icons/arrow.svg" />
+          </Link> */}
+        </div>
+
+        <div className="underline"></div>
+    </div>
     <div className="client-slider">
-      <h2>Our Happy Clients</h2>
+      
+      
 
       <Swiper
       className="happy-client"
@@ -94,5 +110,6 @@ export default function Client() {
         ))}
       </Swiper>
     </div>
+    </>
   );
 }

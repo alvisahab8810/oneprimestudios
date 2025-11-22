@@ -291,8 +291,20 @@ export default function ProductSlider() {
   }
 
   return (
+
+    <>
+
+       <div className="container mobile-none">
+      <div className="categories-header">
+          <h3 className="categories-title">Our Most Popular Products</h3>
+
+          
+        </div>
+
+        <div className="underline"></div>
+    </div>
     <div className="product-slider">
-      <h2 className="mobile-none">Our Most Popular Products</h2>
+      {/* <h2 className="mobile-none">Our Most Popular Products</h2> */}
       <div className="desktop-none">
          <div className="categories-header mobile-products">
           <h3 className="categories-title">Our Most Popular Products</h3>
@@ -336,5 +348,6 @@ export default function ProductSlider() {
         }
       `}</style>
     </div>
+    </>
   );
 }

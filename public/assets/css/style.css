@@ -292,6 +292,7 @@ a{
   font-size: 30px;
   font-weight: 600;
   margin: 0;
+  margin-bottom: 20px;
   color: #0D0C0D;
 }
 
@@ -310,7 +311,8 @@ a{
   width: 100%;
   height: 1px;
   background: #EDEDED;
-  margin: 15px 0 38px 0;
+  margin-bottom: 50px;
+  /* margin: 22px 0px; */
   position: relative;
 }
 
@@ -366,16 +368,17 @@ a{
 
 .reviews-section {
   /* margin: 50px 0; */
-    max-width: 93%;
-    margin-left: auto !important;
-    margin-right: 0 !important;
+  max-width: 93%;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  margin-bottom: 100px;
 }
 
 .reviews-title {
     font-size: 30px;
     font-weight: 600;
     color: #0D0C0D;
-    margin-bottom: 25px;
+    margin-bottom: 50px;
 }
 
 .reviews-swiper {
@@ -468,13 +471,14 @@ a{
     margin-left: auto !important;
     margin-right: 0 !important;
     margin:100px 0px;
+    margin-top: 50px;
 }
 
 .product-slider h2 {
     font-size: 30px;
     font-weight: 600;
     color: #0D0C0D;
-    margin-bottom: 25px;
+    margin-bottom: 50px;
 }
 
 /* Product Card */
@@ -511,9 +515,9 @@ a{
 .product-card .title {
   padding: 12px;
   text-align: left;
-  font-size: 14px;
+  font-size: 15px;
   padding-left: 0;
-  font-weight: 500;
+  font-weight: 600;
   color:#111;
 }
 
@@ -525,18 +529,22 @@ a{
 
 .client-slider {
 
-    max-width: 93%;
-    margin-left: auto !important;
-    margin-right: 0 !important;
-    margin:100px 0px;
+max-width: 93%;
 
+margin-left: auto !important;
+
+margin-right: 0 !important;
+
+margin:100px 0px;
+
+margin-top: 50px;
 }
 
 .client-slider h2{
     font-size: 30px;
     font-weight: 600;
     color: #0D0C0D;
-    margin-bottom: 25px;
+    margin-bottom: 50px;
 }
 
 .client-card img {
@@ -717,7 +725,7 @@ a{
 .custom-accrodion-bx > h2{
   color:#262626;
   font-size: 30px;
-  margin-bottom: 40px;
+  margin-bottom: 50px;
 }
 
 .custom-accrodion-bx {
