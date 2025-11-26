@@ -20,12 +20,12 @@ export default function Dashboard() {
         style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
       >
         {/* Top navbar */}
-        <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
+        <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 admin-topbar">
           <button
             className="btn btn-outline-primary me-3"
             onClick={toggleSidebar}
           >
-            ☰
+            <img src="/assets/images/admin/indent-decrease.svg"></img>
           </button>
           <div className="ms-auto d-flex align-items-center">
             <FaBell className="me-3" size={20} />

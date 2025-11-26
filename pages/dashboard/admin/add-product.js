@@ -409,7 +409,7 @@ export default function AddProduct() {
               </select>
 
               {/* Add New Category Toggle */}
-              {!showCategoryForm ? (
+              {/* {!showCategoryForm ? (
                 <button
                   type="button"
                   className="btn btn-link p-0"
@@ -421,7 +421,6 @@ export default function AddProduct() {
                 <div className="card p-3 mt-2">
                   <h5>Add New Category</h5>
 
-                  {/* Category Name */}
                   <input
                     className="form-control mt-2"
                     placeholder="Category Name"
@@ -429,7 +428,6 @@ export default function AddProduct() {
                     onChange={(e) => setNewCategoryName(e.target.value)}
                   />
 
-                  {/* Parent Category Selector */}
                   <select
                     className="form-select mt-2"
                     value={parentCategoryId}
@@ -461,7 +459,7 @@ export default function AddProduct() {
                     </button>
                   </div>
                 </div>
-              )}
+              )} */}
             </section>
 
             {/* <section className="category-section">

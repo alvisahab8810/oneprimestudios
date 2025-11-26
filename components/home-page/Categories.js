@@ -166,24 +166,35 @@ export default function Categories() {
   // Fetch only parent categories
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("/api/categories/parents");
+      const res = await axios.get("/api/categories/");
       setCategories(res.data || []);
     } catch (err) {
       console.error("Error fetching categories:", err);
     }
   };
 
+  // const getImage = (cat) => {
+  //   const nameKey = cat.name.toLowerCase();
+
+  //   // if matching image exists → return it
+  //   if (categoryImages[nameKey]) {
+  //     return categoryImages[nameKey];
+  //   }
+
+  //   // fallback image
+  //   return "/assets/images/categories/default.png";
+  // };
+
+
   const getImage = (cat) => {
-    const nameKey = cat.name.toLowerCase();
+  if (cat.image) {
+    return cat.image.startsWith("http")
+      ? cat.image
+      : `${cat.image}`;
+  }
+  return "/assets/images/categories/default.png";
+};
 
-    // if matching image exists → return it
-    if (categoryImages[nameKey]) {
-      return categoryImages[nameKey];
-    }
-
-    // fallback image
-    return "/assets/images/categories/default.png";
-  };
 
   return (
     <div className="categories-section">

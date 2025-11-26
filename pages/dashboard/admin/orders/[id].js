@@ -699,6 +699,20 @@ export default function AdminOrderDetail() {
               </div>
             </div>
 
+            {order.status === "Order Ready" && (
+  <div className="alert alert-warning my-3">
+    <strong>Dispatch Request:</strong>{" "}
+    {order.dispatchRequest === "pending" ? "Customer Requested Dispatch" : "Waiting for customer request"}
+  </div>
+)}
+
+{order.dispatchRequest === "approved" && (
+  <div className="alert alert-success my-3">
+    Dispatch request approved — Order is dispatched
+  </div>
+)}
+
+
             {/* Status update */}
             <div className="mt-4 pt-3 border-top">
               <h6 className="fw-semibold mb-2">Update Order Status</h6>
@@ -713,12 +727,14 @@ export default function AdminOrderDetail() {
                   <option value="Design Rejected">Design Rejected</option>
                   <option value="In Progress">In Progress</option>
                   <option value="In Packaging">In Packaging</option>
+                    {/* NEW */}
+                   <option value="Order Ready">Order Ready</option>
                   <option value="Order Dispatched">Order Dispatched</option>
                   <option value="Order Delivered">Order Delivered</option>
                 </select>
 
                 {newStatus === "Design Rejected" && (
-                  <input
+                  <inputx
                     type="text"
                     placeholder="Enter rejection remarks"
                     value={remarks}

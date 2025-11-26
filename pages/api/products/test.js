@@ -47,7 +47,7 @@
 
 
 
-// pages/api/products/[id].js
+// pages/api/products/[slug].js
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
 import nextConnect from "next-connect";

@@ -93,6 +93,21 @@ if (req.method === "PUT") {
       order.remarks = "";
     }
 
+
+
+    // --- NEW LOGIC FOR DISPATCH REQUEST FLOW ---
+
+      // If admin selects "Order Ready", customer can now send dispatch request
+      if (status === "Order Ready") {
+        order.dispatchRequest = "none"; // reset previous values
+      }
+
+      // If admin marks order as dispatched, auto-approve request
+      if (status === "Order Dispatched") {
+        order.dispatchRequest = "approved";
+      }
+
+   // --- NEW LOGIC FOR DISPATCH REQUEST FLOW ---
     await order.save();
 
     // Prepare email content

@@ -341,6 +341,7 @@ a{
 .category-img-wrap {
   width: 150px;
   height: 150px;
+  overflow: hidden;
   margin: 0 auto 0px auto;
   border-radius: 50%;
   display: flex;
@@ -2610,4 +2611,97 @@ ease;
 .footer-item > div {
     border-left: 1px solid #dddd;
     padding-left: 15px;
+}
+
+/* =================================admin panel css-==================== */
+
+/* Unique Parent Wrapper */
+.ops-admin-sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid #e6e6e6;
+  padding: 20px 12px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  display: none;
+  transition: 0.3s ease-in-out;
+  z-index: 100000;
+}
+
+.ops-admin-sidebar.open {
+  display: block;
+}
+
+.ops-admin-sidebar .navbar{
+  margin-left: 20px;
+}
+/* Inner container */
+.ops-sidebar-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Logo */
+.ops-logo img {
+    width: 100px;
+    margin-bottom: 30px;
+}
+
+/* Sidebar Items */
+.ops-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #111111b5;
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: 0.2s;
+}
+
+.ops-item img {
+  width: 20px;
+  height: 20px;
+}
+.ops-item:hover {
+    background: #f5f7ff;
+    color: #8b909a;
+}
+/* Active Item */
+.ops-item.active {
+  background: #1A71F6 !important;
+  color: #fff !important;
+}
+
+.ops-item.active img {
+  filter: brightness(0) invert(1);
+}
+
+/* Section Title */
+.ops-section-title {
+  font-size: 12px;
+  color: #9c9c9c;
+  margin: 20px 14px 10px;
+  letter-spacing: 0.5px;
+  display: block;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+
+
+/* ACTIVE STATE */
+.ops-item.active {
+  background: #1A71F6 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.ops-item.active img {
+  filter: brightness(0) invert(1) !important;
 }

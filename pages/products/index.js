@@ -76,6 +76,9 @@ export default function Products() {
     axios.get(url).then((res) => setProducts(res.data));
   }, []);
 
+
+  
+
   return (
     <div className="products-main-page">
         <Topbar />

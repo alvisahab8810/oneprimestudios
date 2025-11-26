@@ -485,11 +485,11 @@ const mobileDropdownRef = useRef(null);
                     >
                       <img src="/assets/images/icons/profile.svg" alt="Profile" />
                     </button>
-{openProfileCard && (
-  <div
-    className="ops-profile-card ops-animate"
-    onClick={(e) => e.stopPropagation()}
-  >
+                      {openProfileCard && (
+                        <div
+                          className="ops-profile-card ops-animate"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                         {/* Banner */}
                         <div className="ops-card-banner">
                           <img src="/assets/images/banner-girl.png" alt="Offer" />

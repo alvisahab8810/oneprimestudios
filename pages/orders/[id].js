@@ -327,6 +327,28 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
+
+  const sendDispatchRequest = async () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await axios.post(
+      `/api/orders/dispatch-request/${order._id}`,
+      {},
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+
+    toast.success("Dispatch request sent!");
+    // reload page
+    window.location.reload();
+  } catch (err) {
+    toast.error(
+      err.response?.data?.message || "Failed to send dispatch request"
+    );
+  }
+};
+
+
   useEffect(() => {
     if (!id) return;
     const fetchOrder = async () => {
@@ -504,6 +526,30 @@ export default function OrderDetailPage() {
               >
                 {order.status}
               </span>
+
+              {/* ✔ If order is READY — show button */}
+                {order.status === "Order Ready" && order.dispatchRequest === "none" && (
+                  <div className="mt-3">
+                    <button className="track-order-btn" onClick={sendDispatchRequest}>
+                      Send Dispatch Request
+                    </button>
+                  </div>
+                )}
+
+                {/* ✔ When request sent but admin has not approved yet */}
+                {order.status === "Order Ready" && order.dispatchRequest === "pending" && (
+                  <div className="alert alert-info mt-3">
+                    Dispatch request sent. Waiting for admin approval.
+                  </div>
+                )}
+
+                {/* ✔ When admin approves by marking "Order Dispatched" */}
+                {order.dispatchRequest === "approved" && (
+                  <div className="alert alert-success mt-3">
+                    Your dispatch request has been approved.
+                  </div>
+                )}
+
 
               {/* ✅ Show rejection reason only when Design Rejected */}
               {order.status === "Design Rejected" && order.remarks && (

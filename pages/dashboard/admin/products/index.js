@@ -268,12 +268,12 @@ export default function AdminProductList() {
                             <option value="published">Published</option>
                             <option value="draft">Draft</option>
                           </select>
-                          {/* <Link
-                            href={`/dashboard/products/edit/${p._id}`}
-                            className="btn btn-sm btn-outline-secondary me-1"
-                          >
-                            Edit
-                          </Link> */}
+                           <Link
+                                href={`/dashboard/admin/edit-product/${p._id}`}
+                                className="btn btn-sm btn-outline-secondary me-2"
+                              >
+                                Edit
+                              </Link>
                           <button
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => deleteProduct(p._id)}
