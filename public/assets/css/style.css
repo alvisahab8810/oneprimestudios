@@ -2658,7 +2658,7 @@ ease;
   padding: 12px 14px;
   border-radius: 6px;
   font-size: 15px;
-  color: #111111b5;
+  color: #111;
   text-decoration: none;
   margin-bottom: 10px;
   transition: 0.2s;
@@ -2704,4 +2704,127 @@ ease;
 
 .ops-item.active img {
   filter: brightness(0) invert(1) !important;
+}
+
+
+
+
+/* UNIQUE PARENT */
+.admin-dashboard-v2 {
+  background: #f8f9fc;
+  min-height: 100vh;
+}
+
+/* STATS CARDS */
+.admin-dashboard-v2 .stats-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 10px 15px;
+  transition: 0.2s;
+  border: 1px solid #E7E7E7;
+}
+
+.admin-dashboard-v2 .stats-card.highlight-card {
+  background: #0057ff;
+  color: #fff;
+}
+
+.admin-dashboard-v2 .stats-card .top-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  color: #454545;
+  font-weight: 500;
+  padding-bottom: 20px;
+}
+
+.admin-dashboard-v2 .stats-card .title {
+  font-weight: 500;
+}
+
+.admin-dashboard-v2 .stats-card .arrow {
+  font-weight: bold;
+  opacity: 0.6;
+}
+
+.admin-dashboard-v2 .stats-card .value {
+  font-size: 30px;
+  font-weight: 500;
+  margin: 8px 0;
+  color: #1A71F6;
+  margin-bottom: 0;
+}
+
+.admin-dashboard-v2 .percent {
+  font-size: 13px;
+}
+
+.admin-dashboard-v2 .percent.green {
+  color: #16a34a;
+}
+
+.admin-dashboard-v2 .percent.red {
+  color: #dc2626;
+}
+
+/* RECENT ORDERS */
+.admin-dashboard-v2 .recent-orders-card {
+  border-radius: 16px;
+}
+
+.admin-dashboard-v2 table thead {
+  background: #f1f3f7;
+}
+
+.admin-dashboard-v2 table th {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-dashboard-v2 .status-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.status-pill.pending {
+  background: #fff7e5;
+  color: #d97706;
+}
+
+.status-pill.completed {
+  background: #e7fee7;
+  color: #15803d;
+}
+
+
+.main-area-pad{
+  padding:20px;
+}
+
+.dashboard-main-h{
+  font-size: 30px;
+  margin-bottom: 35px;
+}
+
+.stats-card.highlight-card  span {
+    color: white;
+}
+
+.stats-card.highlight-card .value {
+    color: white;
+}
+.highlight-card .top-row .arrow img{
+  filter: brightness(0) invert(1);
+}
+
+.user-flow-icon{
+  height:50px;
+  width:50px;
+  background: #fff;
+  border-radius: 8px;
+  border:1px solid #F6F6F6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

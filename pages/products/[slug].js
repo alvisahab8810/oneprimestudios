@@ -339,7 +339,79 @@ export default function ProductDetails() {
 
                         {/* (attributes unchanged) */}
                         {/* your original UI for text, select, number, checkbox */}
-                        {/* ... */}
+                          {attr.type === "text" && (
+                          <input
+                            type="text"
+                            placeholder={`Enter ${attr.name}`}
+                            onChange={(e) =>
+                              handleAttrChange(attr.name, e.target.value)
+                            }
+                            className={styles.inputField}
+                          />
+                        )}
+
+                        {attr.type === "number" && (
+                          <input
+                            type="number"
+                            placeholder={`Enter ${attr.name}`}
+                            onChange={(e) =>
+                              handleAttrChange(attr.name, e.target.value)
+                            }
+                            className={styles.inputField}
+                          />
+                        )}
+
+                        {attr.type === "select" && (
+                          <select
+                            className={styles.selectField}
+                            value={selectedAttrs[attr.name] ?? ""}
+                            onChange={(e) =>
+                              handleAttrChange(attr.name, e.target.value)
+                            }
+                          >
+                            <option value="">Select {attr.name}</option>
+                            {(attr.values || []).map((val, idx) => (
+                              <option key={idx} value={val.label}>
+                                {val.label}{" "}
+                                {val.priceModifier
+                                  ? `( +₹${val.priceModifier} )`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {attr.type === "checkbox" && (
+                          <div className={styles.checkboxGroup}>
+                            {(attr.values || []).map((val, idx) => (
+                              <label key={idx} className={styles.checkboxLabel}>
+                                <input
+                                  type="checkbox"
+                                  value={val.label}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setSelectedAttrs((prev) => {
+                                      const current = prev[attr.name] || [];
+                                      return {
+                                        ...prev,
+                                        [attr.name]: checked
+                                          ? [...current, val.label]
+                                          : current.filter(
+                                              (v) => v !== val.label
+                                            ),
+                                      };
+                                    });
+                                  }}
+                                  className={styles.checkboxInput}
+                                />
+                                {val.label}{" "}
+                                {val.priceModifier
+                                  ? `( +₹${val.priceModifier} )`
+                                  : ""}
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
