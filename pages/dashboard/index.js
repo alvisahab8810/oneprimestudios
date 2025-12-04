@@ -276,7 +276,7 @@ export default function Dashboard() {
             </div>
 
             {/* Total Revenue */}
-            <div className="col-md-3 mb-3">
+            {/* <div className="col-md-3 mb-3">
               <div className="stats-card highlight-card">
                 <div className="top-row">
                   <span>Total Revenue</span>
@@ -285,39 +285,60 @@ export default function Dashboard() {
                 </div>
                 <div className="value">₹{stats.totalRevenue.toFixed(2)}</div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* RECENT ORDERS TABLE */}
-          <div className="card mt-4 shadow-sm recent-orders-card">
-            <div className="card-body">
-              <h5 className="mb-3 fw-bold">Recent Orders</h5>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>CUSTOMER</th>
-                    <th>STATUS</th>
-                    <th>TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentOrders.map(order => (
-                    <tr key={order._id}>
-                      <td>#{order.orderNumber}</td>
-                      <td>{order.user?.name}</td>
-                      <td>
-                        <span className={`status-pill ${order.status.toLowerCase()}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td>₹{order.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        
+        {/* RECENT ORDERS TABLE */}
+<div className="card mt-4 shadow-sm recent-orders-card">
+  <div className="card-body">
+    <h5 className="mb-3 fw-bold">Recent Orders</h5>
+    <table className="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>CUSTOMER</th>
+          <th>CUSTOMER TYPE</th> {/* NEW */}
+          <th>STATUS</th>
+          <th>TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {stats.recentOrders.map(order => {
+
+          // Detect B2B / B2C
+          let customerType = "N/A";
+          if (order.user?.userType === "partner") customerType = "B2B";
+          if (order.user?.userType === "customer") customerType = "B2C";
+
+          return (
+            <tr key={order._id}>
+              <td>#{order.orderNumber}</td>
+              <td>{order.user?.name}</td>
+
+              <td>
+                <span className="badge bg-primary">
+                  {customerType}
+                </span>
+              </td>
+
+              <td>
+                <span className={`status-pill ${order.status.toLowerCase()}`}>
+                  {order.status}
+                </span>
+              </td>
+
+              <td>₹{order.total}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
 
         </div>
        </div>

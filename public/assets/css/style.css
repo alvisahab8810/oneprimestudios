@@ -106,7 +106,7 @@ a{
 }
 
 .hero-left {
-  background: url("/assets/images/hero/hero-img.png") no-repeat;
+  /* background: url("/assets/images/hero/hero-img.png") no-repeat; */
   width: 75%;
   padding: 40px;
   background-size: cover;
@@ -169,7 +169,7 @@ a{
   color: #F3F3FF;
   font-size: 14px;
   border-radius: 8px;
-  padding: 7px  39px!important;
+  padding: 12px  39px!important;
 }
 
 .hero .btn.primary:hover {
@@ -2828,3 +2828,37 @@ ease;
   justify-content: center;
   align-items: center;
 }
+
+
+.quantity-btns{
+ 
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+
+.hero-slide{
+  display: flex;
+  align-items: center;
+  padding: 40px;
+}
+
+
+ .ops-file-uploader.expanded {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100% !important;
+    margin-top: 15px;
+    z-index: 10;
+
+ }
+
+ #b2border-section{
+  position: relative;
+ }

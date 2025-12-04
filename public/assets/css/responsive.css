@@ -1005,6 +1005,7 @@
     padding: 12px;
     display: flex;
     box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+    flex-flow: column;
 }
 
 .product-details #b2border-section input{

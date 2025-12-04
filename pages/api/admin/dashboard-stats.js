@@ -52,7 +52,9 @@ const contactLeads = await ContactLead.countDocuments();
 
     // 8️⃣ Recent Orders
     const recentOrders = await Order.find()
-      .populate("user", "name")
+      // .populate("user", "name")
+      .populate("user", "name userType")
+
       .sort({ createdAt: -1 })
       .limit(5);
 

@@ -133,6 +133,17 @@ export default function Sidebar({ sidebarOpen }) {
           <img src="/assets/images/admin/partner.svg" /> Partners
         </Link>
 
+
+        {/* Customers */}
+        <Link
+          href="/dashboard/admin/customers"
+          className={`ops-item ${isActive("/dashboard/admin/customers") ? "active" : ""}`}
+        >
+          <img src="/assets/images/admin/partner.svg" /> Customers
+        </Link>
+
+        
+
           {/* Partners */}
         <Link
           href="/dashboard/admin/categories"
