@@ -30,18 +30,47 @@ const handler = nextConnect({
 });
 
 // 🔹 GET all products (with userType filter)
+// handler.get(async (req, res) => {
+//   await dbConnect();
+//   try {
+//     const { userType } = req.query; // partner / customer
+// let filter = { status: "published" }; // add this line
+
+// if (userType === "partner") {
+//   filter["b2bOptions.enabled"] = true;
+// } else if (userType === "customer") {
+//   filter["b2cOptions.enabled"] = true;
+// }
+
+
+//     const products = await Product.find(filter).populate("category");
+//     res.status(200).json(products);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// });
+
 handler.get(async (req, res) => {
   await dbConnect();
   try {
-    const { userType } = req.query; // partner / customer
-let filter = { status: "published" }; // add this line
+    const { userType } = req.query; // "b2b" | "b2c" | undefined
 
-if (userType === "partner") {
-  filter["b2bOptions.enabled"] = true;
-} else if (userType === "customer") {
-  filter["b2cOptions.enabled"] = true;
-}
+    let filter = { status: "published" };
 
+    // -------- NON-LOGIN USER --------
+    if (!userType) {
+      filter.productFor = { $in: ["b2c", "both"] };
+    }
+
+    // -------- B2C USER --------
+    if (userType === "customer" || userType === "b2c") {
+      filter.productFor = { $in: ["b2c", "both"] };
+    }
+
+    // -------- B2B USER --------
+    if (userType === "partner" || userType === "b2b") {
+      filter.productFor = { $in: ["b2b", "both"] };
+    }
 
     const products = await Product.find(filter).populate("category");
     res.status(200).json(products);
@@ -49,6 +78,7 @@ if (userType === "partner") {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 // 🔹 POST new product
 handler.post(
@@ -72,6 +102,7 @@ handler.post(
         stockStatus,
         minOrderQty,
         isFeatured,
+         productFor,     // ⭐ ADD THIS
         b2bOptions,
         b2cOptions,
         attributes,
@@ -156,6 +187,8 @@ parsedAttributes.forEach(attr => {
         stockStatus: stockStatus || "in_stock",
         minOrderQty: minOrderQty ? Number(minOrderQty) : 1,
         isFeatured: isFeatured === "true" || isFeatured === true,
+          productFor: productFor || "both", // ⭐ FINAL FIX ⭐
+
         attributes: parsedAttributes,
         pricingTiers: parsedTiers,
         b2bOptions: parsedB2B,

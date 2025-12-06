@@ -68,16 +68,32 @@ export default function Products() {
     }
   };
 
+  // useEffect(() => {
+  //   const userType = localStorage.getItem("userType");
+  //   let url = "/api/products";
+  //   if (userType) url += `?userType=${userType}`;
+
+  //   axios.get(url).then((res) => setProducts(res.data));
+  // }, []);
+
+
   useEffect(() => {
-    const userType = localStorage.getItem("userType");
-    let url = "/api/products";
-    if (userType) url += `?userType=${userType}`;
+  const token = localStorage.getItem("token");
+  const userType = localStorage.getItem("userType");
 
-    axios.get(url).then((res) => setProducts(res.data));
-  }, []);
+  let url = "/api/products";
 
+  // If not logged in → force B2C only
+  if (!token) {
+    url += "?userType=b2c";
+  } else {
+    // Logged-in users → use saved userType (b2b or b2c)
+    url += `?userType=${userType || "b2c"}`;
+  }
 
-  
+  axios.get(url).then((res) => setProducts(res.data));
+}, []);
+
 
   return (
     <div className="products-main-page">

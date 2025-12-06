@@ -42,28 +42,21 @@ export default function ProductDetails() {
   // const [selectedFiles, setSelectedFiles] = useState([]);
 
   // Compute Add-to-Cart visibility safely
+
+
   const canAddToCart = useMemo(() => {
-    if (!product) return false;
+  if (!product) return false;
 
-    const hasLegacyFile = uploadedFiles.length > 0;
+  // legacy upload system (b2bOptions.allowFileUpload)
+  const hasLegacyFile = uploadedFiles.length > 0;
 
-    const uploadAttrs =
-      product?.attributes?.filter((a) => a.type === "upload") || [];
+  // new upload attributes system
+  const hasAttributeUpload =
+    Object.keys(uploadedAttrFiles).length > 0;
 
-    const allAttributesSatisfied = uploadAttrs.every((a, idx) => {
-      const safeName = (a.name || "attr").trim();
-      const attrKey = `${safeName
-        .replace(/\s+/g, "_")
-        .replace(/[^a-zA-Z0-9_]/g, "")}__${idx}`;
-
-      if (a.uploadRules?.required) {
-        return !!uploadedAttrFiles[attrKey];
-      }
-      return true;
-    });
-
-    return hasLegacyFile || allAttributesSatisfied;
-  }, [product, uploadedFiles, uploadedAttrFiles]);
+  // FINAL RULE (same as OLD LOGIC)
+  return hasLegacyFile || hasAttributeUpload;
+}, [product, uploadedFiles, uploadedAttrFiles]);
 
   useEffect(() => {
     if (!slug) return;
@@ -468,21 +461,7 @@ export default function ProductDetails() {
             {/* B2B Section */}
             {product.b2bOptions?.enabled ? (
               <div className={styles.b2bForm}>
-                <div className="mobile-none">
-                  {/* 🔥 Show Upload button ONLY if no uploaded files */}
-                  {/* {product.b2bOptions?.allowFileUpload &&
-                    uploadedFiles.length === 0 &&
-                    product.attributes?.some((a) => a.type === "upload") ===
-                      false && (
-                      <ProductFileUpload
-                        product={product}
-                        selectedFiles={selectedFiles}
-                        setSelectedFiles={setSelectedFiles}
-                        setFiles={setFiles}
-                        uploadFiles={uploadFiles}
-                      />
-                    )} */}
-                </div>
+              
 
                 <div className={styles.b2bOrderSection} id="b2border-section">
                   {/* Quantity */}
@@ -525,50 +504,135 @@ export default function ProductDetails() {
                     </small>
                   </div>
 
-                  {/* Attributes */}
-                      {product.attributes?.length > 0 &&
-                      product.attributes
-                        .filter((a) => a.type === "upload")
-                        .map((attr, i) => {
-                          const safeName = (attr.name || "attr").trim();
-                          const attrKey = `${safeName
-                            .replace(/\s+/g, "_")
-                            .replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
+                                  {/* Attributes (ALL types) */}
+{product.attributes?.length ? (
+  product.attributes.map((attr, i) => {
+    const safeName = (attr.name || "attr").trim();
+    const attrKey = `${safeName
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
 
-                          return (
-                            <div key={i} style={{ marginBottom: "15px" }}>
-                              <ProductFileUpload
-                                attributeName={attr.name}
-                                attributeKey={attrKey}
-                                uploadedAttrFiles={uploadedAttrFiles}
-                                setUploadedAttrFiles={setUploadedAttrFiles}
-                                acceptTypes={attr.uploadRules?.acceptTypes}
-                                maxSizeMB={attr.uploadRules?.maxSizeMB}
-                                imageDimensions={
-                                  attr.uploadRules?.imageDimensions
-                                }
-                                singleFile={true}
-                              />
+    return (
+      <div key={i} className={styles.inputGroup}>
+        <label className={styles.inputLabel}>
+          {attr.name}{" "}
+          {attr.required && <span className={styles.required}>*</span>}
+        </label>
 
-                              {/* info text */}
-                              {attr.uploadRules?.imageDimensions && (
-                                <p style={{ fontSize: "13px", color: "#777" }}>
-                                  Allowed Size(s):{" "}
-                                  {attr.uploadRules.imageDimensions}
-                                </p>
-                              )}
+        {/* TEXT */}
+        {attr.type === "text" && (
+          <input
+            type="text"
+            placeholder={`Enter ${attr.name}`}
+            onChange={(e) =>
+              handleAttrChange(attr.name, e.target.value)
+            }
+            className={styles.inputField}
+          />
+        )}
 
-                              <p style={{ fontSize: "13px", color: "#777" }}>
-                                Accept:{" "}
-                                {attr.uploadRules?.acceptTypes?.join(", ") ||
-                                  "Any"}{" "}
-                                {attr.uploadRules?.maxSizeMB && (
-                                  <>• Max {attr.uploadRules.maxSizeMB}MB</>
-                                )}
-                              </p>
-                            </div>
-                          );
-                        })}
+        {/* NUMBER */}
+        {attr.type === "number" && (
+          <input
+            type="number"
+            placeholder={`Enter ${attr.name}`}
+            onChange={(e) =>
+              handleAttrChange(attr.name, e.target.value)
+            }
+            className={styles.inputField}
+          />
+        )}
+
+        {/* SELECT */}
+        {attr.type === "select" && (
+          <select
+            className={styles.selectField}
+            value={selectedAttrs[attr.name] ?? ""}
+            onChange={(e) =>
+              handleAttrChange(attr.name, e.target.value)
+            }
+          >
+            <option value="">Select {attr.name}</option>
+            {(attr.values || []).map((val, idx) => (
+              <option key={idx} value={val.label}>
+                {val.label}
+                {val.priceModifier
+                  ? ` (+₹${val.priceModifier})`
+                  : ""}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {/* CHECKBOX */}
+        {attr.type === "checkbox" && (
+          <div className={styles.checkboxGroup}>
+            {(attr.values || []).map((val, idx) => (
+              <label key={idx} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  value={val.label}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSelectedAttrs((prev) => {
+                      const current = prev[attr.name] || [];
+                      return {
+                        ...prev,
+                        [attr.name]: checked
+                          ? [...current, val.label]
+                          : current.filter((v) => v !== val.label),
+                      };
+                    });
+                  }}
+                  className={styles.checkboxInput}
+                />
+                {val.label}
+                {val.priceModifier
+                  ? ` (+₹${val.priceModifier})`
+                  : ""}
+              </label>
+            ))}
+          </div>
+        )}
+
+        {/* UPLOAD TYPE (NEW) */}
+       <div className="mobile-none">
+
+         {attr.type === "upload" && (
+          <>
+            <ProductFileUpload
+              attributeName={attr.name}
+              attributeKey={attrKey}
+              uploadedAttrFiles={uploadedAttrFiles}
+              setUploadedAttrFiles={setUploadedAttrFiles}
+              acceptTypes={attr.uploadRules?.acceptTypes}
+              maxSizeMB={attr.uploadRules?.maxSizeMB}
+              imageDimensions={attr.uploadRules?.imageDimensions}
+              singleFile={true}
+            />
+
+            {/* Info text */}
+            {attr.uploadRules?.imageDimensions && (
+              <p style={{ fontSize: "13px", color: "#777" }}>
+                Allowed Size(s): {attr.uploadRules.imageDimensions}
+              </p>
+            )}
+
+            <p style={{ fontSize: "13px", color: "#777" }}>
+              Accept: {attr.uploadRules?.acceptTypes?.join(", ") || "Any"}
+              {attr.uploadRules?.maxSizeMB &&
+                ` • Max ${attr.uploadRules.maxSizeMB}MB`}
+            </p>
+          </>
+        )}
+
+       </div>
+      </div>
+    );
+  })
+) : (
+  <p className={styles.noOptions}>No extra options available</p>
+)}
 
                    
                 </div>
@@ -897,6 +961,8 @@ export default function ProductDetails() {
     </div>
   );
 }
+
+
 
 // import { useRouter } from "next/router";
 // import { useEffect, useState, useMemo } from "react";

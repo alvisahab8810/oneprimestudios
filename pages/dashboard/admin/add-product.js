@@ -36,7 +36,8 @@ export default function AddProduct() {
     stockStatus: "in_stock",
     minOrderQty: 1,
     isFeatured: false,
-    productFor: "both", // 'b2b' | 'b2c' | 'both'
+   productFor: "b2b",
+
 
     // attributes & pricing tiers (CSV inputs)
 attributes: [],
@@ -284,7 +285,8 @@ form.pricingTiersCSV = tiersCSV;
         stockStatus: "in_stock",
         minOrderQty: 1,
         isFeatured: false,
-        productFor: "both",
+       productFor: "b2b",
+
         attributes: [],
         pricingTiersCSV: "",
           pricingTiers: [],       // ← ADD THIS ✔
