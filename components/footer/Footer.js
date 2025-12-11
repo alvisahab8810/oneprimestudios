@@ -151,7 +151,24 @@ const Footer = () => {
               </p>
             </div>
           </div>
+          
         </div>
+
+
+
+      </div>
+
+
+
+      
+        {/* Footer Quick Links Section */}
+      <div className="footer-links">
+        <ul>
+          <li><a href="/policy/privacy-policy">Privacy Policy</a></li>
+          <li><a href="/policy/terms-and-conditions">Terms & Conditions</a></li>
+          <li><a href="/policy/refund-cancellation-policy">Refund & Cancellation Policy</a></li>
+          <li><a href="/policy/shipping-delivery-policy">Shipping & Delivery Policy</a></li>
+        </ul>
       </div>
 
       {/* Divider */}

@@ -1307,6 +1307,26 @@
 .footer-logo {
     margin-bottom: 10px;
 }
+
+.footer-links ul li a {
+    font-size: 12px;
+}
+
+.footer-links ul {
+
+    gap: 5px;
+}
+
+.footer-links ul li a {
+    color: #111;
+    padding: 5px 8px;
+}
+.footer-links ul {
+    flex-wrap: wrap;
+}
+.footer-links {
+    padding-top: 20px;
+}
 }
 
 
@@ -1336,6 +1356,23 @@
   .mobile-hero-area__image {
     max-width: 118px;
     max-height: 194px;
+  }
+
+  .privacy-content {
+    padding: 40px 10px;
+  }
+
+  .privacy-content h1 {
+    font-size: 20px;
+  }
+
+  .privacy-content h2 {
+    font-size: 18px;
+  }
+
+  .privacy-content p,
+  .privacy-content ul li {
+    font-size: 14px;
   }
 }
 
