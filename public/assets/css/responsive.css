@@ -768,7 +768,9 @@
 }
 
 .client-card img {
-    height: 35px;
+    /* height: 35px; */
+    width:100%;
+    padding:0;
 }
 
 .product-card img {
@@ -1326,6 +1328,11 @@
 }
 .footer-links {
     padding-top: 20px;
+}
+
+.client-card {
+    height: 65px;
+    padding: 8px;
 }
 }
 

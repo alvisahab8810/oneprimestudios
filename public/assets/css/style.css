@@ -549,13 +549,25 @@ margin-top: 50px;
 }
 
 .client-card img {
-    filter: grayscale(1);
+    /* filter: grayscale(1); */
+    width: 130px;
+    padding: 10px;
+    object-fit: contain;
 }
 .happy-client{
   margin-bottom: 50px;;
 }
 
-
+.client-card {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    justify-content: center;
+    background: white;
+    border: 1px solid #ddd;
+    height: 100px;
+    padding: 10px;
+}
 
 /* ========================== Cta css========================= */
 
