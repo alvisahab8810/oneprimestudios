@@ -429,7 +429,7 @@ const mobileDropdownRef = useRef(null);
                           <img src="/assets/images/banner-girl.png" alt="Offer" />
                           
                           <div className="ops-banner-text">
-                            <h4>FLAT <br/>₹300 OFF</h4>
+                            <h4>FLAT <br/>₹199 OFF</h4>
                             <p>ON YOUR 1ST PURCHASE<br/>
                              & MORE EXCITING OFFERS</p>
 
