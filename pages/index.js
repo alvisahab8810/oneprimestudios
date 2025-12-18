@@ -37,8 +37,9 @@ export default function Home() {
       <div className="main-page">
         <Topbar />
         <Offcanvas/>
+        <HeroSection />
         <div className="container">
-          <HeroSection />
+          
           <HeroSectionMobile/>
           <Features />
           <MobileFeatures/>

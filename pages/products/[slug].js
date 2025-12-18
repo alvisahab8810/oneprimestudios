@@ -43,20 +43,18 @@ export default function ProductDetails() {
 
   // Compute Add-to-Cart visibility safely
 
-
   const canAddToCart = useMemo(() => {
-  if (!product) return false;
+    if (!product) return false;
 
-  // legacy upload system (b2bOptions.allowFileUpload)
-  const hasLegacyFile = uploadedFiles.length > 0;
+    // legacy upload system (b2bOptions.allowFileUpload)
+    const hasLegacyFile = uploadedFiles.length > 0;
 
-  // new upload attributes system
-  const hasAttributeUpload =
-    Object.keys(uploadedAttrFiles).length > 0;
+    // new upload attributes system
+    const hasAttributeUpload = Object.keys(uploadedAttrFiles).length > 0;
 
-  // FINAL RULE (same as OLD LOGIC)
-  return hasLegacyFile || hasAttributeUpload;
-}, [product, uploadedFiles, uploadedAttrFiles]);
+    // FINAL RULE (same as OLD LOGIC)
+    return hasLegacyFile || hasAttributeUpload;
+  }, [product, uploadedFiles, uploadedAttrFiles]);
 
   useEffect(() => {
     if (!slug) return;
@@ -458,15 +456,21 @@ export default function ProductDetails() {
               Minimum Order: {product.minOrderQty}
             </p>
 
+                
+
             {/* B2B Section */}
             {product.b2bOptions?.enabled ? (
               <div className={styles.b2bForm}>
-              
 
+                
                 <div className={styles.b2bOrderSection} id="b2border-section">
+
+             
                   {/* Quantity */}
                   {/* Quantity (tier-stepper) */}
-                  <div className={styles.inputGroup}>
+                 
+                 <div className="b2b-container-area">
+                    <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Quantity</label>
 
                     <div
@@ -497,6 +501,9 @@ export default function ProductDetails() {
                       >
                         +
                       </button>
+
+
+                      
                     </div>
 
                     <small className={styles.helperText}>
@@ -504,137 +511,165 @@ export default function ProductDetails() {
                     </small>
                   </div>
 
-                                  {/* Attributes (ALL types) */}
-{product.attributes?.length ? (
-  product.attributes.map((attr, i) => {
-    const safeName = (attr.name || "attr").trim();
-    const attrKey = `${safeName
-      .replace(/\s+/g, "_")
-      .replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
 
-    return (
-      <div key={i} className={styles.inputGroup}>
-        <label className={styles.inputLabel}>
-          {attr.name}{" "}
-          {attr.required && <span className={styles.required}>*</span>}
-        </label>
+                    <div className="whats-appbtn">
+                    
+      
+                      <a href="https://wa.link/y6hc8l"
+                        className="hire-a-designer"
+                      >
+                       Hire a Designersss
+                      </a>
+                  </div>
+                 </div>
+        
 
-        {/* TEXT */}
-        {attr.type === "text" && (
-          <input
-            type="text"
-            placeholder={`Enter ${attr.name}`}
-            onChange={(e) =>
-              handleAttrChange(attr.name, e.target.value)
-            }
-            className={styles.inputField}
-          />
-        )}
+                 
 
-        {/* NUMBER */}
-        {attr.type === "number" && (
-          <input
-            type="number"
-            placeholder={`Enter ${attr.name}`}
-            onChange={(e) =>
-              handleAttrChange(attr.name, e.target.value)
-            }
-            className={styles.inputField}
-          />
-        )}
 
-        {/* SELECT */}
-        {attr.type === "select" && (
-          <select
-            className={styles.selectField}
-            value={selectedAttrs[attr.name] ?? ""}
-            onChange={(e) =>
-              handleAttrChange(attr.name, e.target.value)
-            }
-          >
-            <option value="">Select {attr.name}</option>
-            {(attr.values || []).map((val, idx) => (
-              <option key={idx} value={val.label}>
-                {val.label}
-                {val.priceModifier
-                  ? ` (+₹${val.priceModifier})`
-                  : ""}
-              </option>
-            ))}
-          </select>
-        )}
+                  {/* Attributes (ALL types) */}
+                  {product.attributes?.length ? (
+                    product.attributes.map((attr, i) => {
+                      const safeName = (attr.name || "attr").trim();
+                      const attrKey = `${safeName
+                        .replace(/\s+/g, "_")
+                        .replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
 
-        {/* CHECKBOX */}
-        {attr.type === "checkbox" && (
-          <div className={styles.checkboxGroup}>
-            {(attr.values || []).map((val, idx) => (
-              <label key={idx} className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  value={val.label}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setSelectedAttrs((prev) => {
-                      const current = prev[attr.name] || [];
-                      return {
-                        ...prev,
-                        [attr.name]: checked
-                          ? [...current, val.label]
-                          : current.filter((v) => v !== val.label),
-                      };
-                    });
-                  }}
-                  className={styles.checkboxInput}
-                />
-                {val.label}
-                {val.priceModifier
-                  ? ` (+₹${val.priceModifier})`
-                  : ""}
-              </label>
-            ))}
-          </div>
-        )}
+                      return (
+                        <div key={i} className={styles.inputGroup}>
+                          <label className={styles.inputLabel}>
+                            {attr.name}{" "}
+                            {attr.required && (
+                              <span className={styles.required}>*</span>
+                            )}
+                          </label>
 
-        {/* UPLOAD TYPE (NEW) */}
-       <div className="mobile-none">
+                          {/* TEXT */}
+                          {attr.type === "text" && (
+                            <input
+                              type="text"
+                              placeholder={`Enter ${attr.name}`}
+                              onChange={(e) =>
+                                handleAttrChange(attr.name, e.target.value)
+                              }
+                              className={styles.inputField}
+                            />
+                          )}
 
-         {attr.type === "upload" && (
-          <>
-            <ProductFileUpload
-              attributeName={attr.name}
-              attributeKey={attrKey}
-              uploadedAttrFiles={uploadedAttrFiles}
-              setUploadedAttrFiles={setUploadedAttrFiles}
-              acceptTypes={attr.uploadRules?.acceptTypes}
-              maxSizeMB={attr.uploadRules?.maxSizeMB}
-              imageDimensions={attr.uploadRules?.imageDimensions}
-              singleFile={true}
-            />
+                          {/* NUMBER */}
+                          {attr.type === "number" && (
+                            <input
+                              type="number"
+                              placeholder={`Enter ${attr.name}`}
+                              onChange={(e) =>
+                                handleAttrChange(attr.name, e.target.value)
+                              }
+                              className={styles.inputField}
+                            />
+                          )}
 
-            {/* Info text */}
-            {attr.uploadRules?.imageDimensions && (
-              <p style={{ fontSize: "13px", color: "#777" }}>
-                Allowed Size(s): {attr.uploadRules.imageDimensions}
-              </p>
-            )}
+                          {/* SELECT */}
+                          {attr.type === "select" && (
+                            <select
+                              className={styles.selectField}
+                              value={selectedAttrs[attr.name] ?? ""}
+                              onChange={(e) =>
+                                handleAttrChange(attr.name, e.target.value)
+                              }
+                            >
+                              <option value="">Select {attr.name}</option>
+                              {(attr.values || []).map((val, idx) => (
+                                <option key={idx} value={val.label}>
+                                  {val.label}
+                                  {val.priceModifier
+                                    ? ` (+₹${val.priceModifier})`
+                                    : ""}
+                                </option>
+                              ))}
+                            </select>
+                          )}
 
-            <p style={{ fontSize: "13px", color: "#777" }}>
-              Accept: {attr.uploadRules?.acceptTypes?.join(", ") || "Any"}
-              {attr.uploadRules?.maxSizeMB &&
-                ` • Max ${attr.uploadRules.maxSizeMB}MB`}
-            </p>
-          </>
-        )}
+                          {/* CHECKBOX */}
+                          {attr.type === "checkbox" && (
+                            <div className={styles.checkboxGroup}>
+                              {(attr.values || []).map((val, idx) => (
+                                <label
+                                  key={idx}
+                                  className={styles.checkboxLabel}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    value={val.label}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setSelectedAttrs((prev) => {
+                                        const current = prev[attr.name] || [];
+                                        return {
+                                          ...prev,
+                                          [attr.name]: checked
+                                            ? [...current, val.label]
+                                            : current.filter(
+                                                (v) => v !== val.label
+                                              ),
+                                        };
+                                      });
+                                    }}
+                                    className={styles.checkboxInput}
+                                  />
+                                  {val.label}
+                                  {val.priceModifier
+                                    ? ` (+₹${val.priceModifier})`
+                                    : ""}
+                                </label>
+                              ))}
+                            </div>
+                          )}
 
-       </div>
-      </div>
-    );
-  })
-) : (
-  <p className={styles.noOptions}>No extra options available</p>
-)}
+                          {/* UPLOAD TYPE (NEW) */}
+                          <div className="mobile-none">
+                            {attr.type === "upload" && (
+                              <>
+                                <ProductFileUpload
+                                  attributeName={attr.name}
+                                  attributeKey={attrKey}
+                                  uploadedAttrFiles={uploadedAttrFiles}
+                                  setUploadedAttrFiles={setUploadedAttrFiles}
+                                  acceptTypes={attr.uploadRules?.acceptTypes}
+                                  maxSizeMB={attr.uploadRules?.maxSizeMB}
+                                  imageDimensions={
+                                    attr.uploadRules?.imageDimensions
+                                  }
+                                  singleFile={true}
+                                />
 
-                   
+                                {/* Info text */}
+                                {attr.uploadRules?.imageDimensions && (
+                                  <p
+                                    style={{ fontSize: "13px", color: "#777" }}
+                                  >
+                                    Allowed Size(s):{" "}
+                                    {attr.uploadRules.imageDimensions}
+                                  </p>
+                                )}
+
+                                <p style={{ fontSize: "13px", color: "#777" }}>
+                                  Accept:{" "}
+                                  {attr.uploadRules?.acceptTypes?.join(", ") ||
+                                    "Any"}
+                                  {attr.uploadRules?.maxSizeMB &&
+                                    ` • Max ${attr.uploadRules.maxSizeMB}MB`}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className={styles.noOptions}>
+                      No extra options available
+                    </p>
+                  )}
                 </div>
 
                 <div className="mobile-none b2b-add-to-cart">
@@ -668,8 +703,19 @@ export default function ProductDetails() {
                         />{" "}
                         Chat on WhatsApp
                       </button>
+                      
                     )}
 
+                     {product.b2cOptions?.whatsappSupport && (
+                      <a href="https://wa.link/y6hc8l"
+                        className="hire-a-designer"
+                      >
+                       Hire a Designer
+                      </a>
+                      
+                    )}
+                </div>
+                <div className="mt-3">
                     {/* B2C attribute uploads */}
                     {product.attributes?.length > 0 &&
                       product.attributes
@@ -732,19 +778,19 @@ export default function ProductDetails() {
 
                   {/* b2c add to cart button  */}
 
-                   {canAddToCart ? (
-                      <button className={styles.primaryBtn} onClick={addToCart}>
-                        <img
-                          src="/assets/images/icons/shopping-cart.svg"
-                          className="cart-png"
-                        />
-                        Add to Cart
-                      </button>
-                    ) : (
-                      <p className="text-muted mt-2">
-                        Please upload required files before adding to cart.
-                      </p>
-                    )}
+                  {canAddToCart ? (
+                    <button className={styles.primaryBtn} onClick={addToCart}>
+                      <img
+                        src="/assets/images/icons/shopping-cart.svg"
+                        className="cart-png"
+                      />
+                      Add to Cart
+                    </button>
+                  ) : (
+                    <p className="text-muted mt-2">
+                      Please upload required files before adding to cart.
+                    </p>
+                  )}
                   {/* 
                   {!product.b2cOptions?.designUpload ||
                   uploadedFiles.length > 0 ? (
@@ -903,15 +949,25 @@ export default function ProductDetails() {
         </div>
       </div>
 
-
-     
       {/* MOBILE STICKY BAR */}
       <div className="ops-mobile-sticky desktop-none">
         {/* Show upload panel when files not uploaded */}
         {!mobilePanelOpen && Object.keys(uploadedAttrFiles).length === 0 && (
           <div className="desktop-none">
             <div className="mobile-whtasapp d-flex align-items-center justify-between">
-              {/* WhatsApp button */}
+              {/* WhatsApp button */} 
+              
+              
+              {product.b2cOptions?.whatsappSupport && (
+                      <a href="https://wa.link/y6hc8l"
+                        className="hire-a-designer"
+                      >
+                       Hire a Designer
+                      </a>
+                      
+                    )}
+
+
               {product.b2cOptions?.whatsappSupport && (
                 <button className={styles.whatsappBtn} onClick={handleWhatsapp}>
                   <img src="/assets/images/icons/whatsapp.svg" alt="whatsapp" />
@@ -961,8 +1017,6 @@ export default function ProductDetails() {
     </div>
   );
 }
-
-
 
 // import { useRouter } from "next/router";
 // import { useEffect, useState, useMemo } from "react";

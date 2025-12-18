@@ -124,7 +124,7 @@
 //               {/* ✅ User Section */}
 //               {!user ? (
 //                 <Link href="/login" className="top-btn">
-//                   <img src="/assets/images/icons/user.png" alt="User Icon" />
+//                   <img src="/assets/images/icons/profle.svg" alt="User Icon" />
 //                 </Link>
 //               ) : (
 //                 <div className="dropdown">
@@ -363,6 +363,23 @@ const mobileDropdownRef = useRef(null);
             </Link>
           </div>
 
+
+          {/* SEARCH BAR */}
+        <div className="top-search-bar mobile-none">
+          <form action="/products" method="GET" className="search-form">
+            <input
+              type="text"
+              name="search"
+              placeholder="Search for products..."
+              className="search-input"
+            />
+            <button type="submit" className="search-btn">
+               <img src="/assets/images/icons/serarch.png" />
+             
+            </button>
+          </form>
+        </div>
+
           {/* DESKTOP NAVIGATION */}
           <div className="right-side mobile-none">
             <ul className="navbar-nav gap-3">
@@ -371,17 +388,21 @@ const mobileDropdownRef = useRef(null);
               <li className="nav-item"><Link className="nav-link" href="/contact-us">Contact Us</Link></li>
             </ul>
 
+
+  
+
+
             <div className="d-flex align-items-center gap-3">
               {/* CART */}
               <Link href="/cart" className="cart-btn position-relative">
-                <img src="/assets/images/icons/cart.png" alt="Cart" />
+                <img src="/assets/images/icons/cart1.svg" alt="Cart" />
                 <span className="cart-text">Cart</span>
                 <span className="items-count">{cartCount}</span>
               </Link>
 
               {/* WISHLIST */}
               <Link href="/wishlist" className="top-btn position-relative">
-                <img src="/assets/images/icons/wishlist.png" alt="Wishlist" />
+                <img src="/assets/images/icons/wishlis.svg" alt="Wishlist" />
                 <span className="items-count">{wishlistCount}</span>
               </Link>
 
@@ -390,7 +411,7 @@ const mobileDropdownRef = useRef(null);
 
                 {!user ? (
                   <Link href="/login" className="top-btn  ">
-                    <img src="/assets/images/icons/user.png" alt="User" />
+                    <img src="/assets/images/icons/profle.svg" alt="User" />
                   </Link>
                 ) : (
                   <>
@@ -398,7 +419,7 @@ const mobileDropdownRef = useRef(null);
                       className="ops-profile-btn top-btn  "
                       onClick={() => setOpenProfileCard(!openProfileCard)}
                     >
-                      <img src="/assets/images/icons/user.png" alt="Profile" />
+                      <img src="/assets/images/icons/profle.svg" alt="Profile" />
                     </button>
 
                     {openProfileCard && (
@@ -443,7 +464,7 @@ const mobileDropdownRef = useRef(null);
                           <span>Follow Us On</span>
                           <div className="ops-social-icons">
                             <Link href="#"><img src="/assets/images/icons/instagram.svg" /></Link>
-                            <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link>
+                            {/* <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link> */}
                             <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
                             <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link>
                             
@@ -464,6 +485,9 @@ const mobileDropdownRef = useRef(null);
                 <img src="/assets/images/icons/cart.svg" alt="Cart" />
                 <span className="items-count">{cartCount}</span>
               </Link>
+
+  
+
 
               <Link href="/wishlist" className="top-btn position-relative">
                 <img src="/assets/images/icons/wishlist.svg" alt="Wishlist" />
@@ -535,6 +559,21 @@ const mobileDropdownRef = useRef(null);
           </div>
 
         </div>
+
+        {/* MOBILE SEARCH BAR */}
+      <div className="mobile-search-wrapper desktop-none">
+        <form action="/products" method="GET" className="mobile-search-form">
+          <input
+            type="text"
+            name="search"
+            placeholder="Search products..."
+            className="mobile-search-input"
+          />
+          <button type="submit" className="mobile-search-btn">
+            <img src="/assets/images/icons/serarch.png" />
+          </button>
+        </form>
+      </div>
       </div>
 
       <style jsx>{`

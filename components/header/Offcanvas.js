@@ -84,8 +84,8 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
                         <div className="ops-social-section">
                           <span>Follow Us On</span>
                           <div className="ops-social-icons">
-                            <Link href="#"><img src="/assets/images/icons/instagram.svg" /></Link>
-                            <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link>
+                            <Link href="https://www.instagram.com/oneprimestudios"><img src="/assets/images/icons/instagram.svg" /></Link>
+                            {/* <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link> */}
                             <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
                             <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link>
                             

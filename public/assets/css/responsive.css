@@ -266,7 +266,7 @@
 .mobile-hero-area__welcome {
   margin: 0 0 6px 0;
   font-size: 13px;
-  color: #FEA4D5; /* subtle pink/purple */
+  color: #e71610; /* subtle pink/purple */
   font-weight: 600;
 }
 
@@ -315,7 +315,7 @@
 
 /* primary */
 .mobile-hero-area__btn--primary {
-  background: #6C5DD4;
+  background: #e71610;
   color: #fff;
   font-weight: 400;
 }
@@ -559,7 +559,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #4441E5;
+  color: #333;
   line-height: 1.1;
 }
 
@@ -629,7 +629,7 @@
 }
 
 .reviews-section .review-text {
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .review-rating {
@@ -1125,6 +1125,14 @@
     margin-right: 7px;
 }
 
+.hire-a-designer {
+    padding: 10px 12px;
+    white-space: nowrap;
+    margin-right: 5px;
+    font-size: 10px;
+    font-weight: normal;
+}
+
 
  .ops-mobile-sticky {
     position: fixed;
@@ -1133,7 +1141,7 @@
     right: 0;
     background: #fff;
     border-top: 1px solid #eee;
-    padding: 12px 16px;
+    padding: 12px 10px;
     z-index: 9999;
     box-shadow: 0 -2px 15px rgba(0,0,0,0.08);
   }
@@ -1156,7 +1164,7 @@
 
 .mobile-whtasapp > button{
         padding: 10px 25px;
-    font-size: 13px;
+    font-size: 10px;
 
 }
 .mobile-whtasapp > button img{
@@ -1171,7 +1179,7 @@
     border-radius: 50px;
     justify-content: center;
     width: 100%;
-    font-size: 13px;
+    font-size: 10px;
     margin-left: 5px;
     font-weight: normal;
 }
@@ -1296,12 +1304,21 @@
 .footer-bottom1 {
     font-size: 13px;
     flex-wrap: wrap;
+    justify-content: center;
+    gap:12px;
+}
+
+.copyright-area{
+    flex-wrap: wrap;
+    justify-content: center;
 }
 .footer-bottom1 p {
     margin: 0;
 }
 
-
+    .footer-bottom1 p {
+        font-size: 12px;
+    }
 .footer-divider {
     margin: 20px 0;
 }
@@ -1316,11 +1333,11 @@
 
 .footer-links ul {
 
-    gap: 5px;
+gap: 10px;
 }
 
 .footer-links ul li a {
-    color: #111;
+    color: #ffffff;
     padding: 5px 8px;
 }
 .footer-links ul {
@@ -1333,6 +1350,13 @@
 .client-card {
     height: 65px;
     padding: 8px;
+}
+
+
+.one-prime-studios-area {
+    font-size: 37px;
+    margin-bottom: 30px;
+    width: 100%;
 }
 }
 

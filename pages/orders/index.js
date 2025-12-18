@@ -470,14 +470,14 @@ export default function OrdersListPage() {
           gap: 6px;
         }
         .tab-btn.active {
-          background: #6C5DD4;
+          background: #333;
           color: #fff;
           border-color: transparent;
           box-shadow: 0 2px 6px rgba(114, 9, 183, 0.3);
         }
         .tab-count {
           background: #f3f0ff;
-          color: #5f3dc4;
+          color: #333;
           padding: 2px 8px;
           border-radius: 12px;
           font-size: 13px;
@@ -509,7 +509,7 @@ export default function OrdersListPage() {
         }
         .status-badge.progress {
           background: #e9e6ff;
-          color: #4a37c0;
+          color: #333;
           border: 1px solid #d5ceff;
         }
         .status-badge.completed {
@@ -525,7 +525,7 @@ export default function OrdersListPage() {
 
         .view-link {
           font-weight: 500;
-          color: #4a37c0;
+          color: #333;
           text-decoration: none;
         }
         .view-link:hover {

@@ -10,6 +10,7 @@ import Category from "@/models/Category";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/products");
 
+
 const storage = multer.diskStorage({
   destination: uploadDir,
   filename: (req, file, cb) => {
@@ -29,47 +30,29 @@ const handler = nextConnect({
   },
 });
 
-// 🔹 GET all products (with userType filter)
-// handler.get(async (req, res) => {
-//   await dbConnect();
-//   try {
-//     const { userType } = req.query; // partner / customer
-// let filter = { status: "published" }; // add this line
 
-// if (userType === "partner") {
-//   filter["b2bOptions.enabled"] = true;
-// } else if (userType === "customer") {
-//   filter["b2cOptions.enabled"] = true;
-// }
-
-
-//     const products = await Product.find(filter).populate("category");
-//     res.status(200).json(products);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// });
 
 handler.get(async (req, res) => {
   await dbConnect();
   try {
-    const { userType } = req.query; // "b2b" | "b2c" | undefined
+    const { userType, search } = req.query;
 
     let filter = { status: "published" };
 
-    // -------- NON-LOGIN USER --------
+    // 🔥 Apply B2B/B2C filter
     if (!userType) {
       filter.productFor = { $in: ["b2c", "both"] };
     }
-
-    // -------- B2C USER --------
     if (userType === "customer" || userType === "b2c") {
       filter.productFor = { $in: ["b2c", "both"] };
     }
-
-    // -------- B2B USER --------
     if (userType === "partner" || userType === "b2b") {
       filter.productFor = { $in: ["b2b", "both"] };
+    }
+
+    // 🔥 SEARCH FILTER
+    if (search && search.trim() !== "") {
+      filter.name = { $regex: search, $options: "i" };
     }
 
     const products = await Product.find(filter).populate("category");
@@ -78,6 +61,7 @@ handler.get(async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 
 // 🔹 POST new product

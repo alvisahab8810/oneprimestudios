@@ -49,8 +49,29 @@ export async function getServerSideProps(context) {
   // fetch products that belong to these categories
   // NOTE: adjust the product query if your product schema uses a different field name for category
   //   const products = await Product.find({ categoryId: { $in: catIds } })
-  const products = await Product.find({ category: { $in: catIds } })
 
+  // STEP 1: detect userType (SSR-safe)
+  const cookie = context.req.headers.cookie || "";
+  let userType = "b2c"; // default for guest users
+
+  if (cookie.includes("userType=b2b") || cookie.includes("userType=partner")) {
+    userType = "b2b";
+  }
+
+  // STEP 2: build product filter
+  const productFilter = {
+    category: { $in: catIds },
+  };
+
+  // STEP 3: apply SAME logic as /api/products
+  if (userType === "b2b") {
+    productFilter.productFor = { $in: ["b2b", "both"] };
+  } else {
+    productFilter.productFor = { $in: ["b2c", "both"] };
+  }
+
+  // STEP 4: fetch products safely
+  const products = await Product.find(productFilter)
     .sort({ createdAt: -1 })
     .lean();
 
@@ -81,9 +102,8 @@ export default function CategoryPage({ category, products }) {
         />
       </Head>
 
-
-            <Topbar />
-            <Offcanvas />
+      <Topbar />
+      <Offcanvas />
 
       <div className="container py-5">
         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -164,11 +184,9 @@ export default function CategoryPage({ category, products }) {
         </div>
       </div>
 
+      <ProductSlider />
 
-        <ProductSlider />
-
-        <Footer/>
-      
+      <Footer />
 
       <style jsx>{`
         .category-description :global(p) {

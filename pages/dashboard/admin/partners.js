@@ -8,6 +8,11 @@ import Link from "next/link";
 import Sidebar from "@/components/admin-panel/Sidebar";
 
 export default function PartnerApprovalPage() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // You can change as needed
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -15,6 +20,34 @@ export default function PartnerApprovalPage() {
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingIds, setUpdatingIds] = useState([]); // ✅ track which partner is updating
+
+  // FILTER DATA
+  const filteredPartners = partners.filter((p) => {
+    const matchSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.email.toLowerCase().includes(search.toLowerCase()) ||
+      (p.companyName || "").toLowerCase().includes(search.toLowerCase()) ||
+      p.phone.includes(search);
+
+    const matchStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "approved"
+        ? p.isApproved === true
+        : p.isApproved === false;
+
+    return matchSearch && matchStatus;
+  });
+
+  // PAGINATION
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPartners = filteredPartners.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+
+  const totalPages = Math.ceil(filteredPartners.length / itemsPerPage);
 
   useEffect(() => {
     fetchPartners();
@@ -62,8 +95,7 @@ export default function PartnerApprovalPage() {
   return (
     <div className="d-flex">
       {/* Sidebar */}
-           <Sidebar sidebarOpen={sidebarOpen} />
-      
+      <Sidebar sidebarOpen={sidebarOpen} />
 
       {/* Main content */}
       <div
@@ -112,8 +144,38 @@ export default function PartnerApprovalPage() {
         {/* Dashboard content */}
         <div className="container-fluid p-4">
           <h1 className="mb-4">Partner Approvals</h1>
-          <div className="partner-approval-area">
 
+          {/* FILTER BAR */}
+          <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+            {/* Search Box */}
+            <input
+              type="text"
+              className="form-control w-auto"
+              placeholder="Search by name, email, company, phone..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{ minWidth: "280px" }}
+            />
+
+            {/* Status Filter */}
+            <select
+              className="form-select w-auto"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">All</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+
+          <div className="partner-approval-area">
             <table className="table table-bordered table-hover align-middle">
               <thead className="table-dark">
                 <tr>
@@ -133,7 +195,7 @@ export default function PartnerApprovalPage() {
                     </td>
                   </tr>
                 ) : (
-                  partners.map((partner) => {
+                  currentPartners.map((partner) => {
                     const isUpdating = updatingIds.includes(partner._id);
 
                     return (
@@ -181,6 +243,58 @@ export default function PartnerApprovalPage() {
                   })
                 )}
               </tbody>
+
+              {/* PAGINATION */}
+              <div className="d-flex justify-content-center mt-3">
+                <nav>
+                  <ul className="pagination">
+                    {/* Prev */}
+                    <li
+                      className={`page-item ${
+                        currentPage === 1 ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage((prev) => prev - 1)}
+                      >
+                        Previous
+                      </button>
+                    </li>
+
+                    {/* Page Numbers */}
+                    {[...Array(totalPages)].map((_, index) => (
+                      <li
+                        key={index}
+                        className={`page-item ${
+                          currentPage === index + 1 ? "active" : ""
+                        }`}
+                      >
+                        <button
+                          className="page-link"
+                          onClick={() => setCurrentPage(index + 1)}
+                        >
+                          {index + 1}
+                        </button>
+                      </li>
+                    ))}
+
+                    {/* Next */}
+                    <li
+                      className={`page-item ${
+                        currentPage === totalPages ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage((prev) => prev + 1)}
+                      >
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
             </table>
           </div>
         </div>

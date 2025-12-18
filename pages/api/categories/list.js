@@ -10,6 +10,7 @@
 // }
 
 
+// // pages/api/categories/list.js
 
 
 import dbConnect from "@/lib/dbConnect";

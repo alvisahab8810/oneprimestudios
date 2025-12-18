@@ -91,7 +91,17 @@ export default function Products() {
     url += `?userType=${userType || "b2c"}`;
   }
 
-  axios.get(url).then((res) => setProducts(res.data));
+
+  
+  // axios.get(url).then((res) => setProducts(res.data));
+
+  const searchParams = new URLSearchParams(window.location.search);
+const search = searchParams.get("search") || "";
+
+if (search) url += `&search=${encodeURIComponent(search)}`;
+
+axios.get(url).then((res) => setProducts(res.data));
+
 }, []);
 
 
@@ -104,72 +114,81 @@ export default function Products() {
       
 
         <div className="mobile-products-container">
-          <div className="mobile-products-row"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "15px",
-            }}
-          >
-            {products.map((product) => (
-              <div
-                key={product._id}
-                style={{
-                  position: "relative",
-                  borderRadius: "10px",
-                  overflow: "hidden",
-                }}
-              >
-                {/* ❤️ Wishlist button */}
-                <div
-                className="products-wishlist"
-                  onClick={(e) => toggleWishlist(product._id, e)}
-                  style={{
-                    position: "absolute",
-                    top: "10px",
-                    right: "10px",
-                    zIndex: 10,
-                    background: "#fff",
-                    borderRadius: "50%",
-                    padding: "6px",
-                    cursor: "pointer",
-                    boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
-                    display : "flex"
-                  }}
-                >
-                  {wishlist.includes(product._id) ? (
-                    <FaHeart color="red" size={20} />
-                  ) : (
-                    <FaRegHeart color="gray" size={20} />
-                  )}
-                </div>
+           {products.length === 0 ? (
+  <div className="no-products" style={{ textAlign: "center", padding: "40px 0" }}>
+    <h3>No products found</h3>
+    <p>Try searching with different keywords.</p>
+  </div>
+) : (
+  <div
+    className="mobile-products-row"
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(4, 1fr)",
+      gap: "15px",
+    }}
+  >
+    {products.map((product) => (
+      <div
+        key={product._id}
+        style={{
+          position: "relative",
+          borderRadius: "10px",
+          overflow: "hidden",
+        }}
+      >
+        {/* Wishlist Button */}
+        <div
+          className="products-wishlist"
+          onClick={(e) => toggleWishlist(product._id, e)}
+          style={{
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            zIndex: 10,
+            background: "#fff",
+            borderRadius: "50%",
+            padding: "6px",
+            cursor: "pointer",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+            display: "flex",
+          }}
+        >
+          {wishlist.includes(product._id) ? (
+            <FaHeart color="red" size={20} />
+          ) : (
+            <FaRegHeart color="gray" size={20} />
+          )}
+        </div>
 
-                {/* 🛒 Product Card */}
-                <Link
-                className="products-image-card"
-                  href={`/products/${product.slug}`}
-                  style={{
-                    display: "block",
-                    borderRadius: "10px",
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
-                >
-                  <img
-                    src={product.mainImage || "/placeholder.png"}
-                    alt={product.name || "Product Image"}
-                    style={{
-                      width: "100%",
-                      height: "313px",
-                      objectFit: "cover",
-                      borderRadius: "15px",
-                    }}
-                  />
-                  <h6 style={{ marginTop: "10px" }}>{product.name}</h6>
-                </Link>
-              </div>
-            ))}
-          </div>
+        {/* Product Card */}
+        <Link
+          className="products-image-card"
+          href={`/products/${product.slug}`}
+          style={{
+            display: "block",
+            borderRadius: "10px",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          <img
+            src={product.mainImage || "/placeholder.png"}
+            alt={product.name || "Product Image"}
+            style={{
+              width: "100%",
+              height: "313px",
+              objectFit: "cover",
+              borderRadius: "15px",
+            }}
+          />
+          <h6 style={{ marginTop: "10px" }}>{product.name}</h6>
+        </Link>
+      </div>
+    ))}
+  </div>
+)}
+
         </div>
       </div>
          </div>

@@ -9,6 +9,8 @@ import { Pagination, Autoplay } from "swiper/modules"; // correct import for aut
 export default function HeroSectionMobile() {
   return (
     <div className="mobile-hero-area desktop-none" id="herosection-mobile">
+
+  
       <Swiper
         modules={[Pagination, Autoplay]}
         spaceBetween={10}

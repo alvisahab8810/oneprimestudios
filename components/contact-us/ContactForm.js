@@ -125,7 +125,7 @@ const ContactForm = () => {
 
           <div className="info-item">
             <span className="icon">
-              <img src="/assets/images/icons/location.svg" alt="location icon" />
+              <img src="/assets/images/icons/location2.svg" alt="location icon" />
             </span>
             <p>
               591 eya/19, Raibareli Rd, Kumhar Mandi, Telibagh,
@@ -136,14 +136,14 @@ const ContactForm = () => {
 
           <div className="info-item">
             <span className="icon">
-              <img src="/assets/images/icons/contact.svg" alt="contact icon" />
+              <img src="/assets/images/icons/call2.svg" alt="contact icon" />
             </span>
             <p>+91 87370 38342</p>
           </div>
 
           <div className="info-item">
             <span className="icon">
-              <img src="/assets/images/icons/email.svg" alt="email icon" />
+              <img src="/assets/images/icons/email2.svg" alt="email icon" />
             </span>
             <p>Contact@oneprimestudios.in</p>
           </div>

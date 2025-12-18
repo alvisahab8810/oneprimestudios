@@ -1,18 +1,23 @@
 import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay } from "swiper/modules";
+import { Autoplay, Navigation  } from "swiper/modules";
 import "swiper/css";
 
 export default function HeroSection() {
   return (
     <>
       <section className="hero mobile-none">
+   
 
         {/* LEFT SIDE — FULL BACKGROUND SLIDER */}
         <Swiper
-          modules={[Autoplay]}
+          modules={[Autoplay, Navigation ]}
           autoplay={{ delay: 3000, disableOnInteraction: false }}
           loop={true}
+           navigation={{
+            prevEl: ".hero-prev-btn",
+            nextEl: ".hero-next-btn",
+          }}
           className="hero-left"
         >
           {/* SLIDE 1 */}
@@ -27,6 +32,7 @@ export default function HeroSection() {
                 width: "100%"
               }}
             >
+
               <div className="hero-text">
                 <p className="welcome">Welcome to</p>
                 <h2>One Prime Studios</h2>
@@ -106,10 +112,15 @@ export default function HeroSection() {
               </div>
             </div>
           </SwiperSlide>
+
+          {/* Slider Navigation Buttons */}
+  <div className="hero-nav-btn hero-prev-btn">❮</div>
+  <div className="hero-nav-btn hero-next-btn">❯</div>
+
         </Swiper>
 
         {/* RIGHT SIDE — UNCHANGED */}
-        <div className="hero-right">
+        {/* <div className="hero-right">
           <div className="first-block">
             <img
               src="/assets/images/hero/hero1.png"
@@ -131,7 +142,8 @@ export default function HeroSection() {
               <h2>Business Card </h2>
             </div>
           </div>
-        </div>
+        </div> */}
+
       </section>
     </>
   );

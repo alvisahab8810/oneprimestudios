@@ -5,7 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/pagination";
 import Link from "next/link";
-import { Pagination } from "swiper/modules";
+import { Pagination, Autoplay} from "swiper/modules";
 
 const reviews = [
   {
@@ -125,9 +125,15 @@ export default function GoogleReviews() {
           slidesPerView={3.3}
           spaceBetween={30}
           grabCursor={true}
+
+          
+          autoplay={{
+                      delay: 2500,
+                      disableOnInteraction: false,
+                    }}
           loop={true}
           // pagination={{ clickable: true }}
-          modules={[Pagination]}
+          modules={[Pagination, Autoplay]}
           breakpoints={{
             320: {
               slidesPerView: 1.3,
