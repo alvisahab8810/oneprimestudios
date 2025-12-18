@@ -62,13 +62,13 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
               <Link href="/orders">My Orders</Link>
             </li>
 
-             <li>
+             {/* <li>
               <Link href="#">Privacy Policy</Link>
             </li>
 
              <li>
               <Link href="#">Terms & Conditions</Link>
-            </li>
+            </li> */}
 
          
 
@@ -86,8 +86,8 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
                           <div className="ops-social-icons">
                             <Link href="https://www.instagram.com/oneprimestudios"><img src="/assets/images/icons/instagram.svg" /></Link>
                             {/* <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link> */}
-                            <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
-                            <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link>
+                            {/* <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
+                            <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link> */}
                             
                           </div>
                         </div>

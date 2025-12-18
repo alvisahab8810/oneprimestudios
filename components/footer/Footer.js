@@ -184,14 +184,14 @@ const Footer = () => {
               <a href="https://www.instagram.com/oneprimestudios">
                 <img src="/assets/images/icons/instagram.svg" />
               </a>
-              <a href="/#">
+              {/* <a href="/#">
                 {" "}
                 <img src="/assets/images/icons/facebook.svg" />
               </a>
               <a href="/#">
                 {" "}
                 <img src="/assets/images/icons/youtube.svg" />{" "}
-              </a>
+              </a> */}
             </div>
           </div>
           <div className="copyright-area d-flex align-items-center">

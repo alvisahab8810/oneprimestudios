@@ -455,7 +455,7 @@ const mobileDropdownRef = useRef(null);
                         {/* Menu */}
                         <ul className="ops-menu-list">
                           <li><Link href="/orders"><img src="/assets/images/icons/delivery-truck.png"></img> Orders & Tracking</Link></li>
-                          <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li>
+                          {/* <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li> */}
                           <li className="logout" onClick={handleLogout}><img src="/assets/images/icons/logout.png"></img> Logout</li>
                         </ul>
 
@@ -463,10 +463,10 @@ const mobileDropdownRef = useRef(null);
                         <div className="ops-social-section">
                           <span>Follow Us On</span>
                           <div className="ops-social-icons">
-                            <Link href="#"><img src="/assets/images/icons/instagram.svg" /></Link>
+                            <Link href="https://www.instagram.com/oneprimestudios"><img src="/assets/images/icons/instagram.svg" /></Link>
                             {/* <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link> */}
-                            <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
-                            <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link>
+                            {/* <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
+                            <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link> */}
                             
                           </div>
                         </div>
@@ -545,7 +545,7 @@ const mobileDropdownRef = useRef(null);
                         {/* Menu */}
                         <ul className="ops-menu-list">
                           <li><Link href="/orders"><img src="/assets/images/icons/delivery-truck.png"></img> Orders & Tracking</Link></li>
-                          <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li>
+                          {/* <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li> */}
                           <li className="logout" onClick={handleLogout}><img src="/assets/images/icons/logout.png"></img> Logout</li>
                         </ul>
 

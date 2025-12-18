@@ -1948,7 +1948,7 @@ ease;
   justify-content: space-between;
   gap: 12px;
   position: relative;
-  background: linear-gradient(90deg, #8d302d 0%, #333 100%);
+  background: linear-gradient(90deg, #711815 0%, #ff0000 100%);
 }
 
 .ops-card-banner > img {
@@ -2036,7 +2036,7 @@ ease;
 .ops-social-section {
     padding: 14px 16px;
     text-align: center;
-    background: linear-gradient(90deg, #333 0%, #a50703 100%);
+    background: linear-gradient(90deg, #711815 0%, #ff0000 100%);
     display: flex;
     justify-content: space-between;
     align-items: center;
