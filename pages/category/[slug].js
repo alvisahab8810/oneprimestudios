@@ -9,6 +9,8 @@ import Offcanvas from "@/components/header/Offcanvas";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import Footer from "@/components/footer/Footer";
 import axios from "axios";
+// import Product from "@/models/Product";
+
 
 function serializeDoc(doc) {
   if (!doc) return null;
@@ -65,7 +67,13 @@ const userType =
 
 
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  // const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  const protocol =
+  context.req.headers["x-forwarded-proto"] || "http";
+const host = context.req.headers.host;
+const baseUrl = `${protocol}://${host}`;
+
 
   // Call same API as Products page
   const { data: allProducts } = await axios.get(
