@@ -84,8 +84,8 @@ export default function AdminProductList() {
 
       {/* Main content */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+       
       >
         {/* Top navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
@@ -129,7 +129,7 @@ export default function AdminProductList() {
         {/* Dashboard content */}
         <div className="container-fluid p-4">
           <div className="d-flex justify-content-between align-items-center ">
-            <h1 className="mb-4">Products</h1>
+            <h1 className="dashboard-main-h">Products</h1>
             <Link
               href="/dashboard/admin/add-product"
               className="btn btn-primary"

@@ -159,11 +159,12 @@ const AttributeSchema = new mongoose.Schema(
       maxSizeMB: { type: Number, default: 10 }, // max file size in MB
 
        // ADD THIS FIELD 👇
-  imageDimensions: { type: String, default: "" }, 
-  /*
-     example saved as: "1280x760,760x540"
-     frontend will parse it
-  */
+      imageDimensions: {
+  type: mongoose.Schema.Types.Mixed,
+  default: null,
+},
+
+ 
       uploadFor: {
         type: String,
         enum: ["front", "back", "all"],

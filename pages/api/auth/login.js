@@ -99,19 +99,45 @@ export default async function handler(req, res) {
       });
     }
 
-    const token = jwt.sign(
-      { id: user._id, userType: user.userType },
-      process.env.JWT_SECRET
-    );
+    // const token = jwt.sign(
+    //   { id: user._id, userType: user.userType },
+    //   process.env.JWT_SECRET
+    // );
 
-    res.status(200).json({
-      token,
-      userType: user.userType,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      isApproved: user.isApproved,
-    });
+    // res.status(200).json({
+    //   token,
+    //   userType: user.userType,
+    //   name: user.name,
+    //   email: user.email,
+    //   phone: user.phone,
+    //   isApproved: user.isApproved,
+    // });
+
+
+    const token = jwt.sign(
+  { id: user._id, userType: user.userType },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
+
+// ✅ SET COOKIES FOR SSR + CSR
+res.setHeader("Set-Cookie", [
+  // JWT token (secure, SSR-readable via headers)
+  `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
+
+  // userType (NOT HttpOnly so SSR + client both can read)
+  `userType=${user.userType}; Path=/; SameSite=Lax; Max-Age=604800`,
+]);
+
+res.status(200).json({
+  token,
+  userType: user.userType,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  isApproved: user.isApproved,
+});
+
   } catch (err) {
     console.error("Login error:", err.message);
     res.status(500).json({ message: "Server error" });

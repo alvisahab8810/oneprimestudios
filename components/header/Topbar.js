@@ -235,18 +235,6 @@
 //   );
 // }
 
-
-
-
-
-
-
-
-
-
-
-
-
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -258,33 +246,61 @@ export default function Topbar() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [openProfileCard, setOpenProfileCard] = useState(false);
 
-
   // const dropdownRef = useRef(null);x
   const desktopDropdownRef = useRef(null);
-const mobileDropdownRef = useRef(null);
+  const mobileDropdownRef = useRef(null);
 
   useEffect(() => {
     const name = localStorage.getItem("name");
     const email = localStorage.getItem("email");
     const userType = localStorage.getItem("userType");
 
-    if (name) setUser({ name, email, userType });
+    // if (name) setUser({ name, email, userType });
+
+    if (name) {
+      setUser({ name, email, userType });
+    }
+
+    // 🔥 FETCH FULL USER PROFILE (for memberId)
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const res = await axios.get("/api/user/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setUser((prev) => ({
+          ...prev,
+          memberId: res.data.memberId,
+          userType: res.data.userType,
+        }));
+      } catch (err) {
+        console.error("Failed to load user profile");
+      }
+    };
+
+    fetchUserProfile();
+
+    
 
     fetchCartCount();
     fetchWishlistCount();
 
     // OUTSIDE CLICK HANDLER — FIXED TO IGNORE INTERNAL CLICKS
-  const handleClickOutside = (e) => {
-  if (
-    (desktopDropdownRef.current && desktopDropdownRef.current.contains(e.target)) ||
-    (mobileDropdownRef.current && mobileDropdownRef.current.contains(e.target))
-  ) {
-    return; // Clicked inside → do nothing
-  }
+    const handleClickOutside = (e) => {
+      if (
+        (desktopDropdownRef.current &&
+          desktopDropdownRef.current.contains(e.target)) ||
+        (mobileDropdownRef.current &&
+          mobileDropdownRef.current.contains(e.target))
+      ) {
+        return; // Clicked inside → do nothing
+      }
 
-  setOpenProfileCard(false);
-};
-
+      setOpenProfileCard(false);
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
 
@@ -332,7 +348,6 @@ const mobileDropdownRef = useRef(null);
       <div className="container">
         <div className="mobile-header-row">
           <div className="mobile-logo-area">
-
             {/* HAMBURGER */}
             {/* <div className="desktop-none">
               <button
@@ -344,18 +359,18 @@ const mobileDropdownRef = useRef(null);
               </button>
             </div> */}
 
-             <div className="desktop-none">
-               <button
-                 className="hamburger desktop-none"
-                 data-bs-toggle="offcanvas"
-                 data-bs-target="#mobileMenu"
-                 href="#offcanvasExample"
+            <div className="desktop-none">
+              <button
+                className="hamburger desktop-none"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#mobileMenu"
+                href="#offcanvasExample"
                 role="button"
                 aria-controls="offcanvasExample"
-               >
+              >
                 <img src="/assets/images/hamburger.svg" alt="Hamburger Icon" />
-              </button>           
-              </div>
+              </button>
+            </div>
 
             {/* LOGO */}
             <Link href="/" className="navbar-brand logo-area">
@@ -363,34 +378,40 @@ const mobileDropdownRef = useRef(null);
             </Link>
           </div>
 
-
           {/* SEARCH BAR */}
-        <div className="top-search-bar mobile-none">
-          <form action="/products" method="GET" className="search-form">
-            <input
-              type="text"
-              name="search"
-              placeholder="Search for products..."
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
-               <img src="/assets/images/icons/serarch.png" />
-             
-            </button>
-          </form>
-        </div>
+          <div className="top-search-bar mobile-none">
+            <form action="/products" method="GET" className="search-form">
+              <input
+                type="text"
+                name="search"
+                placeholder="Search for products..."
+                className="search-input"
+              />
+              <button type="submit" className="search-btn">
+                <img src="/assets/images/icons/serarch.png" />
+              </button>
+            </form>
+          </div>
 
           {/* DESKTOP NAVIGATION */}
           <div className="right-side mobile-none">
             <ul className="navbar-nav gap-3">
-              <li className="nav-item"><Link className="nav-link" href="/">Home</Link></li>
-              <li className="nav-item"><Link className="nav-link" href="/products">Products</Link></li>
-              <li className="nav-item"><Link className="nav-link" href="/contact-us">Contact Us</Link></li>
+              <li className="nav-item">
+                <Link className="nav-link" href="/">
+                  Home
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link className="nav-link" href="/products">
+                  Products
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link className="nav-link" href="/contact-us">
+                  Contact Us
+                </Link>
+              </li>
             </ul>
-
-
-  
-
 
             <div className="d-flex align-items-center gap-3">
               {/* CART */}
@@ -407,8 +428,7 @@ const mobileDropdownRef = useRef(null);
               </Link>
 
               {/* PROFILE DROPDOWN */}
-             <div ref={desktopDropdownRef} className="ops-dropdown-wrapper ">
-
+              <div ref={desktopDropdownRef} className="ops-dropdown-wrapper ">
                 {!user ? (
                   <Link href="/login" className="top-btn  ">
                     <img src="/assets/images/icons/profle.svg" alt="User" />
@@ -419,19 +439,30 @@ const mobileDropdownRef = useRef(null);
                       className="ops-profile-btn top-btn  "
                       onClick={() => setOpenProfileCard(!openProfileCard)}
                     >
-                      <img src="/assets/images/icons/profle.svg" alt="Profile" />
+                      <img
+                        src="/assets/images/icons/profle.svg"
+                        alt="Profile"
+                      />
                     </button>
 
                     {openProfileCard && (
                       <div className="ops-profile-card ops-animate">
                         {/* Banner */}
                         <div className="ops-card-banner">
-                          <img src="/assets/images/banner-girl.png" alt="Offer" />
-                          
+                          <img
+                            src="/assets/images/banner-girl.png"
+                            alt="Offer"
+                          />
+
                           <div className="ops-banner-text">
-                            <h4>FLAT <br/>₹199 OFF</h4>
-                            <p>ON YOUR 1ST PURCHASE<br/>
-                             & MORE EXCITING OFFERS</p>
+                            <h4>
+                              FLAT <br />
+                              ₹199 OFF
+                            </h4>
+                            <p>
+                              ON YOUR 1ST PURCHASE
+                              <br />& MORE EXCITING OFFERS
+                            </p>
 
                             {/* <img src="/assets/images/icons/add-cross.svg"></img> */}
                             <img
@@ -450,24 +481,46 @@ const mobileDropdownRef = useRef(null);
                             <h5>Hello {user.name}</h5>
                           </div>
                           <p className="ops-email">{user.email}</p>
+
+                          {user.userType === "partner" && user.memberId && (
+                            <p className="ops-member-id">
+                              <strong>Member ID:</strong> {user.memberId}
+                            </p>
+                          )}
                         </div>
 
                         {/* Menu */}
                         <ul className="ops-menu-list">
-                          <li><Link href="/orders"><img src="/assets/images/icons/delivery-truck.png"></img> Orders & Tracking</Link></li>
+
+                          <li>
+                              <Link href="/profile" className="gap-2">
+                                 <i className="ri-user-line"></i>  My Profile
+                              </Link>
+                            </li>
+
+                          <li>
+                            <Link href="/orders">
+                              <img src="/assets/images/icons/delivery-truck.png"></img>{" "}
+                              Orders & Tracking
+                            </Link>
+                          </li>
                           {/* <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li> */}
-                          <li className="logout" onClick={handleLogout}><img src="/assets/images/icons/logout.png"></img> Logout</li>
+                          <li className="logout" onClick={handleLogout}>
+                            <img src="/assets/images/icons/logout.png"></img>{" "}
+                            Logout
+                          </li>
                         </ul>
 
                         {/* Social */}
                         <div className="ops-social-section">
                           <span>Follow Us On</span>
                           <div className="ops-social-icons">
-                            <Link href="https://www.instagram.com/oneprimestudios"><img src="/assets/images/icons/instagram.svg" /></Link>
+                            <Link href="https://www.instagram.com/oneprimestudios">
+                              <img src="/assets/images/icons/instagram.svg" />
+                            </Link>
                             {/* <Link href="#"> <img src="/assets/images/icons/twitter.svg" /></Link> */}
                             {/* <Link href="#"> <img src="/assets/images/icons/facebook.svg" /></Link>
                             <Link href="#"> <img src="/assets/images/icons/youtube.svg" /> </Link> */}
-                            
                           </div>
                         </div>
                       </div>
@@ -486,17 +539,13 @@ const mobileDropdownRef = useRef(null);
                 <span className="items-count">{cartCount}</span>
               </Link>
 
-  
-
-
               <Link href="/wishlist" className="top-btn position-relative">
                 <img src="/assets/images/icons/wishlist.svg" alt="Wishlist" />
                 <span className="items-count">{wishlistCount}</span>
               </Link>
 
-               {/* PROFILE DROPDOWN */}
-             <div ref={mobileDropdownRef} className="ops-dropdown-wrapper ">
-
+              {/* PROFILE DROPDOWN */}
+              <div ref={mobileDropdownRef} className="ops-dropdown-wrapper ">
                 {!user ? (
                   <Link href="/login" className="top-btn  ">
                     <img src="/assets/images/icons/profile.svg" alt="User" />
@@ -507,21 +556,32 @@ const mobileDropdownRef = useRef(null);
                       className="ops-profile-btn top-btn  "
                       onClick={() => setOpenProfileCard(!openProfileCard)}
                     >
-                      <img src="/assets/images/icons/profile.svg" alt="Profile" />
+                      <img
+                        src="/assets/images/icons/profile.svg"
+                        alt="Profile"
+                      />
                     </button>
-                      {openProfileCard && (
-                        <div
-                          className="ops-profile-card ops-animate"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                    {openProfileCard && (
+                      <div
+                        className="ops-profile-card ops-animate"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {/* Banner */}
                         <div className="ops-card-banner">
-                          <img src="/assets/images/banner-girl.png" alt="Offer" />
-                          
+                          <img
+                            src="/assets/images/banner-girl.png"
+                            alt="Offer"
+                          />
+
                           <div className="ops-banner-text">
-                            <h4>FLAT <br/>₹300 OFF</h4>
-                            <p>ON YOUR 1ST PURCHASE<br/>
-                             & MORE EXCITING OFFERS</p>
+                            <h4>
+                              FLAT <br />
+                              ₹300 OFF
+                            </h4>
+                            <p>
+                              ON YOUR 1ST PURCHASE
+                              <br />& MORE EXCITING OFFERS
+                            </p>
 
                             {/* <img src="/assets/images/icons/add-cross.svg"></img> */}
                             <img
@@ -540,16 +600,35 @@ const mobileDropdownRef = useRef(null);
                             <h5>Hello {user.name}</h5>
                           </div>
                           <p className="ops-email">{user.email}</p>
+
+                          {user.userType === "partner" && user.memberId && (
+                            <p className="ops-member-id">
+                              <strong>Member ID:</strong> {user.memberId}
+                            </p>
+                          )}
                         </div>
 
                         {/* Menu */}
                         <ul className="ops-menu-list">
-                          <li><Link href="/orders"><img src="/assets/images/icons/delivery-truck.png"></img> Orders & Tracking</Link></li>
-                          {/* <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li> */}
-                          <li className="logout" onClick={handleLogout}><img src="/assets/images/icons/logout.png"></img> Logout</li>
-                        </ul>
+                          <li>
+                            <Link href="/profile">
+                              <img src="/assets/images/icons/user.png" /> My
+                              Profile
+                            </Link>
+                          </li>
 
-                       
+                          <li>
+                            <Link href="/orders">
+                              <img src="/assets/images/icons/delivery-truck.png"></img>{" "}
+                              Orders & Tracking
+                            </Link>
+                          </li>
+                          {/* <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li> */}
+                          <li className="logout" onClick={handleLogout}>
+                            <img src="/assets/images/icons/logout.png"></img>{" "}
+                            Logout
+                          </li>
+                        </ul>
                       </div>
                     )}
                   </>
@@ -557,23 +636,22 @@ const mobileDropdownRef = useRef(null);
               </div>
             </div>
           </div>
-
         </div>
 
         {/* MOBILE SEARCH BAR */}
-      <div className="mobile-search-wrapper desktop-none">
-        <form action="/products" method="GET" className="mobile-search-form">
-          <input
-            type="text"
-            name="search"
-            placeholder="Search products..."
-            className="mobile-search-input"
-          />
-          <button type="submit" className="mobile-search-btn">
-            <img src="/assets/images/icons/serarch.png" />
-          </button>
-        </form>
-      </div>
+        <div className="mobile-search-wrapper desktop-none">
+          <form action="/products" method="GET" className="mobile-search-form">
+            <input
+              type="text"
+              name="search"
+              placeholder="Search products..."
+              className="mobile-search-input"
+            />
+            <button type="submit" className="mobile-search-btn">
+              <img src="/assets/images/icons/serarch.png" />
+            </button>
+          </form>
+        </div>
       </div>
 
       <style jsx>{`

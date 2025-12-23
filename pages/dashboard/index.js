@@ -173,11 +173,11 @@ export default function Dashboard() {
 
       <div
         className="main-area"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0" }}
+ 
       >
        <div className="main-area-pad">
            {/* TOP BAR */}
-        <nav className="navbar navbar-light bg-light px-4 admin-topbar">
+        <nav className="navbar navbar-light bg-light admin-topbar">
           <button
             className="btn btn-outline-primary me-3"
             onClick={toggleSidebar}
@@ -195,7 +195,7 @@ export default function Dashboard() {
         </nav>
 
         {/* CONTENT */}
-        <div className="container-fluid p-4">
+        <div className="content-dashbord mt-2">
           <h2 className="dashboard-main-h">Dashboard Overview</h2>
 
           {/* CARDS */}

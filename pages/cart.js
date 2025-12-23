@@ -15,6 +15,15 @@ import FaqAccordion from "@/components/home-page/Faq";
 import Offcanvas from "@/components/header/Offcanvas";
 
 export default function CartPage() {
+
+  // These Coupon States
+
+   const [couponCode, setCouponCode] = useState("");
+   const [appliedCoupon, setAppliedCoupon] = useState(null);
+   // appliedCoupon = { code, discount }
+   const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+
   const [cartItems, setCartItems] = useState([]);
   const [tempQty, setTempQty] = useState({}); // { [index]: "123" } - string for free typing
   const [removingIndex, setRemovingIndex] = useState(null);
@@ -197,6 +206,11 @@ const buildQuantityLadder = (product) => {
     return acc + unitPrice * q;
   }, 0);
 
+  // ✅ ADD THIS
+const finalAmount = appliedCoupon
+  ? Math.max(total - appliedCoupon.discount, 0)
+  : total;
+
   const getImageUrl = (imgPath) => {
     if (!imgPath) return "/no-image.png";
     if (/^https?:\/\//.test(imgPath)) return imgPath;
@@ -204,6 +218,51 @@ const buildQuantityLadder = (product) => {
       return `${window.location.origin}${imgPath}`;
     return imgPath;
   };
+
+
+  // for coupon genration function
+
+  const applyCoupon = async () => {
+  if (!couponCode.trim()) {
+    toast.error("Please enter a coupon code");
+    return;
+  }
+
+  try {
+    setApplyingCoupon(true);
+    const token = localStorage.getItem("token");
+
+    const res = await axios.post(
+      "/api/coupons/apply",
+      {
+        code: couponCode,
+        cartTotal: total,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+   const couponData = {
+  code: res.data.coupon.code,
+  discount: res.data.discount,
+};
+
+setAppliedCoupon(couponData);
+
+// ✅ ADD THIS (VERY IMPORTANT)
+localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
+
+
+    toast.success("Coupon applied successfully");
+  } catch (err) {
+    toast.error(err?.response?.data?.message || "Invalid coupon");
+    setAppliedCoupon(null);
+  } finally {
+    setApplyingCoupon(false);
+  }
+};
+
 
   if (loading) {
     return (
@@ -369,25 +428,25 @@ const buildQuantityLadder = (product) => {
                     {/* QTY BUTTONS */}
                     <div className="cart-qty-row">
                     <button
-  onClick={() => {
-    const ladder = buildQuantityLadder(item.product);
-    const current = Number(tempValue);
+                            onClick={() => {
+                              const ladder = buildQuantityLadder(item.product);
+                              const current = Number(tempValue);
 
-    // find previous tier
-    let prev = ladder[0];
-    for (let i = ladder.length - 1; i >= 0; i--) {
-      if (ladder[i] < current) {
-        prev = ladder[i];
-        break;
-      }
-    }
+                              // find previous tier
+                              let prev = ladder[0];
+                              for (let i = ladder.length - 1; i >= 0; i--) {
+                                if (ladder[i] < current) {
+                                  prev = ladder[i];
+                                  break;
+                                }
+                              }
 
-    setTempQty((p) => ({ ...p, [idx]: String(prev) }));
-    updateQuantity(idx, prev);
-  }}
->
-  -
-</button>
+                              setTempQty((p) => ({ ...p, [idx]: String(prev) }));
+                              updateQuantity(idx, prev);
+                            }}
+                          >
+                            -
+                          </button>
 
 
                       <input
@@ -446,32 +505,71 @@ const buildQuantityLadder = (product) => {
           <div className="cart-summary-card">
             <h5 className="cart-summary-title">Summary</h5>
 
-            <div className="promo-row">
+            {/* <div className="promo-row">
               <input type="text" placeholder="Promo code" />
               <button>Apply</button>
-            </div>
+            </div> */}
+
+            <div className="promo-row">
+                <input
+                  type="text"
+                  placeholder="Promo code"
+                  value={couponCode}
+                  disabled={!!appliedCoupon}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                />
+
+                {appliedCoupon ? (
+                  <button
+                    onClick={() => {
+                       setAppliedCoupon(null);
+                        setCouponCode("");
+                        localStorage.removeItem("appliedCoupon"); // ✅ ADD
+                        toast.success("Coupon removed");
+
+                    }}
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button onClick={applyCoupon} disabled={applyingCoupon}>
+                    {applyingCoupon ? "Applying..." : "Apply"}
+                  </button>
+                )}
+              </div>
+
 
             <div className="summary-line">
               <span>Sub-total</span>
               <strong>₹{total.toFixed(2)}</strong>
             </div>
 
-            <div className="summary-line">
+             <div className="summary-line">
               <span>Voucher</span>
-              <strong>-</strong>
+              <strong className="text-success">
+                {appliedCoupon ? `-₹${appliedCoupon.discount.toFixed(2)}` : "-"}
+              </strong>
             </div>
 
-            <div className="summary-line">
+
+            {/* <div className="summary-line">
               <span>Delivery Fee</span>
               <strong>-</strong>
-            </div>
+            </div> */}
 
             <hr />
 
-            <div className="summary-total">
+            {/* <div className="summary-total">
               <span>Total Amount</span>
               <strong>₹{total.toFixed(2)}</strong>
-            </div>
+            </div> */}
+
+
+            <div className="summary-total">
+  <span>Total Amount</span>
+  <strong>₹{finalAmount.toFixed(2)}</strong>
+</div>
+
 
             <div className="mobile-none">
               <button
@@ -541,7 +639,9 @@ const buildQuantityLadder = (product) => {
     className="mobile-cart-button"
     onClick={() => router.push("/checkout")}
   >
-   Continue to Pay  ₹{total.toFixed(2)}
+   Continue to Pay 
+    {/* ₹{total.toFixed(2)} */}
+   ₹{finalAmount.toFixed(2)}
   </button>
 </div>
 

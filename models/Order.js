@@ -53,17 +53,43 @@ const OrderSchema = new mongoose.Schema(
 
 
     // NEW FIELD
-dispatchRequest: {
-  type: String,
-  enum: ["none", "pending", "approved"],
-  default: "none",
+      dispatchRequest: {
+        type: String,
+        enum: ["none", "pending", "approved"],
+        default: "none",
+      },
+
+
+  coupon: {
+  code: { type: String },
+  discountType: { type: String },
+  discountValue: { type: Number },
+  discountAmount: { type: Number },
 },
 
 
+      subtotal: { type: Number, required: true },
+
+
     uploadedFiles: [{ type: String }],
+
+    reuploadedFiles: [
+  {
+    fileUrl: String,
+    uploadedAt: { type: Date, default: Date.now },
+  },
+],
+
     remarks: { type: String, default: "" }, // ✅ Added remarks
+
+    customerRemarks: { type: String, default: "" },
+
+    
+
     orderNumber: { type: String, unique: true },
   },
+
+  
   { timestamps: true }
 );
 

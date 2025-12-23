@@ -2480,7 +2480,7 @@ ease;
 
 .order-details-area .summary-card {
       margin-left: auto;
-    width: fit-content;
+    width: 500px;
 }
 
 .bg-brand{
@@ -2534,13 +2534,13 @@ ease;
 }
 
 /* When panel open → push drawer below */
-.b2c-purchase-row .ops-file-uploader.expanded {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100% !important;
-  margin-top: 15px;
-  z-index: 10;
+.ops-file-uploader.expanded {
+    position: absolute;
+    top: -15px;
+    left: 0;
+    width: 100% !important;
+    margin-top: 0;
+    z-index: 10;
 }
 
 /* Drawer UI full width */
@@ -2645,12 +2645,12 @@ ease;
 
 /* Unique Parent Wrapper */
 .ops-admin-sidebar {
-  width: 240px;
+  width: 17%;
   height: 100vh;
   background: #ffffff;
   border-right: 1px solid #e6e6e6;
   padding: 20px 12px;
-  position: fixed;
+  /* position: fixed; */
   left: 0;
   top: 0;
   overflow-y: auto;
@@ -2876,16 +2876,14 @@ ease;
   padding: 40px;
 }
 
-
- .ops-file-uploader.expanded {
+.ops-file-uploader.expanded {
     position: absolute;
-    top: 100%;
+    top: -15px;
     left: 0;
     width: 100% !important;
-    margin-top: 15px;
+    margin-top: 0;
     z-index: 10;
-
- }
+}
 
  #b2border-section{
   position: relative;
@@ -3179,6 +3177,13 @@ ease;
 
 
 
+.attributes-area{
+
+  border-top: 1px solid #ddd;
+    padding-top: 15px;
+    margin-top: 10px;
+    position: relative;
+}
 
 
 
@@ -3187,3 +3192,68 @@ ease;
 
 
 
+
+
+
+.ops-member-id {
+  font-size: 13px;
+  color: #555;
+  margin-top: 4px;
+}
+
+
+.categories-wise-products{
+      text-decoration: none;
+    color: inherit;
+    border-radius: 14px;
+    overflow: hidden;
+    display: block;
+    /* box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 10px; */
+    border: 1px solid #F0EEF0;
+    padding: 10px;
+}
+
+.category-info{
+      display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding: 10px;
+}
+.category-info h5{
+
+    margin: 0px;
+    font-size: 15px;
+    color: #0D0C0D;
+
+}
+
+.category-info span{
+      font-size: 15px;
+    color: #6C5DD4;
+    margin-top: 0px;
+    display: inline-block;
+}
+
+.categories-wise-products .products-img{
+  border-radius: 9px;
+   width: 100%;
+   height: 100%;
+   object-fit: cover;
+            
+}
+
+
+.main-area {
+    width: 83%;
+}
+
+.ops-admin-sidebar .ops-item svg{
+      color: #8b909a;
+    font-size: 18px;
+}
+
+.ops-admin-sidebar .ops-item.active svg {
+    color: #fff;
+    font-size: 18px;
+}

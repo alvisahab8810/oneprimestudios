@@ -146,6 +146,34 @@ export default async function handler(req, res) {
       });
     }
 
+
+
+
+
+
+
+
+    // ✅ CHECK DUPLICATE GST FOR PARTNER
+if (userType === "partner" && gstNumber) {
+  const existingGstUser = await User.findOne({
+    gstNumber: gstNumber,
+    userType: "partner",
+  });
+
+  if (existingGstUser) {
+    return res.status(400).json({
+      message: "GST number already registered",
+    });
+  }
+}
+
+
+
+
+
+
+
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({

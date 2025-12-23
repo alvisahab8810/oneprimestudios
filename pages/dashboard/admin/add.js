@@ -304,8 +304,8 @@ export default function AddProduct() {
 
       {/* Main content */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+        
       >
         {/* Top navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">

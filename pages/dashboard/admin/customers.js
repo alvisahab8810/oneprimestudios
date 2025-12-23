@@ -49,8 +49,8 @@ export default function B2CUsersPage() {
 
       {/* Main content */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+        
       >
         {/* Top navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
@@ -88,7 +88,7 @@ export default function B2CUsersPage() {
 
         {/* Page content */}
         <div className="container-fluid p-4">
-          <h1 className="mb-4">B2C Customers</h1>
+          <h1 className="dashboard-main-h">B2C Customers</h1>
 
           {/* Search */}
           <div className="mb-3">

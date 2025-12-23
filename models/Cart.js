@@ -6,6 +6,8 @@ const CartItemSchema = new mongoose.Schema({
   selectedAttrs: { type: Object, default: {} },
   uploadedFiles: { type: [String], default: [] },
   price: { type: Number, required: true },
+  remarks: { type: String, default: "" },
+
 });
 
 const CartSchema = new mongoose.Schema({

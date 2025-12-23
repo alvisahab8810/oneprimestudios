@@ -127,13 +127,6 @@
 
 
 
-
-
-
-
-
-
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -156,6 +149,18 @@ const categoryImages = {
   
 };
 
+
+const getUserType = () => {
+  if (typeof window === "undefined") return "b2c";
+
+  const token = localStorage.getItem("token");
+  const userType = localStorage.getItem("userType");
+
+  if (!token) return "b2c";
+  return userType === "partner" || userType === "b2b" ? "b2b" : "b2c";
+};
+
+
 export default function Categories() {
   const [categories, setCategories] = useState([]);
 
@@ -164,26 +169,31 @@ export default function Categories() {
   }, []);
 
   // Fetch only parent categories
+
+
   const fetchCategories = async () => {
-    try {
-      const res = await axios.get("/api/categories/");
-      setCategories(res.data || []);
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
-  };
+  try {
+    const userType = getUserType();
 
-  // const getImage = (cat) => {
-  //   const nameKey = cat.name.toLowerCase();
+    // 1️⃣ Fetch products filtered by userType
+    const res = await axios.get(`/api/products?userType=${userType}`);
+    const products = res.data || [];
 
-  //   // if matching image exists → return it
-  //   if (categoryImages[nameKey]) {
-  //     return categoryImages[nameKey];
-  //   }
+    // 2️⃣ Extract unique categories from products
+    const categoryMap = {};
+    products.forEach((p) => {
+      if (p.category && p.category._id) {
+        categoryMap[p.category._id] = p.category;
+      }
+    });
 
-  //   // fallback image
-  //   return "/assets/images/categories/default.png";
-  // };
+    // 3️⃣ Set categories
+    setCategories(Object.values(categoryMap));
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+  }
+};
+
 
 
   const getImage = (cat) => {
@@ -225,7 +235,20 @@ export default function Categories() {
         {categories.map((cat) => (
           <SwiperSlide key={cat._id}>
             <div className="category-card">
-              <Link href={`/category/${cat.slug}`}>
+              <Link
+                  href={{
+                    pathname: `/category/${cat.slug}`,
+                    query: {
+                      userType:
+                        typeof window !== "undefined"
+                          ? localStorage.getItem("userType") === "partner"
+                            ? "b2b"
+                            : "b2c"
+                          : "b2c",
+                    },
+                  }}
+                >
+
                 <div className="category-img-wrap">
                   <img
                     src={getImage(cat)}

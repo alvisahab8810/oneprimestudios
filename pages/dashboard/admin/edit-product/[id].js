@@ -38,7 +38,8 @@ export default function EditProductPage() {
     productFor: "both",
     status: "draft",
     attributes: [],
-    pricingTiersCSV: "",
+     pricingTiers: [],   // ✅ ADD THIS
+    // pricingTiersCSV: "",
     // b2b/b2c
     b2b_enabled: false,
     b2b_allowFileUpload: true,
@@ -86,6 +87,46 @@ export default function EditProductPage() {
       const res = await axios.get(`/api/products/${id}`);
       const p = res.data;
 
+      const normalizedPricingTiers = Array.isArray(p.pricingTiers)
+  ? p.pricingTiers.map((t) => ({
+      minQty: t.minQty ?? "",
+      pricePerUnit: t.pricePerUnit ?? "",
+    }))
+  : [];
+
+
+      const normalizedAttributes = (p.attributes || []).map((attr) => ({
+  name: attr.name || "",
+  type: attr.type || "select",
+  required: !!attr.required,
+
+  // convert backend "values" → frontend "options"
+  options: Array.isArray(attr.values)
+    ? attr.values.map((v) => ({
+        label: v.label,
+        priceModifier: v.priceModifier,
+      }))
+    : [],
+
+  // normalize upload rules
+  uploadRules:
+    attr.type === "upload"
+      ? {
+          required: !!attr.uploadRules?.required,
+          acceptTypes: attr.uploadRules?.acceptTypes || [],
+          maxSizeMB: attr.uploadRules?.maxSizeMB || 5,
+          uploadFor: attr.uploadRules?.uploadFor || "all",
+          imageDimensions:
+            attr.uploadRules?.imageDimensions
+              ? typeof attr.uploadRules.imageDimensions === "string"
+                ? { unit: "px", values: attr.uploadRules.imageDimensions }
+                : attr.uploadRules.imageDimensions
+              : { unit: "px", values: "" },
+        }
+      : undefined,
+}));
+
+
       // Pre-fill form from product
       setForm((prev) => ({
         ...prev,
@@ -105,9 +146,9 @@ export default function EditProductPage() {
         isFeatured: !!p.isFeatured,
         productFor: p.productFor || "both",
         status: p.status || "draft",
-        attributes: p.attributes || [],
-        pricingTiersCSV:
-          (p.pricingTiers && p.pricingTiers.map(t => `${t.minQty}:${t.pricePerUnit}`).join(",")) || "",
+        // attributes: p.attributes || [],
+        attributes: normalizedAttributes,
+       pricingTiers: normalizedPricingTiers,
         b2b_enabled: !!(p.b2bOptions && p.b2bOptions.enabled),
         b2b_allowFileUpload: !!(p.b2bOptions && p.b2bOptions.allowFileUpload),
         b2c_enabled: !!(p.b2cOptions && p.b2cOptions.enabled),
@@ -170,7 +211,17 @@ export default function EditProductPage() {
   const addAttribute = () => {
     setForm((prev) => ({
       ...prev,
-      attributes: [...prev.attributes, { name: "", type: "select", required: false, values: [] }],
+      attributes: [...prev.attributes, {
+  name: "",
+  type: "select",
+  required: false,
+  options: [],
+  uploadRules: {
+    imageDimensions: { unit: "px", values: "" },
+  },
+}
+
+    ],
     }));
   };
 
@@ -234,8 +285,41 @@ export default function EditProductPage() {
       fd.append("status", form.status || "draft");
 
       // attributes & pricing
-      fd.append("attributes", JSON.stringify(form.attributes || []));
-      fd.append("pricingTiers", JSON.stringify(parseTiersCSV(form.pricingTiersCSV || "")));
+      // fd.append("attributes", JSON.stringify(form.attributes || []));
+
+      const transformedAttributes = form.attributes.map((attr) => {
+  const rawOptions = Array.isArray(attr.options) ? attr.options : [];
+
+  const values = rawOptions.map((o) => ({
+    label: String(o.label || "").trim(),
+    priceModifier: Number(o.priceModifier || 0),
+  }));
+
+  return {
+    name: String(attr.name || "").trim(),
+    type: attr.type || "select",
+    values,
+    required: !!attr.required,
+    uploadRules:
+      attr.type === "upload"
+        ? {
+            required: !!attr.uploadRules?.required,
+            acceptTypes: attr.uploadRules?.acceptTypes || [],
+            maxSizeMB: attr.uploadRules?.maxSizeMB || 5,
+            uploadFor: attr.uploadRules?.uploadFor || "all",
+            imageDimensions: attr.uploadRules?.imageDimensions || null,
+          }
+        : undefined,
+  };
+});
+
+fd.append("attributes", JSON.stringify(transformedAttributes));
+
+      fd.append(
+  "pricingTiers",
+  JSON.stringify(form.pricingTiers || [])
+);
+
 
       // b2b/b2c
       const b2bOptions = {
@@ -291,7 +375,7 @@ export default function EditProductPage() {
     <div className="d-flex">
       <Sidebar sidebarOpen={sidebarOpen} />
 
-      <div className="flex-grow-1" style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}>
+      <div className="main-area">
         <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
           <button className="btn btn-outline-primary me-3" onClick={toggleSidebar}>
             ☰
@@ -332,8 +416,8 @@ export default function EditProductPage() {
                 <label className="mt-2">Slug (editable)</label>
                 <input name="slug" value={form.slug} onChange={handleChange} className="input-primary mb-2" />
 
-                <label>Short Description</label>
-                <input name="shortDescription" value={form.shortDescription} onChange={handleChange} className="input-primary" />
+                {/* <label>Short Description</label> */}
+                {/* <input name="shortDescription" value={form.shortDescription} onChange={handleChange} className="input-primary" /> */}
 
                 <label className="mt-3">Description</label>
                 <ReactQuill value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} theme="snow" />
@@ -383,60 +467,363 @@ export default function EditProductPage() {
                   </label>
                 </div>
 
+                {/* <label className="mt-3">Quantity Pricing Tiers</label> */}
+                {/* <input placeholder="e.g. 1:10,50:8,100:6" value={form.pricingTiersCSV || ""} onChange={(e) => setForm((f) => ({ ...f, pricingTiersCSV: e.target.value }))} className="input-primary" /> */}
+
                 <label className="mt-3">Quantity Pricing Tiers</label>
-                <input placeholder="e.g. 1:10,50:8,100:6" value={form.pricingTiersCSV || ""} onChange={(e) => setForm((f) => ({ ...f, pricingTiersCSV: e.target.value }))} className="input-primary" />
+
+{form.pricingTiers?.map((tier, index) => (
+  <div key={index} className="flex gap-2 mb-2">
+    <input
+      type="number"
+      placeholder="Min Qty"
+      className="input-primary w-1/2"
+      value={tier.minQty}
+      onChange={(e) => {
+        const updated = [...form.pricingTiers];
+        updated[index].minQty = e.target.value;
+        setForm((f) => ({ ...f, pricingTiers: updated }));
+      }}
+    />
+
+    <input
+      type="number"
+      placeholder="Price"
+      className="input-primary w-1/2"
+      value={tier.pricePerUnit}
+      onChange={(e) => {
+        const updated = [...form.pricingTiers];
+        updated[index].pricePerUnit = e.target.value;
+        setForm((f) => ({ ...f, pricingTiers: updated }));
+      }}
+    />
+
+    <button
+      type="button"
+      onClick={() => {
+        const updated = [...form.pricingTiers];
+        updated.splice(index, 1);
+        setForm((f) => ({ ...f, pricingTiers: updated }));
+      }}
+      className="bg-red-500 text-white px-2 rounded"
+    >
+      X
+    </button>
+  </div>
+))}
+
+<button
+  type="button"
+  className="bg-green-500 text-white px-4 py-1 rounded"
+  onClick={() =>
+    setForm((f) => ({
+      ...f,
+      pricingTiers: [
+        ...(f.pricingTiers || []),
+        { minQty: "", pricePerUnit: "" },
+      ],
+    }))
+  }
+>
+  + Add Tier
+</button>
+
+
+
+
+
 
                 {/* Attributes */}
-                <div className="attributes-section mt-3">
-                  <h4>Custom Attributes</h4>
 
-                  {form.attributes.map((attr, i) => (
-                    <div key={i} className="attribute-card mb-3 p-3 border rounded">
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        <input type="text" className="form-control" placeholder="Attribute Name (e.g. Side)" value={attr.name} onChange={(e) => updateAttribute(i, { name: e.target.value })} />
-                        <select className="form-select" value={attr.type} onChange={(e) => updateAttribute(i, { type: e.target.value })}>
-                          <option value="select">Select</option>
-                          <option value="checkbox">Checkbox</option>
-                          <option value="text">Text</option>
-                          <option value="number">Number</option>
-                        </select>
-                        <div className="form-check">
-                          <input className="form-check-input" type="checkbox" checked={!!attr.required} onChange={(e) => updateAttribute(i, { required: e.target.checked })} />
-                          <label className="form-check-label">Required</label>
-                        </div>
-                        <button type="button" className="btn btn-sm btn-danger" onClick={() => removeAttribute(i)}>Delete</button>
-                      </div>
+                <div className="attributes-section">
+                    <h4>Custom Attributes</h4>
 
-                      <div className="options-section ms-3">
-                        <label className="fw-bold">Options:</label>
-                        {attr.values?.map((opt, j) => (
-                          <div key={j} className="d-flex align-items-center gap-2 mb-2">
-                            <input type="text" className="form-control" placeholder="Option Label (e.g. Single Side)" value={opt.label} onChange={(e) => {
-                              const newOptions = [...attr.values];
-                              newOptions[j].label = e.target.value;
-                              updateAttribute(i, { values: newOptions });
-                            }} />
-                            <input type="number" className="form-control" placeholder="Price Modifier (₹)" value={opt.priceModifier} onChange={(e) => {
-                              const newOptions = [...attr.values];
-                              newOptions[j].priceModifier = e.target.value;
-                              updateAttribute(i, { values: newOptions });
-                            }} />
-                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => {
-                              const newOptions = attr.values.filter((_, idx) => idx !== j);
-                              updateAttribute(i, { values: newOptions });
-                            }}>❌</button>
+                    {form.attributes.map((attr, i) => (
+                      <div
+                        key={i}
+                        className="attribute-card mb-3 p-3 border rounded"
+                      >
+                        {/* Attribute Name + Type + Required */}
+                        <div className="d-flex align-items-center gap-2 mb-2">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Attribute Name (e.g. Side)"
+                            value={attr.name}
+                            onChange={(e) =>
+                              updateAttribute(i, { name: e.target.value })
+                            }
+                          />
+                          <select
+                            className="form-select"
+                            value={attr.type}
+                            onChange={(e) =>
+                              updateAttribute(i, { type: e.target.value })
+                            }
+                          >
+                            <option value="select">Select</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="upload">Upload File</option>{" "}
+                            {/* ⭐ NEW */}
+                          </select>
+
+                          <div className="form-check">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              checked={!!attr.required}
+                              onChange={(e) =>
+                                updateAttribute(i, {
+                                  required: e.target.checked,
+                                })
+                              }
+                            />
+                            <label className="form-check-label">Required</label>
                           </div>
-                        ))}
-                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => {
-                          const newOptions = attr.values ? [...attr.values, { label: "", priceModifier: 0 }] : [{ label: "", priceModifier: 0 }];
-                          updateAttribute(i, { values: newOptions });
-                        }}>➕ Add Option</button>
-                      </div>
-                    </div>
-                  ))}
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            onClick={() => removeAttribute(i)}
+                          >
+                            Delete
+                          </button>
+                        </div>
 
-                  <button type="button" className="btn btn-primary mt-3" onClick={addAttribute}>➕ Add Attribute</button>
-                </div>
+                        {/* Attribute Options */}
+                        <div className="options-section ms-3">
+                          <label className="fw-bold">Options:</label>
+                          {attr.options?.map((opt, j) => (
+                            <div
+                              key={j}
+                              className="d-flex align-items-center gap-2 mb-2"
+                            >
+                              <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Option Label (e.g. Single Side)"
+                                value={opt.label}
+                                onChange={(e) => {
+                                  const newOptions = [...attr.options];
+                                  newOptions[j].label = e.target.value;
+                                  updateAttribute(i, { options: newOptions });
+                                }}
+                              />
+                              <input
+                                type="number"
+                                className="form-control"
+                                placeholder="Price Modifier (₹)"
+                                value={opt.priceModifier}
+                                onChange={(e) => {
+                                  const newOptions = [...attr.options];
+                                  newOptions[j].priceModifier = e.target.value;
+                                  updateAttribute(i, { options: newOptions });
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => {
+                                  const newOptions = attr.options.filter(
+                                    (_, idx) => idx !== j
+                                  );
+                                  updateAttribute(i, { options: newOptions });
+                                }}
+                              >
+                                ❌
+                              </button>
+                            </div>
+                          ))}
+
+                          {attr.type === "upload" && (
+                            <div className="upload-rules-section mt-3 p-3 border rounded bg-light">
+                              <h6 className="fw-bold mb-2">Upload Rules</h6>
+
+                              {/* Required Upload */}
+                              <div className="form-check mb-2">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  checked={attr.uploadRules?.required || false}
+                                  onChange={(e) =>
+                                    updateAttribute(i, {
+                                      uploadRules: {
+                                        ...attr.uploadRules,
+                                        required: e.target.checked,
+                                      },
+                                    })
+                                  }
+                                />
+                                <label className="form-check-label">
+                                  Mandatory File Upload
+                                </label>
+                              </div>
+
+                              {/* Acceptable File Types */}
+                              <label className="fw-bold">
+                                Accepted File Types
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control mb-2"
+                                placeholder="e.g. png,jpg,pdf"
+                                value={(
+                                  attr.uploadRules?.acceptTypes || []
+                                ).join(",")}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      acceptTypes: e.target.value
+                                        .split(",")
+                                        .map((s) => s.trim()),
+                                    },
+                                  })
+                                }
+                              />
+
+                              {/* Max Size */}
+                              <label className="fw-bold">
+                                Max File Size (MB)
+                              </label>
+                              <input
+                                type="number"
+                                className="form-control mb-2"
+                                placeholder="Max Size"
+                                value={attr.uploadRules?.maxSizeMB || 5}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      maxSizeMB: Number(e.target.value),
+                                    },
+                                  })
+                                }
+                              />
+
+                              {/* Image Dimensions (optional) */}
+                              <label className="fw-bold mt-2">
+                                Allowed Image Dimensions (comma separated)
+                              </label>
+                              {/* <input
+                                type="text"
+                                className="form-control mb-2"
+                                placeholder="e.g. 1280x760,760x540 (leave empty to skip dimension check)"
+                                value={attr.uploadRules?.imageDimensions || ""}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      imageDimensions: e.target.value, // store as raw string
+                                    },
+                                  })
+                                }
+                              /> */}
+
+
+
+                              {/* Dimension Unit */}
+                                <label className="fw-bold mt-2">Dimension Unit</label>
+                                <select
+                                  className="form-select mb-2"
+                                  value={attr.uploadRules?.imageDimensions?.unit || "px"}
+                                  onChange={(e) =>
+                                    updateAttribute(i, {
+                                      uploadRules: {
+                                        ...attr.uploadRules,
+                                        imageDimensions: {
+                                          unit: e.target.value,
+                                          values: attr.uploadRules?.imageDimensions?.values || "",
+                                        },
+                                      },
+                                    })
+                                  }
+                                >
+                                  <option value="px">Pixels (px)</option>
+                                  <option value="mm">Millimeter (mm)</option>
+                                  <option value="inch">Inch (in)</option>
+                                </select>
+
+                                {/* Dimension Values */}
+                                <label className="fw-bold">Allowed Dimensions</label>
+                                <input
+                                  type="text"
+                                  className="form-control mb-2"
+                                  placeholder="e.g. 1280x760 or 210x297"
+                                  value={attr.uploadRules?.imageDimensions?.values || ""}
+                                  onChange={(e) =>
+                                    updateAttribute(i, {
+                                      uploadRules: {
+                                        ...attr.uploadRules,
+                                        imageDimensions: {
+                                          unit: attr.uploadRules?.imageDimensions?.unit || "px",
+                                          values: e.target.value,
+                                        },
+                                      },
+                                    })
+                                  }
+                                />
+
+                                <small className="text-muted">
+                                  Enter width x height. Unit depends on selection above.
+                                </small>
+
+                              <small className="text-muted">
+                                Enter widthxheight values separated by commas.
+                                Users must upload an image matching one of these
+                                exactly.
+                              </small>
+
+                              {/* Upload Side */}
+                              <label className="fw-bold">Upload For</label>
+                              <select
+                                className="form-select"
+                                value={attr.uploadRules?.uploadFor || "all"}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      uploadFor: e.target.value,
+                                    },
+                                  })
+                                }
+                              >
+                                <option value="front">Front</option>
+                                <option value="back">Back</option>
+                                <option value="all">All</option>
+                              </select>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => {
+                              const newOptions = attr.options
+                                ? [
+                                    ...attr.options,
+                                    { label: "", priceModifier: 0 },
+                                  ]
+                                : [{ label: "", priceModifier: 0 }];
+                              updateAttribute(i, { options: newOptions });
+                            }}
+                          >
+                            ➕ Add Option
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      className="btn btn-primary mt-3"
+                      onClick={addAttribute}
+                    >
+                      ➕ Add Attribute
+                    </button>
+                  </div>
+             
 
                 {/* B2B/B2C Sections */}
                 <div className="b2b-section mt-3">

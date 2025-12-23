@@ -165,10 +165,6 @@
 //   );
 // }
 
-
-
-
-
 // "use client";
 // export const dynamic = "force-dynamic";
 
@@ -434,10 +430,6 @@
 //   );
 // }
 
-
-
-
-
 "use client";
 export const dynamic = "force-dynamic";
 
@@ -510,8 +502,8 @@ export default function AdminOrderDetail() {
 
       {/* Main content */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+        
       >
         {/* Top navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-white px-4 shadow-sm sticky-top">
@@ -521,7 +513,7 @@ export default function AdminOrderDetail() {
           >
             ☰
           </button>
-          <h5 className="mb-0 fw-semibold">Order Details</h5>
+          <h5 className="dashboard-main-h">Order Details</h5>
           <div className="ms-auto d-flex align-items-center">
             <FaBell className="me-3 text-muted" size={20} />
             <div className="dropdown">
@@ -574,14 +566,21 @@ export default function AdminOrderDetail() {
                   {order.status}
                 </span>
 
-                 {order.status === "Design Rejected" && order.remarks && (
-                    <div className="alert alert-danger mt-3 py-2 px-3">
-                        <strong>Reason for Rejection:</strong> {order.remarks}
-                    </div>
-                    )}
-
+                {order.status === "Design Rejected" && order.remarks && (
+                  <div className="alert alert-danger mt-3 py-2 px-3">
+                    <strong>Reason for Rejection:</strong> {order.remarks}
+                  </div>
+                )}
               </div>
             </div>
+
+            {order.customerRemarks && (
+              <div className="alert alert-info mt-3">
+                <strong>Customer Special Remarks:</strong>
+                <br />
+                {order.customerRemarks}
+              </div>
+            )}
 
             {/* Customer & Shipping */}
             <div className="row mb-4">
@@ -622,15 +621,30 @@ export default function AdminOrderDetail() {
               </div>
             </div>
 
-
-              <DesignUploads productId={order.items?.[0]?.product?._id || order.items?.[0]?.product} />
-              {/* <DesignUploads
+            <DesignUploads
+              productId={
+                order.items?.[0]?.product?._id || order.items?.[0]?.product
+              }
+            />
+            {/* <DesignUploads
                 productId={order?.product?._id || order?.productId}
                 userId={order?.user?._id || order?.userId}
               /> */}
 
-
-
+            {order.reuploadedFiles?.length > 0 && (
+              <div className="alert alert-info mt-3">
+                <strong>Re-uploaded Designs:</strong>
+                <ul className="mt-2">
+                  {order.reuploadedFiles.map((f, i) => (
+                    <li key={i}>
+                      <a href={f.fileUrl} target="_blank" rel="noreferrer">
+                        Download Re-uploaded File {i + 1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Items Table */}
             <h6 className="fw-semibold mb-3">
@@ -672,18 +686,12 @@ export default function AdminOrderDetail() {
                       </td>
                       <td>{it.quantity}</td>
                       <td>₹{it.price.toFixed(2)}</td>
-                      <td>
-                        ₹{(it.price * it.quantity).toFixed(2)}
-                      </td>
+                      <td>₹{(it.price * it.quantity).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-
-
-
 
             {/* Summary */}
             <div className="d-flex justify-content-end mt-4">
@@ -700,18 +708,19 @@ export default function AdminOrderDetail() {
             </div>
 
             {order.status === "Order Ready" && (
-  <div className="alert alert-warning my-3">
-    <strong>Dispatch Request:</strong>{" "}
-    {order.dispatchRequest === "pending" ? "Customer Requested Dispatch" : "Waiting for customer request"}
-  </div>
-)}
+              <div className="alert alert-warning my-3">
+                <strong>Dispatch Request:</strong>{" "}
+                {order.dispatchRequest === "pending"
+                  ? "Customer Requested Dispatch"
+                  : "Waiting for customer request"}
+              </div>
+            )}
 
-{order.dispatchRequest === "approved" && (
-  <div className="alert alert-success my-3">
-    Dispatch request approved — Order is dispatched
-  </div>
-)}
-
+            {order.dispatchRequest === "approved" && (
+              <div className="alert alert-success my-3">
+                Dispatch request approved — Order is dispatched
+              </div>
+            )}
 
             {/* Status update */}
             <div className="mt-4 pt-3 border-top">
@@ -727,14 +736,24 @@ export default function AdminOrderDetail() {
                   <option value="Design Rejected">Design Rejected</option>
                   <option value="In Progress">In Progress</option>
                   <option value="In Packaging">In Packaging</option>
-                    {/* NEW */}
-                   <option value="Order Ready">Order Ready</option>
+                  {/* NEW */}
+                  <option value="Order Ready">Order Ready</option>
                   <option value="Order Dispatched">Order Dispatched</option>
                   <option value="Order Delivered">Order Delivered</option>
                 </select>
-
+                {/* 
                 {newStatus === "Design Rejected" && (
                   <inputx
+                    type="text"
+                    placeholder="Enter rejection remarks"
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="form-control w-100 w-md-auto"
+                  />
+                )} */}
+
+                {newStatus === "Design Rejected" && (
+                  <input
                     type="text"
                     placeholder="Enter rejection remarks"
                     value={remarks}
@@ -748,10 +767,6 @@ export default function AdminOrderDetail() {
                 </button>
               </div>
             </div>
-
-
- 
-
           </div>
         </div>
       </div>

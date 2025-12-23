@@ -3,12 +3,12 @@ import React from "react";
 import Link from "next/link";
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
-import Product from "@/models/Product"; // <- adjust path/name if your product model is different
 import Head from "next/head";
 import Topbar from "@/components/header/Topbar";
 import Offcanvas from "@/components/header/Offcanvas";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import Footer from "@/components/footer/Footer";
+import axios from "axios";
 
 function serializeDoc(doc) {
   if (!doc) return null;
@@ -51,29 +51,37 @@ export async function getServerSideProps(context) {
   //   const products = await Product.find({ categoryId: { $in: catIds } })
 
   // STEP 1: detect userType (SSR-safe)
-  const cookie = context.req.headers.cookie || "";
-  let userType = "b2c"; // default for guest users
 
-  if (cookie.includes("userType=b2b") || cookie.includes("userType=partner")) {
-    userType = "b2b";
-  }
 
-  // STEP 2: build product filter
-  const productFilter = {
-    category: { $in: catIds },
-  };
+  
 
-  // STEP 3: apply SAME logic as /api/products
-  if (userType === "b2b") {
-    productFilter.productFor = { $in: ["b2b", "both"] };
-  } else {
-    productFilter.productFor = { $in: ["b2c", "both"] };
-  }
 
-  // STEP 4: fetch products safely
-  const products = await Product.find(productFilter)
-    .sort({ createdAt: -1 })
-    .lean();
+  const rawUserType = context.query.userType;
+
+const userType =
+  rawUserType === "b2b" || rawUserType === "partner"
+    ? "b2b"
+    : "b2c";
+
+
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  // Call same API as Products page
+  const { data: allProducts } = await axios.get(
+    `${baseUrl}/api/products?userType=${userType}`,
+    {
+      headers: {
+        cookie: context.req.headers.cookie || "",
+      },
+    }
+  );
+
+
+  const products = allProducts.filter((p) =>
+  catIds.includes(String(p.category?._id || p.category))
+);
+
 
   const serializedCategory = serializeDoc(category);
   const serializedProducts = products.map(serializeDoc);

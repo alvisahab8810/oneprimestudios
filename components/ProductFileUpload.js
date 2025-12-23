@@ -3,17 +3,10 @@
 import React, { useState, useRef } from "react";
 import { toast } from "react-hot-toast";
 
-/**
- * ProductFileUpload
- *
- * Supports:
- * - Legacy multi-file upload (selectedFiles, setSelectedFiles, setFiles, uploadFiles)
- * - Attribute single-file upload (attributeName, attributeKey, uploadedAttrFiles, setUploadedAttrFiles,
- *   acceptTypes, maxSizeMB, imageDimensions)
- *
- * Note: This component intentionally does NOT use prop-types to avoid extra dependency.
- */
+
 export default function ProductFileUpload({
+
+  
   product,
   selectedFiles = [],
   setSelectedFiles,
@@ -28,12 +21,30 @@ export default function ProductFileUpload({
   setUploadedAttrFiles = null,
   acceptTypes = null, // array like ['png','jpg','pdf']
   maxSizeMB = null, // number
-  imageDimensions = null, // string e.g. "1280x760,760x540" or "1280 x 760"
+  // normalizedImageDimensions = null, // string e.g. "1280x760,760x540" or "1280 x 760"
+  imageDimensions = null,
+
   singleFile = false,
 }) {
   const [openPanel, setOpenPanel] = useState(false);
   const [urlValue, setUrlValue] = useState("");
   const fileInputRef = useRef(null);
+
+const getNormalizedImageDimensions = (dim) => {
+  if (!dim) return "";
+
+  // Old products
+  if (typeof dim === "string") return dim;
+
+  // New products
+  if (typeof dim === "object") return dim.values || "";
+
+  return "";
+};
+
+const normalizedImageDimensions = getNormalizedImageDimensions(imageDimensions);
+
+
 
   // ---------------- helpers ----------------
   const normalizeDimString = (s) => {
@@ -66,6 +77,12 @@ export default function ProductFileUpload({
     setFiles && setFiles(arr);
   };
 
+
+  const DPI = 300; // standard print DPI
+
+const inchToPx = (inch) => Math.round(inch * DPI);
+const mmToPx = (mm) => Math.round((mm / 25.4) * DPI);
+
   // -------- attribute single-file handler (robust) --------
   const handlePickedFileForAttribute = (file) => {
     if (!attributeKey || !setUploadedAttrFiles) return;
@@ -86,7 +103,26 @@ export default function ProductFileUpload({
     }
 
     // 3) validate image dimensions (if configured & file is image)
-    const dims = parseAllowedDims(imageDimensions);
+    let dims = parseAllowedDims(normalizedImageDimensions);
+
+// 🔥 Convert to PX if unit is inch or mm
+if (imageDimensions && typeof imageDimensions === "object") {
+  if (imageDimensions.unit === "inch") {
+    dims = dims.map(d => ({
+      w: inchToPx(d.w),
+      h: inchToPx(d.h),
+    }));
+  }
+
+  if (imageDimensions.unit === "mm") {
+    dims = dims.map(d => ({
+      w: mmToPx(d.w),
+      h: mmToPx(d.h),
+    }));
+  }
+}
+
+    
     if (dims.length > 0 && file.type && file.type.startsWith("image/")) {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -175,6 +211,24 @@ export default function ProductFileUpload({
   };
 
   // ---------------- render ----------------
+
+
+  const normalizeImageDimensions = (dim) => {
+  if (!dim) return "";
+
+  // Old products (string)
+  if (typeof dim === "string") {
+    return dim;
+  }
+
+  // New products (object)
+  if (typeof dim === "object") {
+    return dim.values || "";
+  }
+
+  return "";
+};
+
   return (
     <div className={`ops-file-uploader ${openPanel ? "expanded" : ""}`}>
       {/* hidden file input */}
@@ -195,7 +249,10 @@ export default function ProductFileUpload({
           type="button"
         >
           <img src="/assets/images/icons/upload.svg" />
-          {attributeName ? `Upload ${attributeName}` : "Upload Your Design"}
+          {/* {attributeName ? `Upload ${attributeName}` : "Upload Your Design"} */}
+
+          {attributeName || "Upload Your Design"}
+
         </button>
       ) : (
         <div className="ops-panel" onDrop={onDrop} onDragOver={onDragOver}>
@@ -204,9 +261,9 @@ export default function ProductFileUpload({
             {attributeName && (
               <div style={{ marginBottom: 10, textAlign: "left" }}>
                 <h4 style={{ margin: 0 }}>{attributeName}</h4>
-                {imageDimensions && (
+                {normalizedImageDimensions && (
                   <p style={{ fontSize: 13, margin: "4px 0", color: "#555" }}>
-                    <strong>Required Size:</strong> {imageDimensions}
+                    <strong>Required Size:</strong> {normalizedImageDimensions}
                   </p>
                 )}
                 <p style={{ fontSize: 13, margin: "2px 0", color: "#555" }}>

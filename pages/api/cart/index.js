@@ -78,7 +78,15 @@ export default async function handler(req, res) {
 
     // POST -> add item to cart
     if (req.method === "POST") {
-      const { productId, quantity = 1, selectedAttrs = {}, uploadedFiles = [], price = 0 } = req.body;
+      const {
+  productId,
+  quantity = 1,
+  selectedAttrs = {},
+  uploadedFiles = [],
+  price = 0,
+  remarks = "",
+} = req.body;
+
       if (!productId) return res.status(400).json({ message: "productId required" });
 
       // Ensure product exists
@@ -110,6 +118,11 @@ export default async function handler(req, res) {
         cart.items[matchIndex].quantity += Number(quantity);
         // update unit price if needed
         cart.items[matchIndex].price = unitPrice;
+        // overwrite remarks if user re-adds item
+if (remarks) {
+  cart.items[matchIndex].remarks = remarks;
+}
+
       } else {
         cart.items.push({
           product: productId,
@@ -117,6 +130,7 @@ export default async function handler(req, res) {
           selectedAttrs,
           uploadedFiles: uploadedFiles || [],
           price: unitPrice, // store unit price
+           remarks: remarks || "",
         });
       }
 

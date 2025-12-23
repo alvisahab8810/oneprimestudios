@@ -99,8 +99,8 @@ export default function PartnerApprovalPage() {
 
       {/* Main content */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+      
       >
         {/* Top navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
@@ -143,7 +143,7 @@ export default function PartnerApprovalPage() {
 
         {/* Dashboard content */}
         <div className="container-fluid p-4">
-          <h1 className="mb-4">Partner Approvals</h1>
+          <h1 className="dashboard-main-h">Partner Approvals</h1>
 
           {/* FILTER BAR */}
           <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">

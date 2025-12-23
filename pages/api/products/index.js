@@ -39,16 +39,17 @@ handler.get(async (req, res) => {
 
     let filter = { status: "published" };
 
-    // 🔥 Apply B2B/B2C filter
-    if (!userType) {
-      filter.productFor = { $in: ["b2c", "both"] };
-    }
-    if (userType === "customer" || userType === "b2c") {
-      filter.productFor = { $in: ["b2c", "both"] };
-    }
-    if (userType === "partner" || userType === "b2b") {
-      filter.productFor = { $in: ["b2b", "both"] };
-    }
+  // 🔒 STRICT B2B / B2C VISIBILITY RULES
+if (!userType || userType === "customer" || userType === "b2c") {
+  // Non-login or customer → B2C ONLY
+  filter.productFor = "b2c";
+}
+
+if (userType === "partner" || userType === "b2b") {
+  // Partner → B2B ONLY
+  filter.productFor = "b2b";
+}
+
 
     // 🔥 SEARCH FILTER
     if (search && search.trim() !== "") {

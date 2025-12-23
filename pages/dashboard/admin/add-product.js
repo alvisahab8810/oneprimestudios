@@ -36,14 +36,12 @@ export default function AddProduct() {
     stockStatus: "in_stock",
     minOrderQty: 1,
     isFeatured: false,
-   productFor: "b2b",
-
+    productFor: "b2b",
 
     // attributes & pricing tiers (CSV inputs)
-attributes: [],
-pricingTiers: [],
-pricingTiersCSV: "",
-
+    attributes: [],
+    pricingTiers: [],
+    pricingTiersCSV: "",
 
     // B2B
     b2b_enabled: true,
@@ -52,8 +50,8 @@ pricingTiersCSV: "",
 
     // B2C
     b2c_enabled: false,
-    b2c_designUpload: true,
-    b2c_whatsapp: true,
+    b2c_designUpload: false,
+    b2c_whatsapp: false,
     b2c_quantityOptionsCSV: "", // optional, if you want fixed options for B2C
   });
 
@@ -171,49 +169,49 @@ pricingTiersCSV: "",
       submittingRef.current = true;
 
       // prepare attributes: ensure we map front-end attr.options -> values (numbers)
-     const transformedAttributes = form.attributes.map((attr) => {
-  const rawOptions = Array.isArray(attr.options) ? attr.options : [];
+      const transformedAttributes = form.attributes.map((attr) => {
+        const rawOptions = Array.isArray(attr.options) ? attr.options : [];
 
-  const values = rawOptions
-    .filter((o) => o && (o.label || o.label === ""))
-    .map((o) => ({
-      label: String(o.label || "").trim(),
-      priceModifier: Number(o.priceModifier || 0),
-    }));
+        const values = rawOptions
+          .filter((o) => o && (o.label || o.label === ""))
+          .map((o) => ({
+            label: String(o.label || "").trim(),
+            priceModifier: Number(o.priceModifier || 0),
+          }));
 
-  return {
-    name: String(attr.name || "").trim(),
-    type: attr.type || "select",
-    values,
-    required: !!attr.required,
+        return {
+          name: String(attr.name || "").trim(),
+          type: attr.type || "select",
+          values,
+          required: !!attr.required,
 
-    // ⭐ NEW upload rules — safe optional
-  uploadRules:
-  attr.type === "upload"
-    ? {
-        required: !!attr.uploadRules?.required,
-        acceptTypes: attr.uploadRules?.acceptTypes || [],
-        maxSizeMB: attr.uploadRules?.maxSizeMB || 5,
-        uploadFor: attr.uploadRules?.uploadFor || "all",
-        imageDimensions: attr.uploadRules?.imageDimensions || "", // <-- NEW
-      }
-    : undefined,
+          // ⭐ NEW upload rules — safe optional
+          uploadRules:
+            attr.type === "upload"
+              ? {
+                  required: !!attr.uploadRules?.required,
+                  acceptTypes: attr.uploadRules?.acceptTypes || [],
+                  maxSizeMB: attr.uploadRules?.maxSizeMB || 5,
+                  uploadFor: attr.uploadRules?.uploadFor || "all",
+                  // imageDimensions: attr.uploadRules?.imageDimensions || "",
+                  imageDimensions:
+                    attr.uploadRules?.imageDimensions
+                      ? typeof attr.uploadRules.imageDimensions === "string"
+                        ? { unit: "px", values: attr.uploadRules.imageDimensions }
+                        : attr.uploadRules.imageDimensions
+                      : null
 
-  };
-});
-
-
+                }
+              : undefined,
+        };
+      });
 
       // convert dynamic tiers → CSV string
-const tiersCSV = (form.pricingTiers || [])
-  .map(t => `${t.minQty}:${t.pricePerUnit}`)
-  .join(",");
+      const tiersCSV = (form.pricingTiers || [])
+        .map((t) => `${t.minQty}:${t.pricePerUnit}`)
+        .join(",");
 
-form.pricingTiersCSV = tiersCSV;
-
-
-
-
+      form.pricingTiersCSV = tiersCSV;
 
       // pricing tiers
       const transformedTiers = parseTiersCSV(form.pricingTiersCSV || "");
@@ -285,11 +283,11 @@ form.pricingTiersCSV = tiersCSV;
         stockStatus: "in_stock",
         minOrderQty: 1,
         isFeatured: false,
-       productFor: "b2b",
+        productFor: "b2b",
 
         attributes: [],
         pricingTiersCSV: "",
-          pricingTiers: [],       // ← ADD THIS ✔
+        pricingTiers: [], // ← ADD THIS ✔
         b2b_enabled: false,
         b2b_allowFileUpload: true,
         b2b_quantityOptionsCSV: "",
@@ -316,7 +314,18 @@ form.pricingTiersCSV = tiersCSV;
       ...prev,
       attributes: [
         ...prev.attributes,
-        { name: "", type: "select", required: false, options: [] },
+        // { name: "", type: "select", required: false, options: [] },
+
+        {
+  name: "",
+  type: "select",
+  required: false,
+  options: [],
+  uploadRules: {
+    imageDimensions: { unit: "px", values: "" }
+  }
+}
+
       ],
     }));
   };
@@ -338,30 +347,28 @@ form.pricingTiersCSV = tiersCSV;
     });
   };
 
-
   const handleAddCategory = async () => {
-  if (!newCategoryName.trim()) return toast.error("Category name required");
+    if (!newCategoryName.trim()) return toast.error("Category name required");
 
-  try {
-    const res = await axios.post("/api/categories", {
-      name: newCategoryName.trim(),
-      parent: parentCategoryId || null,
-    });
+    try {
+      const res = await axios.post("/api/categories", {
+        name: newCategoryName.trim(),
+        parent: parentCategoryId || null,
+      });
 
-    toast.success("Category added");
+      toast.success("Category added");
 
-    setCategories((prev) => [...prev, res.data]);
+      setCategories((prev) => [...prev, res.data]);
 
-    // reset form
-    setNewCategoryName("");
-    setParentCategoryId("");
-    setShowCategoryForm(false);
-  } catch (err) {
-    console.error(err);
-    toast.error(err.response?.data?.message || "Error adding category");
-  }
-   };
-
+      // reset form
+      setNewCategoryName("");
+      setParentCategoryId("");
+      setShowCategoryForm(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Error adding category");
+    }
+  };
 
   return (
     <div className="d-flex">
@@ -371,8 +378,8 @@ form.pricingTiersCSV = tiersCSV;
 
       {/* Main content */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+       
       >
         {/* Top navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
@@ -415,13 +422,13 @@ form.pricingTiersCSV = tiersCSV;
 
         {/* Dashboard content */}
         <div className="container-fluid p-4">
-          <h1 className="mb-4">Add Products</h1>
+          <h1 className="dashboard-main-h" >Add Products</h1>
 
           <div className="add-product-page">
             {/* Categories */}
 
             <section className="category-section mb-4">
-              <h3 className="mb-3">Product Category</h3>
+              <h5 className="mb-3">Select Category</h5>
 
               {/* Main Category Selector */}
               <select
@@ -578,17 +585,20 @@ form.pricingTiersCSV = tiersCSV;
                               updateAttribute(i, { name: e.target.value })
                             }
                           />
-                        <select
-  className="form-select"
-  value={attr.type}
-  onChange={(e) => updateAttribute(i, { type: e.target.value })}
->
-  <option value="select">Select</option>
-  <option value="checkbox">Checkbox</option>
-  <option value="text">Text</option>
-  <option value="number">Number</option>
-  <option value="upload">Upload File</option>  {/* ⭐ NEW */}
-</select>
+                          <select
+                            className="form-select"
+                            value={attr.type}
+                            onChange={(e) =>
+                              updateAttribute(i, { type: e.target.value })
+                            }
+                          >
+                            <option value="select">Select</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="upload">Upload File</option>{" "}
+                            {/* ⭐ NEW */}
+                          </select>
 
                           <div className="form-check">
                             <input
@@ -657,106 +667,165 @@ form.pricingTiersCSV = tiersCSV;
                             </div>
                           ))}
 
-
                           {attr.type === "upload" && (
-  <div className="upload-rules-section mt-3 p-3 border rounded bg-light">
+                            <div className="upload-rules-section mt-3 p-3 border rounded bg-light">
+                              <h6 className="fw-bold mb-2">Upload Rules</h6>
 
-    <h6 className="fw-bold mb-2">Upload Rules</h6>
+                              {/* Required Upload */}
+                              <div className="form-check mb-2">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  checked={attr.uploadRules?.required || false}
+                                  onChange={(e) =>
+                                    updateAttribute(i, {
+                                      uploadRules: {
+                                        ...attr.uploadRules,
+                                        required: e.target.checked,
+                                      },
+                                    })
+                                  }
+                                />
+                                <label className="form-check-label">
+                                  Mandatory File Upload
+                                </label>
+                              </div>
 
-    {/* Required Upload */}
-    <div className="form-check mb-2">
-      <input
-        className="form-check-input"
-        type="checkbox"
-        checked={attr.uploadRules?.required || false}
-        onChange={(e) =>
-          updateAttribute(i, {
-            uploadRules: {
-              ...attr.uploadRules,
-              required: e.target.checked,
-            },
-          })
-        }
-      />
-      <label className="form-check-label">Mandatory File Upload</label>
-    </div>
+                              {/* Acceptable File Types */}
+                              <label className="fw-bold">
+                                Accepted File Types
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control mb-2"
+                                placeholder="e.g. png,jpg,pdf"
+                                value={(
+                                  attr.uploadRules?.acceptTypes || []
+                                ).join(",")}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      acceptTypes: e.target.value
+                                        .split(",")
+                                        .map((s) => s.trim()),
+                                    },
+                                  })
+                                }
+                              />
 
-    {/* Acceptable File Types */}
-    <label className="fw-bold">Accepted File Types</label>
-    <input
-      type="text"
-      className="form-control mb-2"
-      placeholder="e.g. png,jpg,pdf"
-      value={(attr.uploadRules?.acceptTypes || []).join(",")}
-      onChange={(e) =>
-        updateAttribute(i, {
-          uploadRules: {
-            ...attr.uploadRules,
-            acceptTypes: e.target.value.split(",").map((s) => s.trim()),
-          },
-        })
-      }
-    />
+                              {/* Max Size */}
+                              <label className="fw-bold">
+                                Max File Size (MB)
+                              </label>
+                              <input
+                                type="number"
+                                className="form-control mb-2"
+                                placeholder="Max Size"
+                                value={attr.uploadRules?.maxSizeMB || 5}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      maxSizeMB: Number(e.target.value),
+                                    },
+                                  })
+                                }
+                              />
 
-    {/* Max Size */}
-    <label className="fw-bold">Max File Size (MB)</label>
-    <input
-      type="number"
-      className="form-control mb-2"
-      placeholder="Max Size"
-      value={attr.uploadRules?.maxSizeMB || 5}
-      onChange={(e) =>
-        updateAttribute(i, {
-          uploadRules: {
-            ...attr.uploadRules,
-            maxSizeMB: Number(e.target.value),
-          },
-        })
-      }
-    />
-
-
-    {/* Image Dimensions (optional) */}
-<label className="fw-bold mt-2">Allowed Image Dimensions (comma separated)</label>
-<input
-  type="text"
-  className="form-control mb-2"
-  placeholder="e.g. 1280x760,760x540 (leave empty to skip dimension check)"
-  value={attr.uploadRules?.imageDimensions || ""}
-  onChange={(e) =>
-    updateAttribute(i, {
-      uploadRules: {
-        ...attr.uploadRules,
-        imageDimensions: e.target.value, // store as raw string
-      },
-    })
-  }
-/>
-<small className="text-muted">
-  Enter widthxheight values separated by commas. Users must upload an image matching one of these exactly.
-</small>
+                              {/* Image Dimensions (optional) */}
+                              <label className="fw-bold mt-2">
+                                Allowed Image Dimensions (comma separated)
+                              </label>
+                              {/* <input
+                                type="text"
+                                className="form-control mb-2"
+                                placeholder="e.g. 1280x760,760x540 (leave empty to skip dimension check)"
+                                value={attr.uploadRules?.imageDimensions || ""}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      imageDimensions: e.target.value, // store as raw string
+                                    },
+                                  })
+                                }
+                              /> */}
 
 
-    {/* Upload Side */}
-    <label className="fw-bold">Upload For</label>
-    <select
-      className="form-select"
-      value={attr.uploadRules?.uploadFor || "all"}
-      onChange={(e) =>
-        updateAttribute(i, {
-          uploadRules: {
-            ...attr.uploadRules,
-            uploadFor: e.target.value,
-          },
-        })
-      }
-    >
-      <option value="front">Front</option>
-      <option value="back">Back</option>
-      <option value="all">All</option>
-    </select>
-  </div>
-)}
+
+                              {/* Dimension Unit */}
+                                <label className="fw-bold mt-2">Dimension Unit</label>
+                                <select
+                                  className="form-select mb-2"
+                                  value={attr.uploadRules?.imageDimensions?.unit || "px"}
+                                  onChange={(e) =>
+                                    updateAttribute(i, {
+                                      uploadRules: {
+                                        ...attr.uploadRules,
+                                        imageDimensions: {
+                                          unit: e.target.value,
+                                          values: attr.uploadRules?.imageDimensions?.values || "",
+                                        },
+                                      },
+                                    })
+                                  }
+                                >
+                                  <option value="px">Pixels (px)</option>
+                                  <option value="mm">Millimeter (mm)</option>
+                                  <option value="inch">Inch (in)</option>
+                                </select>
+
+                                {/* Dimension Values */}
+                                <label className="fw-bold">Allowed Dimensions</label>
+                                <input
+                                  type="text"
+                                  className="form-control mb-2"
+                                  placeholder="e.g. 1280x760 or 210x297"
+                                  value={attr.uploadRules?.imageDimensions?.values || ""}
+                                  onChange={(e) =>
+                                    updateAttribute(i, {
+                                      uploadRules: {
+                                        ...attr.uploadRules,
+                                        imageDimensions: {
+                                          unit: attr.uploadRules?.imageDimensions?.unit || "px",
+                                          values: e.target.value,
+                                        },
+                                      },
+                                    })
+                                  }
+                                />
+
+                                <small className="text-muted">
+                                  Enter width x height. Unit depends on selection above.
+                                </small>
+
+                              <small className="text-muted">
+                                Enter widthxheight values separated by commas.
+                                Users must upload an image matching one of these
+                                exactly.
+                              </small>
+
+                              {/* Upload Side */}
+                              <label className="fw-bold">Upload For</label>
+                              <select
+                                className="form-select"
+                                value={attr.uploadRules?.uploadFor || "all"}
+                                onChange={(e) =>
+                                  updateAttribute(i, {
+                                    uploadRules: {
+                                      ...attr.uploadRules,
+                                      uploadFor: e.target.value,
+                                    },
+                                  })
+                                }
+                              >
+                                <option value="front">Front</option>
+                                <option value="back">Back</option>
+                                <option value="all">All</option>
+                              </select>
+                            </div>
+                          )}
 
                           <button
                             type="button"
@@ -771,7 +840,7 @@ form.pricingTiersCSV = tiersCSV;
                               updateAttribute(i, { options: newOptions });
                             }}
                           >
-                            ➕ Add Option
+                            + Add Option
                           </button>
                         </div>
                       </div>
@@ -782,7 +851,7 @@ form.pricingTiersCSV = tiersCSV;
                       className="btn btn-primary mt-3"
                       onClick={addAttribute}
                     >
-                      ➕ Add Attribute
+                      + Add Attribute
                     </button>
                   </div>
 
@@ -891,7 +960,7 @@ form.pricingTiersCSV = tiersCSV;
                       Featured
                     </label> */}
                   </div>
-{/* 
+                  {/* 
                   <label>Quantity Pricing Tiers</label>
                   <input
                     placeholder="e.g. 1:10,50:8,100:6"
@@ -905,68 +974,68 @@ form.pricingTiersCSV = tiersCSV;
                     className="input-primary"
                   /> */}
 
+                  <label className="mb-2">Quantity Pricing Tiers</label>
 
+                  {form.pricingTiers?.map((tier, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                      <input
+                        type="number"
+                        placeholder="Min Qty"
+                        className="input-primary w-1/2"
+                        value={tier.minQty}
+                        onChange={(e) => {
+                          const updated = [...form.pricingTiers];
+                          updated[index].minQty = e.target.value;
+                          setForm((f) => ({ ...f, pricingTiers: updated }));
+                        }}
+                      />
 
-                 <label>Quantity Pricing Tiers</label>
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        className="input-primary w-1/2"
+                        value={tier.pricePerUnit}
+                        onChange={(e) => {
+                          const updated = [...form.pricingTiers];
+                          updated[index].pricePerUnit = e.target.value;
+                          setForm((f) => ({ ...f, pricingTiers: updated }));
+                        }}
+                      />
 
-{form.pricingTiers?.map((tier, index) => (
-  <div key={index} className="flex gap-2 mb-2">
-    <input
-      type="number"
-      placeholder="Min Qty"
-      className="input-primary w-1/2"
-      value={tier.minQty}
-      onChange={(e) => {
-        const updated = [...form.pricingTiers];
-        updated[index].minQty = e.target.value;
-        setForm((f) => ({ ...f, pricingTiers: updated }));
-      }}
-    />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...form.pricingTiers];
+                          updated.splice(index, 1);
+                          setForm((f) => ({ ...f, pricingTiers: updated }));
+                        }}
+                        className="bg-red-500 px-2 rounded"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
 
-    <input
-      type="number"
-      placeholder="Price"
-      className="input-primary w-1/2"
-      value={tier.pricePerUnit}
-      onChange={(e) => {
-        const updated = [...form.pricingTiers];
-        updated[index].pricePerUnit = e.target.value;
-        setForm((f) => ({ ...f, pricingTiers: updated }));
-      }}
-    />
+                  <button
+                    type="button"
+                    className="bg-green-500  px-4 py-1 rounded"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        pricingTiers: [
+                          ...(f.pricingTiers || []),
+                          { minQty: "", pricePerUnit: "" },
+                        ],
+                      }))
+                    }
+                  >
+                    + Add Tier
+                  </button>
 
-    <button
-      type="button"
-      onClick={() => {
-        const updated = [...form.pricingTiers];
-        updated.splice(index, 1);
-        setForm((f) => ({ ...f, pricingTiers: updated }));
-      }}
-      className="bg-red-500 text-white px-2 rounded"
-    >
-      X
-    </button>
-  </div>
-))}
-
-<button
-  type="button"
-  className="bg-green-500 text-white px-4 py-1 rounded"
-  onClick={() =>
-    setForm((f) => ({
-      ...f,
-      pricingTiers: [...(f.pricingTiers || []), { minQty: "", pricePerUnit: "" }],
-    }))
-  }
->
-  + Add Tier
-</button>
-
-
-
-                  {/* B2B / B2C Options */}
-                  <div className="b2b-section">
-                    <h4>B2B Options</h4>
+                 <div className="d-flex gap-5 bg-light px-3 mt-4">
+                   {/* B2B / B2C Options */}
+                  <div className="b2b-section mt-3">
+                    <h5 className="mb-3">B2B Options</h5>
                     <label>
                       <input
                         type="checkbox"
@@ -998,8 +1067,8 @@ form.pricingTiersCSV = tiersCSV;
                     /> */}
                   </div>
 
-                  <div className="b2c-section">
-                    <h4>B2C Options</h4>
+                  <div className="b2c-section mt-3">
+                    <h5 className="mb-3">B2C Options</h5>
                     <label>
                       <input
                         type="checkbox"
@@ -1039,6 +1108,7 @@ form.pricingTiersCSV = tiersCSV;
                       className="input-primary"
                     /> */}
                   </div>
+                 </div>
                 </div>
 
                 {/* Right Column */}
@@ -1087,36 +1157,6 @@ form.pricingTiersCSV = tiersCSV;
   );
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // // pages/admin/add-product.js
 // import { useEffect, useState, useRef } from "react";
 // import axios from "axios";
@@ -1161,7 +1201,6 @@ form.pricingTiersCSV = tiersCSV;
 // attributes: [],
 // pricingTiers: [],
 // pricingTiersCSV: "",
-
 
 //     // B2B
 //     b2b_enabled: true,
@@ -1308,17 +1347,12 @@ form.pricingTiersCSV = tiersCSV;
 //         };
 //       });
 
-
 //       // convert dynamic tiers → CSV string
 // const tiersCSV = (form.pricingTiers || [])
 //   .map(t => `${t.minQty}:${t.pricePerUnit}`)
 //   .join(",");
 
 // form.pricingTiersCSV = tiersCSV;
-
-
-
-
 
 //       // pricing tiers
 //       const transformedTiers = parseTiersCSV(form.pricingTiersCSV || "");
@@ -1442,7 +1476,6 @@ form.pricingTiersCSV = tiersCSV;
 //     });
 //   };
 
-
 //   const handleAddCategory = async () => {
 //   if (!newCategoryName.trim()) return toast.error("Category name required");
 
@@ -1465,7 +1498,6 @@ form.pricingTiersCSV = tiersCSV;
 //     toast.error(err.response?.data?.message || "Error adding category");
 //   }
 //    };
-
 
 //   return (
 //     <div className="d-flex">
@@ -1650,7 +1682,7 @@ form.pricingTiersCSV = tiersCSV;
 //                     className="input-primary"
 //                     required
 //                   />
-//                   {/* 
+//                   {/*
 //                   <div className="short-desc-row">
 //                     <input
 //                       name="shortDescription"
@@ -1659,7 +1691,7 @@ form.pricingTiersCSV = tiersCSV;
 //                       onChange={handleChange}
 //                       className="input-primary"
 //                     />
-                
+
 //                   </div> */}
 
 //                   {/* Attributes Section */}
@@ -1893,7 +1925,7 @@ form.pricingTiersCSV = tiersCSV;
 //                       Featured
 //                     </label> */}
 //                   </div>
-// {/* 
+// {/*
 //                   <label>Quantity Pricing Tiers</label>
 //                   <input
 //                     placeholder="e.g. 1:10,50:8,100:6"
@@ -1906,8 +1938,6 @@ form.pricingTiersCSV = tiersCSV;
 //                     }
 //                     className="input-primary"
 //                   /> */}
-
-
 
 //                  <label>Quantity Pricing Tiers</label>
 
@@ -1963,8 +1993,6 @@ form.pricingTiersCSV = tiersCSV;
 // >
 //   + Add Tier
 // </button>
-
-
 
 //                   {/* B2B / B2C Options */}
 //                   <div className="b2b-section">

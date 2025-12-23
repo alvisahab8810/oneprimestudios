@@ -432,8 +432,8 @@ export default function AdminOrdersPage() {
 
       {/* Main Area */}
       <div
-        className="flex-grow-1"
-        style={{ marginLeft: sidebarOpen ? "220px" : "0", transition: "0.3s" }}
+        className="main-area"
+       
       >
         {/* Navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-white px-4 shadow-sm sticky-top">
@@ -443,7 +443,7 @@ export default function AdminOrdersPage() {
           >
             ☰
           </button>
-          <h5 className="mb-0 fw-semibold">Admin Dashboard</h5>
+          {/* <h5 className="dashboard-main-h">Admin Dashboard</h5> */}
           <div className="ms-auto d-flex align-items-center">
             <FaBell className="me-3 text-muted" size={20} />
           </div>
@@ -582,7 +582,7 @@ export default function AdminOrdersPage() {
                                 style={{ gap: "10px" }}
                               >
                                 {/* PRODUCT IMAGE */}
-                                <img
+                                {/* <img
                                   src={
                                     item.product?.images?.[0]
                                       ? item.product.images[0]
@@ -596,7 +596,7 @@ export default function AdminOrdersPage() {
                                     borderRadius: "6px",
                                     border: "1px solid #ddd",
                                   }}
-                                />
+                                /> */}
 
                                 {/* PRODUCT INFO */}
                                 <div style={{ lineHeight: "1.2" }}>

@@ -275,7 +275,7 @@ export default function ProductSlider() {
   if (loading) {
     return (
       <div className="product-slider text-center my-5">
-        <h2>Our Most popular Products</h2>
+        <h2>Explore Our Products</h2>
         <div className="spinner-border text-primary mt-3" role="status" />
       </div>
     );
@@ -284,7 +284,7 @@ export default function ProductSlider() {
   if (!products.length) {
     return (
       <div className="product-slider text-center my-5">
-        <h2>Our Most popular Products</h2>
+        <h2>Our  Products</h2>
         <p>No products found for your account type.</p>
       </div>
     );
@@ -294,12 +294,12 @@ export default function ProductSlider() {
 
     <>
 
-       <div className="container mobile-none">
+    <div className="container mobile-none">
       <div className="categories-header">
-          <h3 className="categories-title">Our Most Popular Products</h3>
+          <h3 className="categories-title">Explore Our Products</h3>
 
           
-        </div>
+       </div>
 
         <div className="underline"></div>
     </div>
@@ -307,7 +307,7 @@ export default function ProductSlider() {
       {/* <h2 className="mobile-none">Our Most Popular Products</h2> */}
       <div className="desktop-none">
          <div className="categories-header mobile-products">
-          <h3 className="categories-title">Our Most Popular Products</h3>
+          <h3 className="categories-title">Explore Our Products</h3>
           <Link href="/products" className="view-all-link">
             View All <img src="/assets/images/icons/arrow.svg"></img>
           </Link>

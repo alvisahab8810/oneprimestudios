@@ -103,10 +103,10 @@ export default function CategoriesAdmin() {
     <div className="d-flex">
       <Sidebar sidebarOpen={sidebarOpen} />
 
-      <div className="flex-grow-1" style={{ marginLeft: sidebarOpen ? "220px" : 0, transition: "0.3s" }}>
+      <div className="main-area">
         <div className="container-fluid p-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h1>Category Management</h1>
+            <h1 className="dashboard-main-h">Category Management</h1>
             <div>
               <button className="btn btn-outline-secondary me-2" onClick={() => { resetForm(); setEditing(null); setShowForm((s) => !s); }}>
                 {showForm ? "Close" : "+ Add Category"}

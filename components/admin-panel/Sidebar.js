@@ -93,6 +93,15 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { FaTruck } from "react-icons/fa";
+
+import { FaHandshake } from "react-icons/fa";
+import { FaUserPlus } from "react-icons/fa";
+import { FaTags } from "react-icons/fa";
+
+
+
+
 import { usePathname } from "next/navigation";
 
 export default function Sidebar({ sidebarOpen }) {
@@ -130,7 +139,7 @@ export default function Sidebar({ sidebarOpen }) {
           href="/dashboard/admin/partners"
           className={`ops-item ${isActive("/dashboard/admin/partners") ? "active" : ""}`}
         >
-          <img src="/assets/images/admin/partner.svg" /> Partners
+          <FaHandshake className="me-2" /> Partners
         </Link>
 
 
@@ -142,6 +151,16 @@ export default function Sidebar({ sidebarOpen }) {
           <img src="/assets/images/admin/partner.svg" /> Customers
         </Link>
 
+
+
+           {/* Customers */}
+        <Link
+          href="/dashboard/admin/dispatch-requests"
+          className={`ops-item ${isActive("/dashboard/admin/dispatch-requests") ? "active" : ""}`}
+        >
+            <FaTruck className="me-2" /> Dispatched Requests
+        </Link>
+
         
 
           {/* Partners */}
@@ -149,7 +168,7 @@ export default function Sidebar({ sidebarOpen }) {
           href="/dashboard/admin/categories"
           className={`ops-item ${isActive("/dashboard/admin/categories") ? "active" : ""}`}
         >
-          <img src="/assets/images/admin/partner.svg" /> Add Category
+          <img src="/assets/images/admin/add-order.svg" /> Add Category
         </Link>
 
 
@@ -157,7 +176,7 @@ export default function Sidebar({ sidebarOpen }) {
           href="/dashboard/admin/leads"
           className={`ops-item ${isActive("/dashboard/admin/leads") ? "active" : ""}`}
         >
-          <img src="/assets/images/admin/partner.svg" /> Contact Leads
+          <FaUserPlus className="me-2" /> Leads
         </Link>
 
         {/* Section Label */}
@@ -177,6 +196,15 @@ export default function Sidebar({ sidebarOpen }) {
           className={`ops-item ${isActive("/dashboard/admin/products") ? "active" : ""}`}
         >
           <img src="/assets/images/admin/product-list.svg" /> Product List
+        </Link>
+
+
+             {/* Add Product */}
+        <Link
+          href="/dashboard/admin/coupons"
+          className={`ops-item ${isActive("/dashboard/admin/coupons") ? "active" : ""}`}
+        >
+          <FaTags className="me-2" /> Coupons
         </Link>
 
       </div>

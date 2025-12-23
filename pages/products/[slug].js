@@ -16,6 +16,9 @@ import ProductFileUpload from "@/components/ProductFileUpload";
 // import { toast } from "sonner";
 
 export default function ProductDetails() {
+
+  const [specialRemarks, setSpecialRemarks] = useState("");
+
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   const [uploadedAttrFiles, setUploadedAttrFiles] = useState({});
@@ -42,6 +45,35 @@ export default function ProductDetails() {
   // const [selectedFiles, setSelectedFiles] = useState([]);
 
   // Compute Add-to-Cart visibility safely
+
+
+
+  const formatImageDimensions = (dim) => {
+  if (!dim) return "";
+
+  // Old products (string)
+  if (typeof dim === "string") {
+    return dim;
+  }
+
+  // New products (object)
+  if (typeof dim === "object") {
+    const unitLabel =
+      dim.unit === "px"
+        ? "px"
+        : dim.unit === "mm"
+        ? "mm"
+        : dim.unit === "inch"
+        ? "inch"
+        : "";
+
+    return `${dim.values}${unitLabel ? " " + unitLabel : ""}`;
+  }
+
+  return "";
+};
+
+
 
   const canAddToCart = useMemo(() => {
     if (!product) return false;
@@ -359,6 +391,8 @@ export default function ProductDetails() {
           selectedAttrs,
           price: finalPrice,
 
+          remarks: specialRemarks,
+
           // legacy upload files
           uploadedFiles: uploadedFiles.map((f) => f.url),
 
@@ -465,8 +499,7 @@ export default function ProductDetails() {
                 
                 <div className={styles.b2bOrderSection} id="b2border-section">
 
-             
-                  {/* Quantity */}
+
                   {/* Quantity (tier-stepper) */}
                  
                  <div className="b2b-container-area">
@@ -506,9 +539,9 @@ export default function ProductDetails() {
                       
                     </div>
 
-                    <small className={styles.helperText}>
+                    {/* <small className={styles.helperText}>
                       Minimum order: {product.minOrderQty || 1}
-                    </small>
+                    </small> */}
                   </div>
 
 
@@ -518,7 +551,7 @@ export default function ProductDetails() {
                       <a href="https://wa.link/y6hc8l"
                         className="hire-a-designer"
                       >
-                       Hire a Designersss
+                       Hire a Designer
                       </a>
                   </div>
                  </div>
@@ -527,7 +560,8 @@ export default function ProductDetails() {
                  
 
 
-                  {/* Attributes (ALL types) */}
+                 <div className="d-flex gap-4 attributes-area">
+                      {/* Attributes (ALL types) */}
                   {product.attributes?.length ? (
                     product.attributes.map((attr, i) => {
                       const safeName = (attr.name || "attr").trim();
@@ -536,6 +570,7 @@ export default function ProductDetails() {
                         .replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
 
                       return (
+                      <div className="mobile-none">
                         <div key={i} className={styles.inputGroup}>
                           <label className={styles.inputLabel}>
                             {attr.name}{" "}
@@ -626,7 +661,7 @@ export default function ProductDetails() {
                           )}
 
                           {/* UPLOAD TYPE (NEW) */}
-                          <div className="mobile-none">
+                 
                             {attr.type === "upload" && (
                               <>
                                 <ProductFileUpload
@@ -648,7 +683,10 @@ export default function ProductDetails() {
                                     style={{ fontSize: "13px", color: "#777" }}
                                   >
                                     Allowed Size(s):{" "}
-                                    {attr.uploadRules.imageDimensions}
+                                    {/* {attr.uploadRules.imageDimensions} */}
+
+                                    {formatImageDimensions(attr.uploadRules?.imageDimensions)}
+
                                   </p>
                                 )}
 
@@ -670,6 +708,21 @@ export default function ProductDetails() {
                       No extra options available
                     </p>
                   )}
+                 </div>
+
+                 <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>
+                      Special Remarks (Optional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Any special instructions for this order..."
+                      value={specialRemarks}
+                      onChange={(e) => setSpecialRemarks(e.target.value)}
+                      className={styles.inputField}
+                    />
+                  </div>
+
                 </div>
 
                 <div className="mobile-none b2b-add-to-cart">
@@ -715,7 +768,7 @@ export default function ProductDetails() {
                       
                     )}
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 d-flex gap-4 attributes-area">
                     {/* B2C attribute uploads */}
                     {product.attributes?.length > 0 &&
                       product.attributes
@@ -745,7 +798,10 @@ export default function ProductDetails() {
                               {attr.uploadRules?.imageDimensions && (
                                 <p style={{ fontSize: "13px", color: "#777" }}>
                                   Allowed Size(s):{" "}
-                                  {attr.uploadRules.imageDimensions}
+                                  {/* {attr.uploadRules.imageDimensions} */}
+                                  {formatImageDimensions(attr.uploadRules?.imageDimensions)}
+
+                                  
                                 </p>
                               )}
 
@@ -761,19 +817,7 @@ export default function ProductDetails() {
                           );
                         })}
 
-                    {/* {canAddToCart ? (
-                      <button className={styles.primaryBtn} onClick={addToCart}>
-                        <img
-                          src="/assets/images/icons/shopping-cart.svg"
-                          className="cart-png"
-                        />
-                        Add to Cart
-                      </button>
-                    ) : (
-                      <p className="text-muted mt-2">
-                        Please upload required files before adding to cart.
-                      </p>
-                    )} */}
+                   
                   </div>
 
                   {/* b2c add to cart button  */}
@@ -902,8 +946,7 @@ export default function ProductDetails() {
               border: 1px solid #ddd;
               border-radius: 8px;
               overflow: hidden;
-              margin: 20px 0;
-              font-family: Arial, sans-serif;
+              margin: 70px 0;
             }
 
             .accordion-item + .accordion-item {
@@ -954,7 +997,7 @@ export default function ProductDetails() {
         {/* Show upload panel when files not uploaded */}
         {!mobilePanelOpen && Object.keys(uploadedAttrFiles).length === 0 && (
           <div className="desktop-none">
-            <div className="mobile-whtasapp d-flex align-items-center justify-between">
+            <div className="mobile-whtasapp d-flex align-items-center justify-between gap-2">
               {/* WhatsApp button */} 
               
               
