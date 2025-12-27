@@ -36,9 +36,9 @@ export default function HeroSectionMobile() {
                 
 
                 <div className="mobile-hero-area__btns">
-                  <button className="mobile-hero-area__btn mobile-hero-area__btn--primary">
+                  <a href="/contact-us" className="mobile-hero-area__btn mobile-hero-area__btn--primary">
                     Get Started
-                  </button>
+                  </a>
                 
                 </div>
               </div>
@@ -71,9 +71,9 @@ export default function HeroSectionMobile() {
                
 
                 <div className="mobile-hero-area__btns">
-                  <button className="mobile-hero-area__btn mobile-hero-area__btn--primary">
+                  <a href="/contact-us" className="mobile-hero-area__btn mobile-hero-area__btn--primary">
                     Get Started
-                  </button>
+                  </ a>
                 
                 </div>
               </div>
@@ -106,9 +106,9 @@ export default function HeroSectionMobile() {
                
 
                 <div className="mobile-hero-area__btns">
-                  <button className="mobile-hero-area__btn mobile-hero-area__btn--primary">
+                  <a href="/contact-us" className="mobile-hero-area__btn mobile-hero-area__btn--primary">
                     Get Started
-                  </button>
+                  </a>
                   
                 </div>
               </div>

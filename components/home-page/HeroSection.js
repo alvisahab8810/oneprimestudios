@@ -21,7 +21,7 @@ export default function HeroSection() {
           className="hero-left"
         >
           {/* SLIDE 1 */}
-          <SwiperSlide>
+          {/* <SwiperSlide>
             <div
               className="hero-slide"
               style={{
@@ -51,7 +51,7 @@ export default function HeroSection() {
                 </div>
               </div>
             </div>
-          </SwiperSlide>
+          </SwiperSlide> */}
 
           {/* SLIDE 2 */}
           <SwiperSlide>
