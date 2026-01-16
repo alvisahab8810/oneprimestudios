@@ -9,10 +9,12 @@ import GoogleReviews from "@/components/home-page/GoogleReviews";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { toast } from "react-hot-toast"; // or "sonner" — whichever you finalized
 import Offcanvas from "@/components/header/Offcanvas";
+import PartnerInfoBanner from "@/components/partner/PartnerInfoBanner";
+import PartnerLiveCounter from "@/components/partner/PartnerLiveCounter";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
-
+const [showPartnerBanner, setShowPartnerBanner] = useState(false);
   const [wishlist, setWishlist] = useState([]);
   const authHeaders = () => {
     const token =
@@ -21,6 +23,8 @@ export default function Products() {
     return {};
   };
 
+
+  
   const loadWishlist = async () => {
     try {
       const token =
@@ -76,106 +80,110 @@ export default function Products() {
   //   axios.get(url).then((res) => setProducts(res.data));
   // }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userType = localStorage.getItem("userType");
+
+    let url = "/api/products";
+
+    // If not logged in → force B2C only
+    if (!token) {
+      url += "?userType=b2c";
+    } else {
+      // Logged-in users → use saved userType (b2b or b2c)
+      url += `?userType=${userType || "b2c"}`;
+    }
+
+    // axios.get(url).then((res) => setProducts(res.data));
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const search = searchParams.get("search") || "";
+
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+
+    axios.get(url).then((res) => setProducts(res.data));
+  }, []);
+
+  const categoriesMap = products.reduce((acc, product) => {
+    if (product.category && product.category._id) {
+      acc[product.category._id] = product.category;
+    }
+    return acc;
+  }, {});
+
+  const categories = Object.values(categoriesMap);
+
+
+
 
   useEffect(() => {
   const token = localStorage.getItem("token");
   const userType = localStorage.getItem("userType");
 
-  let url = "/api/products";
-
-  // If not logged in → force B2C only
-  if (!token) {
-    url += "?userType=b2c";
-  } else {
-    // Logged-in users → use saved userType (b2b or b2c)
-    url += `?userType=${userType || "b2c"}`;
+  if (token && userType === "partner") {
+    setShowPartnerBanner(true);
   }
-
-
-  
-  // axios.get(url).then((res) => setProducts(res.data));
-
-  const searchParams = new URLSearchParams(window.location.search);
-const search = searchParams.get("search") || "";
-
-if (search) url += `&search=${encodeURIComponent(search)}`;
-
-axios.get(url).then((res) => setProducts(res.data));
-
 }, []);
-
-
-
-const categoriesMap = products.reduce((acc, product) => {
-  if (product.category && product.category._id) {
-    acc[product.category._id] = product.category;
-  }
-  return acc;
-}, {});
-
-const categories = Object.values(categoriesMap);
-
-
 
   return (
     <div className="products-main-page">
-        <Topbar />
-        <Offcanvas/>
-         <div className="products-main-row padding-top-40">
-           <div className="container">
-      
-       <div
-  className="mobile-products-row"
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "20px",
-  }}
->
-  {categories.map((category) => (
-   <Link
-  href={{
-    pathname: `/category/${category.slug}`,
-    query: {
-      userType:
-        typeof window !== "undefined"
-          ? localStorage.getItem("userType") || "b2c"
-          : "b2c",
-    },
-  }}
+      <Topbar />
+      <Offcanvas />
+      {showPartnerBanner && (
+        <div className="container">
+          <PartnerLiveCounter />
+        </div>
+      )}
+      {showPartnerBanner && <PartnerInfoBanner />}
 
-     className="categories-wise-products"
-    >
-      {/* Category Image */}
-      <div
-        style={{
-          width: "100%",
-          height: "260px",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src={category.image || "/placeholder.png"}
-          alt={category.name}
-          className="products-img"
-        />
-      </div>
+      <div className="products-main-row padding-top-40">
+        <div className="container">
+          <div
+            className="mobile-products-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "20px",
+            }}
+          >
+            {categories.map((category) => (
+              <Link
+                href={{
+                  pathname: `/category/${category.slug}`,
+                  query: {
+                    userType:
+                      typeof window !== "undefined"
+                        ? localStorage.getItem("userType") || "b2c"
+                        : "b2c",
+                  },
+                }}
+                className="categories-wise-products"
+              >
+                {/* Category Image */}
+                <div
+                  style={{
+                    width: "100%",
+                    height: "260px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <img
+                    src={category.image || "/placeholder.png"}
+                    alt={category.name}
+                    className="products-img"
+                  />
+                </div>
 
-      {/* Category Info */}
-      <div className="category-info">
-        <h5 style={{ margin: 0 }}>{category.name}</h5>
-        <span
-         
-        >
-          View All →
-        </span>
+                {/* Category Info */}
+                <div className="category-info">
+                  <h5 style={{ margin: 0 }}>{category.name}</h5>
+                  <span>View All →</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
-    </Link>
-  ))}
-</div>
-
-      </div>
-         </div>
 
       {/* <GoogleReviews /> */}
       <ProductSlider />
@@ -186,23 +194,6 @@ const categories = Object.values(categoriesMap);
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import { useEffect, useState } from "react";
 // import Link from "next/link";
@@ -282,7 +273,6 @@ const categories = Object.values(categoriesMap);
 //   //   axios.get(url).then((res) => setProducts(res.data));
 //   // }, []);
 
-
 //   useEffect(() => {
 //   const token = localStorage.getItem("token");
 //   const userType = localStorage.getItem("userType");
@@ -297,8 +287,6 @@ const categories = Object.values(categoriesMap);
 //     url += `?userType=${userType || "b2c"}`;
 //   }
 
-
-  
 //   // axios.get(url).then((res) => setProducts(res.data));
 
 //   const searchParams = new URLSearchParams(window.location.search);
@@ -310,14 +298,12 @@ const categories = Object.values(categoriesMap);
 
 // }, []);
 
-
 //   return (
 //     <div className="products-main-page">
 //         <Topbar />
 //         <Offcanvas/>
 //          <div className="products-main-row padding-top-40">
 //            <div className="container">
-      
 
 //         <div className="mobile-products-container">
 //            {products.length === 0 ? (

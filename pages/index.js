@@ -39,7 +39,6 @@ export default function Home() {
         <Offcanvas/>
         <HeroSection />
         <div className="container">
-          
           <HeroSectionMobile/>
           <Features />
           <MobileFeatures/>
@@ -48,7 +47,7 @@ export default function Home() {
         <GoogleReviews />
         <ProductSlider />
         <Client />
-        <ProductSlider />
+        {/* <ProductSlider /> */}
         <div className="container">
           <DealBanner />
           <FaqAccordion />

@@ -1358,12 +1358,26 @@ gap: 10px;
     margin-bottom: 30px;
     width: 100%;
 }
+.stats-label {
+    font-size: 16px;
+    margin-bottom: 0px;
+}
+.partner-slide {
+  min-height: 190px;
+
+}
+
 }
 
 
 
 /* Small screen tuning */
 @media (max-width: 420px) {
+
+    .stats-content {
+    flex-flow: column;
+    gap: 5px;
+}
   .mobile-hero-area__inner {
     padding-right: 140px;
     padding-left: 14px;

@@ -545,7 +545,7 @@ export default function ProductDetails() {
                   </div>
 
 
-                    <div className="whats-appbtn">
+                    {/* <div className="whats-appbtn">
                     
       
                       <a href="https://wa.link/y6hc8l"
@@ -553,7 +553,7 @@ export default function ProductDetails() {
                       >
                        Hire a Designer
                       </a>
-                  </div>
+                  </div> */}
                  </div>
         
 

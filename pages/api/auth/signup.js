@@ -1,6 +1,3 @@
-
-// // // pages/api/auth/signup.js
-
 // import dbConnect from "@/lib/dbConnect";
 // import User from "@/models/User";
 // import bcrypt from "bcryptjs";
@@ -22,6 +19,8 @@
 //       password,
 //       confirmPassword,
 //       userType,
+//       gstNumber,
+//       businessAddress,
 //     } = req.body;
 
 //     if (
@@ -33,6 +32,17 @@
 //       !userType
 //     ) {
 //       return res.status(400).json({ message: "All fields are required" });
+//     }
+
+//     if (userType === "partner") {
+//       if (!companyName || !gstNumber || !businessAddress) {
+//         return res
+//           .status(400)
+//           .json({
+//             message:
+//               "GST Number, Address, and Company Name are required for partners",
+//           });
+//       }
 //     }
 
 //     if (password !== confirmPassword) {
@@ -52,12 +62,27 @@
 //       });
 //     }
 
+//     // ✅ CHECK DUPLICATE GST FOR PARTNER
+//     if (userType === "partner" && gstNumber) {
+//       const existingGstUser = await User.findOne({
+//         gstNumber: gstNumber,
+//         userType: "partner",
+//       });
+
+//       if (existingGstUser) {
+//         return res.status(400).json({
+//           message: "GST number already registered",
+//         });
+//       }
+//     }
+
 //     const hashedPassword = await bcrypt.hash(password, 10);
 
-//     // ✅ Partner is not approved initially
 //     const user = await User.create({
 //       name,
 //       companyName: userType === "partner" ? companyName : undefined,
+//       gstNumber: userType === "partner" ? gstNumber : undefined,
+//       businessAddress: userType === "partner" ? businessAddress : undefined,
 //       phone,
 //       email,
 //       password: hashedPassword,
@@ -75,13 +100,15 @@
 //       userType: user.userType,
 //       name: user.name,
 //       email: user.email,
-//       isApproved: user.isApproved, // ✅ send approval status
+//       isApproved: user.isApproved,
 //     });
 //   } catch (err) {
 //     console.error("Signup error:", err.message);
 //     res.status(500).json({ message: "Server error" });
 //   }
 // }
+
+
 
 
 
@@ -108,6 +135,11 @@ export default async function handler(req, res) {
       userType,
       gstNumber,
       businessAddress,
+      
+      // ✅ NEW
+      city,
+      state,
+      pinCode,
     } = req.body;
 
     if (
@@ -121,13 +153,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    if (userType === "partner") {
-      if (!companyName || !gstNumber || !businessAddress) {
-        return res
-          .status(400)
-          .json({ message: "GST Number, Address, and Company Name are required for partners" });
-      }
-    }
+   if (userType === "partner") {
+  if (
+    !companyName ||
+    !businessAddress ||
+    !city ||
+    !state ||
+    !pinCode
+  ) {
+    return res.status(400).json({
+      message:
+        "Company name, address, city, state, and pin code are required for partners",
+    });
+  }
+}
 
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
@@ -146,33 +185,19 @@ export default async function handler(req, res) {
       });
     }
 
-
-
-
-
-
-
-
     // ✅ CHECK DUPLICATE GST FOR PARTNER
-if (userType === "partner" && gstNumber) {
-  const existingGstUser = await User.findOne({
-    gstNumber: gstNumber,
-    userType: "partner",
-  });
+    if (userType === "partner" && gstNumber) {
+      const existingGstUser = await User.findOne({
+        gstNumber: gstNumber,
+        userType: "partner",
+      });
 
-  if (existingGstUser) {
-    return res.status(400).json({
-      message: "GST number already registered",
-    });
-  }
-}
-
-
-
-
-
-
-
+      if (existingGstUser) {
+        return res.status(400).json({
+          message: "GST number already registered",
+        });
+      }
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -181,6 +206,14 @@ if (userType === "partner" && gstNumber) {
       companyName: userType === "partner" ? companyName : undefined,
       gstNumber: userType === "partner" ? gstNumber : undefined,
       businessAddress: userType === "partner" ? businessAddress : undefined,
+
+      // ✅ NEW
+  city: userType === "partner" ? city : undefined,
+  state: userType === "partner" ? state : undefined,
+  pinCode: userType === "partner" ? pinCode : undefined,
+
+
+      
       phone,
       email,
       password: hashedPassword,

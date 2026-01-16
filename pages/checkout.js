@@ -71,7 +71,8 @@ export default function CheckoutPage() {
           street: data.businessAddress || "",
           city: data.city || "",
           state: data.state || "",
-          zip: data.zip || "",
+          // zip: data.zip || "",
+          zip: data.pinCode || "",
           companyName: data.companyName || "",
           gstNumber: data.gstNumber || "",
         };
@@ -156,12 +157,24 @@ export default function CheckoutPage() {
     if (!zip.trim()) newErrors.zip = "ZIP Code is required.";
     else if (!/^\d{6}$/.test(zip)) newErrors.zip = "ZIP must be 6 digits.";
 
+    // if (userType === "partner") {
+    //   if (!companyName.trim())
+    //     newErrors.companyName = "Company name is required for partners.";
+    //   if (!gstNumber.trim())
+    //     newErrors.gstNumber = "GST number is required for partners.";
+    // }
+
     if (userType === "partner") {
-      if (!companyName.trim())
-        newErrors.companyName = "Company name is required for partners.";
-      if (!gstNumber.trim())
-        newErrors.gstNumber = "GST number is required for partners.";
-    }
+  if (!companyName.trim()) {
+    newErrors.companyName = "Company name is required for partners.";
+  }
+
+  // ✅ GST validation ONLY if user entered it
+  if (gstNumber && !/^[0-9A-Z]{15}$/.test(gstNumber)) {
+    newErrors.gstNumber = "Invalid GST number format.";
+  }
+}
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -637,7 +650,7 @@ export default function CheckoutPage() {
 
                     <div className="mb-3">
                       <label className="form-label fw-semibold">
-                        GST Number *
+                        GST Number (Optional)
                       </label>
                       <input
                         className={`form-control ${

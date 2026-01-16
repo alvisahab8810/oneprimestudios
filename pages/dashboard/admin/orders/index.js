@@ -1,4 +1,3 @@
-
 // "use client";
 // import { useEffect, useState } from "react";
 // import axios from "axios";
@@ -291,11 +290,6 @@
 //   }
 // }
 
-
-
-
-
-
 "use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -316,12 +310,8 @@ import {
 } from "react-icons/fa";
 
 export default function AdminOrdersPage() {
-
-
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrders, setSelectedOrders] = useState([]);
-
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -336,25 +326,23 @@ export default function AdminOrdersPage() {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-
   const exportToExcel = () => {
-  const data = orders.map(o => ({
-    OrderNo: o.orderNumber,
-    Customer: o.user?.name,
-    UserType: o.user?.userType,
-    Total: o.total,
-    Status: o.status,
-    Payment: o.paymentMethod,
-    Products: o.items.map(i => i.product?.name).join(", "),
-    CreatedAt: new Date(o.createdAt).toLocaleString(),
-  }));
+    const data = orders.map((o) => ({
+      OrderNo: o.orderNumber,
+      Customer: o.user?.name,
+      UserType: o.user?.userType,
+      Total: o.total,
+      Status: o.status,
+      Payment: o.paymentMethod,
+      Products: o.items.map((i) => i.product?.name).join(", "),
+      CreatedAt: new Date(o.createdAt).toLocaleString(),
+    }));
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Orders");
-  XLSX.writeFile(wb, "orders.xlsx");
-};
-
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    XLSX.writeFile(wb, "orders.xlsx");
+  };
 
   const loadOrders = async () => {
     try {
@@ -406,35 +394,30 @@ export default function AdminOrdersPage() {
       "—"
     );
 
+  const handleBulkDelete = async () => {
+    if (!confirm("Are you sure you want to delete selected orders?")) return;
 
+    try {
+      await axios.post(
+        "/api/admin/orders/bulk-delete",
+        { ids: selectedOrders },
+        { withCredentials: true }
+      );
 
-    const handleBulkDelete = async () => {
-  if (!confirm("Are you sure you want to delete selected orders?")) return;
-
-  try {
-    await axios.post(
-      "/api/admin/orders/bulk-delete",
-      { ids: selectedOrders },
-      { withCredentials: true }
-    );
-
-    toast.success("Orders deleted successfully");
-    setSelectedOrders([]);
-    loadOrders();
-  } catch (err) {
-    toast.error("Failed to delete orders");
-  }
-};
+      toast.success("Orders deleted successfully");
+      setSelectedOrders([]);
+      loadOrders();
+    } catch (err) {
+      toast.error("Failed to delete orders");
+    }
+  };
 
   return (
     <div className="d-flex bg-light min-vh-100">
       <Sidebar sidebarOpen={sidebarOpen} />
 
       {/* Main Area */}
-      <div
-        className="main-area"
-       
-      >
+      <div className="main-area">
         {/* Navbar */}
         <nav className="navbar navbar-expand-lg navbar-light bg-white px-4 shadow-sm sticky-top">
           <button
@@ -501,20 +484,17 @@ export default function AdminOrdersPage() {
               </select>
             </div>
 
-
             <button
-  className="btn btn-danger btn-sm"
-  disabled={!selectedOrders.length}
-  onClick={handleBulkDelete}
->
-  Delete Selected
-</button>
+              className="btn btn-danger btn-sm"
+              disabled={!selectedOrders.length}
+              onClick={handleBulkDelete}
+            >
+              Delete Selected
+            </button>
 
-<button className="btn btn-success btn-sm" onClick={exportToExcel}>
-  Export Excel
-</button>
-
-
+            <button className="btn btn-success btn-sm" onClick={exportToExcel}>
+              Export Excel
+            </button>
           </div>
 
           {/* Orders Table */}
@@ -531,16 +511,19 @@ export default function AdminOrdersPage() {
                 <thead className="table-light">
                   <tr>
                     <th>
-  <input
-    type="checkbox"
-    checked={selectedOrders.length === orders.length && orders.length > 0}
-    onChange={(e) =>
-      setSelectedOrders(
-        e.target.checked ? orders.map(o => o._id) : []
-      )
-    }
-  />
-</th>
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedOrders.length === orders.length &&
+                          orders.length > 0
+                        }
+                        onChange={(e) =>
+                          setSelectedOrders(
+                            e.target.checked ? orders.map((o) => o._id) : []
+                          )
+                        }
+                      />
+                    </th>
 
                     <th>Order No</th>
                     <th>Products</th>
@@ -563,9 +546,9 @@ export default function AdminOrdersPage() {
                             type="checkbox"
                             checked={selectedOrders.includes(o._id)}
                             onChange={() =>
-                              setSelectedOrders(prev =>
+                              setSelectedOrders((prev) =>
                                 prev.includes(o._id)
-                                  ? prev.filter(id => id !== o._id)
+                                  ? prev.filter((id) => id !== o._id)
                                   : [...prev, o._id]
                               )
                             }
@@ -573,16 +556,16 @@ export default function AdminOrdersPage() {
                         </td>
 
                         <td className="fw-semibold">#{o.orderNumber}</td>
-                       
-                          <td style={{ maxWidth: "320px" }}>
-                            {o.items?.map((item, idx) => (
-                              <div
-                                key={idx}
-                                className="d-flex align-items-center mb-2"
-                                style={{ gap: "10px" }}
-                              >
-                                {/* PRODUCT IMAGE */}
-                                {/* <img
+
+                        <td style={{ maxWidth: "320px" }}>
+                          {o.items?.map((item, idx) => (
+                            <div
+                              key={idx}
+                              className="d-flex align-items-center mb-2"
+                              style={{ gap: "10px" }}
+                            >
+                              {/* PRODUCT IMAGE */}
+                              {/* <img
                                   src={
                                     item.product?.images?.[0]
                                       ? item.product.images[0]
@@ -598,18 +581,18 @@ export default function AdminOrdersPage() {
                                   }}
                                 /> */}
 
-                                {/* PRODUCT INFO */}
-                                <div style={{ lineHeight: "1.2" }}>
-                                  <div className="fw-semibold small">
-                                    {item.product?.name || "Product"}
-                                  </div>
-                                  <div className="text-muted small">
-                                    Qty: {item.quantity} × ₹{item.price}
-                                  </div>
+                              {/* PRODUCT INFO */}
+                              <div style={{ lineHeight: "1.2" }}>
+                                <div className="fw-semibold small">
+                                  {item.product?.name || "Product"}
+                                </div>
+                                <div className="text-muted small">
+                                  Qty: {item.quantity} × ₹{item.price}
                                 </div>
                               </div>
-                            ))}
-                          </td>
+                            </div>
+                          ))}
+                        </td>
 
                         <td>{o.user?.name || "—"}</td>
                         <td>{getUserTypeLabel(o.user)}</td>
