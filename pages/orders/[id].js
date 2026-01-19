@@ -1,5 +1,3 @@
-
-
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -19,7 +17,6 @@ import {
 import Offcanvas from "@/components/header/Offcanvas";
 
 export default function OrderDetailPage() {
-
   const [reuploading, setReuploading] = useState(false);
 
   const router = useRouter();
@@ -27,27 +24,25 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-
   const sendDispatchRequest = async () => {
-  try {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    const res = await axios.post(
-      `/api/orders/dispatch-request/${order._id}`,
-      {},
-      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-    );
+      const res = await axios.post(
+        `/api/orders/dispatch-request/${order._id}`,
+        {},
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+      );
 
-    toast.success("Dispatch request sent!");
-    // reload page
-    window.location.reload();
-  } catch (err) {
-    toast.error(
-      err.response?.data?.message || "Failed to send dispatch request"
-    );
-  }
-};
-
+      toast.success("Dispatch request sent!");
+      // reload page
+      window.location.reload();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to send dispatch request",
+      );
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -70,20 +65,16 @@ export default function OrderDetailPage() {
     fetchOrder();
   }, [id, router]);
 
-
   // ✅ SAFE SUBTOTAL CALCULATION
-const calculatedSubtotal =
-  typeof order?.subtotal === "number"
-    ? order.subtotal
-    : order?.items?.reduce(
-        (sum, i) => sum + i.price * i.quantity,
-        0
-      ) || order?.total || 0;
+  const calculatedSubtotal =
+    typeof order?.subtotal === "number"
+      ? order.subtotal
+      : order?.items?.reduce((sum, i) => sum + i.price * i.quantity, 0) ||
+        order?.total ||
+        0;
 
-// ✅ SAFE DISCOUNT CALCULATION
-const calculatedDiscount = order?.coupon?.discountAmount || 0;
-
-
+  // ✅ SAFE DISCOUNT CALCULATION
+  const calculatedDiscount = order?.coupon?.discountAmount || 0;
 
   if (loading)
     return (
@@ -116,7 +107,8 @@ const calculatedDiscount = order?.coupon?.discountAmount || 0;
             border: 6px solid #d9d9ff;
             border-top-color: #6a5cff;
             border-right-color: #6a5cff;
-            animation: cart-spin 1s linear infinite,
+            animation:
+              cart-spin 1s linear infinite,
               pulse 1.5s ease-in-out infinite;
             box-shadow: 0 0 20px rgba(106, 92, 255, 0.3);
           }
@@ -236,35 +228,76 @@ const calculatedDiscount = order?.coupon?.discountAmount || 0;
             <div>
               <span
                 className={`badge px-3 py-2 fs-6 ${getStatusBadgeClass(
-                  order.status
+                  order.status,
                 )}`}
               >
                 {order.status}
               </span>
 
               {/* ✔ If order is READY — show button */}
-                {order.status === "Order Ready" && order.dispatchRequest === "none" && (
+              {order.status === "Order Ready" &&
+                order.dispatchRequest === "none" && (
                   <div className="mt-3">
-                    <button className="track-order-btn" onClick={sendDispatchRequest}>
+                    <button
+                      className="track-order-btn"
+                      onClick={sendDispatchRequest}
+                    >
                       Send Dispatch Request
                     </button>
                   </div>
                 )}
 
-                {/* ✔ When request sent but admin has not approved yet */}
-                {order.status === "Order Ready" && order.dispatchRequest === "pending" && (
+              {/* ✔ When request sent but admin has not approved yet */}
+              {order.status === "Order Ready" &&
+                order.dispatchRequest === "pending" && (
                   <div className="alert alert-info mt-3">
                     Dispatch request sent. Waiting for admin approval.
                   </div>
                 )}
 
-                {/* ✔ When admin approves by marking "Order Dispatched" */}
-                {order.dispatchRequest === "approved" && (
-                  <div className="alert alert-success mt-3">
-                    Your dispatch request has been approved.
+              {/* ✔ When admin approves by marking "Order Dispatched" */}
+              {order.dispatchRequest === "approved" && (
+                <div className="alert alert-success mt-3">
+                  Your dispatch request has been approved.
+                </div>
+              )}
+
+              {/* 🚚 DELIVERY DETAILS (VISIBLE TO USER) */}
+              {order.status === "Order Delivered" &&
+                order.deliveryChallan?.fileUrl && (
+                  <div className="mt-3 p-3 border rounded bg-light">
+                    <h6 className="fw-semibold mb-2 text-success">
+                      <FaTruck className="me-2" />
+                      Order Delivered
+                    </h6>
+
+                    {/* Admin delivery remarks */}
+                    {order.deliveryRemarks && (
+                      <p className="mb-2">
+                        <strong>Delivery Remarks:</strong>{" "}
+                        {order.deliveryRemarks}
+                      </p>
+                    )}
+
+                    {/* Delivery challan download */}
+                    <a
+                      href={order.deliveryChallan.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline-primary btn-sm"
+                    >
+                      <FaFileInvoice className="me-2" />
+                      Download Delivery Challan
+                    </a>
+
+                    {order.deliveredAt && (
+                      <div className="text-muted small mt-2">
+                        Delivered on:{" "}
+                        {new Date(order.deliveredAt).toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 )}
-
 
               {/* ✅ Show rejection reason only when Design Rejected */}
               {order.status === "Design Rejected" && order.remarks && (
@@ -280,46 +313,45 @@ const calculatedDiscount = order?.coupon?.discountAmount || 0;
               )}
 
               {order.status === "Design Rejected" && (
-  <div className="mt-3 p-3 border rounded">
-    <h6 className="fw-semibold mb-2">Re-upload Design</h6>
+                <div className="mt-3 p-3 border rounded">
+                  <h6 className="fw-semibold mb-2">Re-upload Design</h6>
 
-    <input
-      type="file"
-      className="form-control mb-2"
-      onChange={async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+                  <input
+                    type="file"
+                    className="form-control mb-2"
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
 
-        const formData = new FormData();
-        formData.append("file", file);
+                      const formData = new FormData();
+                      formData.append("file", file);
 
-        try {
-          setReuploading(true);
-          const token = localStorage.getItem("token");
+                      try {
+                        setReuploading(true);
+                        const token = localStorage.getItem("token");
 
-          await axios.post(
-            `/api/orders/reupload-design/${order._id}`,
-            formData,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+                        await axios.post(
+                          `/api/orders/reupload-design/${order._id}`,
+                          formData,
+                          {
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                            },
+                          },
+                        );
 
-          toast.success("Design re-uploaded successfully");
-          window.location.reload();
-        } catch (err) {
-          toast.error("Failed to re-upload design");
-        } finally {
-          setReuploading(false);
-        }
-      }}
-      disabled={reuploading}
-    />
-  </div>
-)}
-
+                        toast.success("Design re-uploaded successfully");
+                        window.location.reload();
+                      } catch (err) {
+                        toast.error("Failed to re-upload design");
+                      } finally {
+                        setReuploading(false);
+                      }
+                    }}
+                    disabled={reuploading}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -328,7 +360,7 @@ const calculatedDiscount = order?.coupon?.discountAmount || 0;
           onClick={() => router.push(`/track-order/${order._id}`)}
           className="track-order-btn"
         >
-           Track Your Order
+          Track Your Order
         </button>
 
         {/* SHIPPING + BILLING INFO */}
@@ -454,37 +486,30 @@ const calculatedDiscount = order?.coupon?.discountAmount || 0;
           </div>
         </div> */}
 
-     
+        <div className="summary-card card p-3">
+          <h6 className="fw-semibold mb-3">Payment Summary</h6>
 
-     <div className="summary-card card p-3">
-  <h6 className="fw-semibold mb-3">Payment Summary</h6>
+          <div className="d-flex justify-content-between mb-2">
+            <span>Subtotal</span>
+            <strong>₹{calculatedSubtotal.toFixed(2)}</strong>
+          </div>
 
-  <div className="d-flex justify-content-between mb-2">
-    <span>Subtotal</span>
-    <strong>₹{calculatedSubtotal.toFixed(2)}</strong>
-  </div>
+          {calculatedDiscount > 0 && (
+            <div className="d-flex justify-content-between mb-2 text-success">
+              <span>
+                Discount {order?.coupon?.code ? `(${order.coupon.code})` : ""}
+              </span>
+              <strong>- ₹{calculatedDiscount.toFixed(2)}</strong>
+            </div>
+          )}
 
-  {calculatedDiscount > 0 && (
-    <div className="d-flex justify-content-between mb-2 text-success">
-      <span>
-        Discount {order?.coupon?.code ? `(${order.coupon.code})` : ""}
-      </span>
-      <strong>- ₹{calculatedDiscount.toFixed(2)}</strong>
-    </div>
-  )}
+          <hr />
 
-  <hr />
-
-  <div className="d-flex justify-content-between">
-    <span className="fw-semibold">Total Payable</span>
-    <strong className="fs-5">
-      ₹{order.total.toFixed(2)}
-    </strong>
-  </div>
-</div>
-
-
-
+          <div className="d-flex justify-content-between">
+            <span className="fw-semibold">Total Payable</span>
+            <strong className="fs-5">₹{order.total.toFixed(2)}</strong>
+          </div>
+        </div>
 
         {/* BACK BUTTON */}
         <div className="text-center mt-4 mb-4">

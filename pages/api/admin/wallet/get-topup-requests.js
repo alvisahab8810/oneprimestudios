@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import { verifyAdmin } from "@/lib/verifyJWT";
-import WalletTopupRequest from "@/models/WalletTopupRequest";
+import WalletTopupRequest from "@/models/WalletTransaction";
 import User from "@/models/User";
 
 export default async function handler(req, res) {

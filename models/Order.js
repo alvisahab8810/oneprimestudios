@@ -60,6 +60,22 @@ const OrderSchema = new mongoose.Schema(
       },
 
 
+         // DELIVERY CHALLAN (B2B)
+    deliveryChallan: {
+      fileUrl: { type: String },
+      uploadedAt: { type: Date },
+    },
+
+    deliveryRemarks: {
+      type: String,
+      default: "",
+    },
+
+    deliveredAt: {
+      type: Date,
+    },
+
+
   coupon: {
   code: { type: String },
   discountType: { type: String },

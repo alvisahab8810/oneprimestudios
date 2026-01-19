@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
-import PartnerWallet from "@/models/PartnerWallet";
-import WalletTopupRequest from "@/models/WalletTopupRequest";
+import PartnerWallet from "@/models/Wallet";
+import WalletTopupRequest from "@/models/WalletTransaction";
 
 export default async function handler(req, res) {
   // 🚫 Disable cache so balance always updates

@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
-import WalletTopupRequest from "@/models/WalletTopupRequest";
+import WalletTopupRequest from "@/models/WalletTransaction";
 
 export default async function handler(req, res) {
   await dbConnect();

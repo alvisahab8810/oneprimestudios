@@ -10,6 +10,67 @@ import { Pagination, Autoplay} from "swiper/modules";
 const reviews = [
   {
     id: 1,
+    name: "Ashwat Mani Singh",
+    date: "2 weeks ago",
+    avatar: "/assets/images/reviews/nish.png",
+    rating: 4,
+    text: "The quality of the sheet along with the colour is awesome. Apart from that, the owner of the studio is also a great human being. It was great working with you guys. Thanks ❤️",
+  },
+
+
+    {
+    id: 1,
+    name: "Md Islam",
+    date: "a month ago",
+    avatar: "/assets/images/reviews/md.png",
+    rating: 4,
+    text: "Excellent printing service with high-quality results. The team is professional, reliable, and delivers exactly as promised. Print quality is sharp, colors are accurate, and turnaround time is impressive...",
+  },
+
+
+
+    {
+    id: 1,
+    name: "Preeti Singh",
+    date: "a month ago",
+    avatar: "/assets/images/reviews/priti.png",
+    rating: 4,
+    text: "Outstanding printing service from start to finish. The quality of work is consistently excellent, with sharp detailing and accurate colors that truly stand out. They are highly professional…",
+  },
+
+
+      {
+    id: 1,
+    name: "Abdul Rahman",
+    date: "a month ago",
+    avatar: "/assets/images/reviews/abdul.png",
+    rating: 4,
+    text: "One of the most dependable printing services I have worked with. They pay close attention to details and ensure the final output matches exactly what is approved. Communication is clear...",
+  },
+
+
+        {
+    id: 1,
+    name: "damini singh",
+    date: "a month ago",
+    avatar: "/assets/images/reviews/damini.png",
+    rating: 4,
+    text: "Bahut bahut acha hai yeh or time se affordable price mai kaam ho jata hai ❤️",
+  },
+
+        {
+    id: 1,
+    name: "Agrima Singh",
+    date: "4 months ago",
+    avatar: "/assets/images/reviews/a.png",
+    rating: 4,
+    text: "Owner is extremely rude. Both service and quality of work are really bad and the requested order is never on time",
+  },
+
+
+
+  {
+    id: 1,
     name: "Vaibhav Dosar",
     date: "5 years ago",
     avatar: "/assets/images/reviews/v.png",

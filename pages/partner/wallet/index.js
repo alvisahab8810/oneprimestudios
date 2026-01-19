@@ -1,78 +1,55 @@
+"use client";
 import { useEffect, useState } from "react";
+import axios from "axios";
+import { useRouter } from "next/router";
+import { toast } from "react-hot-toast";
 
-export default function PartnerWallet() {
+export default function WalletHome() {
   const [balance, setBalance] = useState(0);
-  const [transactions, setTransactions] = useState([]);
-  const [pending, setPending] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    fetch("/api/wallet/partner-dashboard", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setBalance(data.balance);
-        setTransactions(data.transactions || []);
-        setPending(data.pending || []);
-      });
+    const fetchWallet = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("/api/partner/wallet", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setBalance(res.data.balance);
+      } catch (err) {
+        toast.error("Failed to load wallet");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWallet();
   }, []);
 
+  if (loading) return <p>Loading wallet...</p>;
+
   return (
-    <div style={{ padding: 30 }}>
-      <h1>Partner Wallet</h1>
+    <div className="container py-5">
+      <h3 className="mb-3">Partner Wallet</h3>
 
-      <div style={{ padding: 20, border: "1px solid #ccc", width: 300 }}>
-        <h2>Wallet Balance</h2>
-        <h1 style={{ color: "green" }}>₹{balance}</h1>
+      <div className="card p-4 mb-4">
+        <h5>Available Balance</h5>
+        <h2 className="text-success">₹{balance.toFixed(2)}</h2>
       </div>
 
-      {pending.length > 0 && (
-        <div style={{ marginTop: 30 }}>
-          <h2>Pending Top-Up Requests</h2>
-          <table border="1" cellPadding="10">
-            <thead>
-              <tr>
-                <th>Amount</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pending.map((p) => (
-                <tr key={p._id}>
-                  <td>₹{p.amount}</td>
-                  <td>{new Date(p.createdAt).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <button
+        className="btn btn-primary me-2"
+        onClick={() => router.push("/partner/wallet/add")}
+      >
+        Add Money
+      </button>
 
-      <div style={{ marginTop: 30 }}>
-        <h2>Transaction History</h2>
-        <table border="1" cellPadding="10">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Description</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((t, i) => (
-              <tr key={i}>
-                <td>{t.type}</td>
-                <td>₹{t.amount}</td>
-                <td>{t.description}</td>
-                <td>{new Date(t.createdAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <button
+        className="btn btn-outline-secondary"
+        onClick={() => router.push("/partner/wallet/statement")}
+      >
+        Account Statement
+      </button>
     </div>
   );
 }
