@@ -466,7 +466,7 @@ export default function Topbar() {
 
                             {/* <img src="/assets/images/icons/add-cross.svg"></img> */}
                             <img
-                              src="/assets/images/icons/add-cross.svg"
+                              src="/assets/images/icons/cross.svg"
                               alt="close"
                               className="ops-close-icon"
                               onClick={() => setOpenProfileCard(false)}
@@ -504,7 +504,7 @@ export default function Topbar() {
                               Orders & Tracking
                             </Link>
                           </li>
-                          {/* <li><Link href="/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li> */}
+                          <li><Link href="/partner/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li>
                           <li className="logout" onClick={handleLogout}>
                             <img src="/assets/images/icons/logout.png"></img>{" "}
                             Logout

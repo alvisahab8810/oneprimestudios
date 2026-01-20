@@ -1366,7 +1366,18 @@ gap: 10px;
   min-height: 190px;
 
 }
+.filter-field input {
 
+    min-width: 100%;
+}
+
+.filter-field {
+    width: 100%;
+}
+
+.statement-table th, .statement-table td {
+    width: 100px;
+}
 }
 
 

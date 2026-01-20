@@ -1948,7 +1948,8 @@ ease;
   justify-content: space-between;
   gap: 12px;
   position: relative;
-  background: linear-gradient(90deg, #711815 0%, #ff0000 100%);
+  /* background: linear-gradient(90deg, #711815 0%, #ff0000 100%); */
+      background: linear-gradient(90deg, #111827 0%, #000000 100%);
 }
 
 .ops-card-banner > img {
@@ -2036,7 +2037,8 @@ ease;
 .ops-social-section {
     padding: 14px 16px;
     text-align: center;
-    background: linear-gradient(90deg, #711815 0%, #ff0000 100%);
+    /* background: linear-gradient(90deg, #711815 0%, #ff0000 100%); */
+        background: linear-gradient(90deg, #111827 0%, #000000 100%);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -3383,4 +3385,505 @@ ease;
   .stats-value {
     font-size: 28px;
   }
+}
+
+
+
+/* ========================================= Wallet csss start from here ========================= */
+
+/* ===== Wallet Base ===== */
+
+.wallet-area {
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+.wallet-wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+/* Header */
+
+.wallet-header {
+  margin-bottom: 20px;
+}
+
+.wallet-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.wallet-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Card */
+
+.wallet-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+}
+
+/* Balance Row */
+
+.wallet-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.wallet-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.wallet-amount {
+  font-size: 36px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.wallet-icon {
+  color: #9ca3af;
+}
+
+/* Actions */
+
+.wallet-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wallet-btn {
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Primary */
+
+.wallet-btn.primary {
+  background: #111827;
+  color: #ffffff;
+}
+
+.wallet-btn.primary:hover {
+  background: #000000;
+}
+
+/* Secondary */
+
+.wallet-btn.secondary {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+
+.wallet-btn.secondary:hover {
+  background: #f9fafb;
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .wallet-amount {
+    font-size: 30px;
+  }
+
+  .wallet-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
+
+/* ===== Form Group ===== */
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.wallet-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Input */
+
+.wallet-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  outline: none;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wallet-input:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1);
+}
+
+/* Button full width */
+
+.wallet-btn.full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Helper text */
+
+.wallet-helper {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+
+/* ===== Statement Table ===== */
+
+.statement-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Header */
+
+.statement-head {
+  display: grid;
+  grid-template-columns: 120px 1.5fr 1fr 1fr 1.2fr;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Row */
+
+.statement-row {
+  display: grid;
+  grid-template-columns: 120px 1.5fr 1fr 1fr 1.2fr;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.statement-row:hover {
+  background: #f9fafb;
+}
+
+/* Text helpers */
+
+.muted {
+  color: #6b7280;
+}
+
+.right {
+  text-align: right;
+}
+
+/* Credit / Debit */
+
+.credit {
+  color: #065f46;
+  font-weight: 500;
+}
+
+.debit {
+  color: #991b1b;
+  font-weight: 500;
+}
+
+/* Empty state */
+
+.statement-empty {
+  padding: 30px;
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* ===== Mobile ===== */
+
+@media (max-width: 768px) {
+  .statement-head {
+    display: none;
+  }
+
+  .statement-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .statement-row span {
+    text-align: left !important;
+    font-size: 13px;
+  }
+
+  .statement-row span::before {
+    content: attr(data-label);
+    font-size: 11px;
+    color: #9ca3af;
+    display: block;
+  }
+}
+
+
+
+/* ===== Payment Page ===== */
+
+.wallet-wrap.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+}
+
+.pay-card {
+  max-width: 420px;
+  text-align: center;
+}
+
+.pay-card h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.pay-amount {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #111827;
+}
+
+.qr-image {
+  width: 220px;
+  margin: 20px auto;
+}
+
+.timer {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.pay-note {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Status */
+
+.status.success {
+  border-left: 4px solid #10b981;
+}
+
+.status.failed {
+  border-left: 4px solid #ef4444;
+}
+
+
+
+/* ===============================
+   STATEMENT FILTERS
+   =============================== */
+
+.statement-filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.statement-filters label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.statement-filters input,
+.statement-filters select {
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  min-width: 150px;
+}
+
+
+
+/* ===============================
+   BASE LAYOUT
+   =============================== */
+
+.wallet-area {
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+.wallet-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 20px;
+}
+
+/* ===============================
+   HEADER
+   =============================== */
+
+.wallet-header {
+  margin-bottom: 24px;
+}
+
+.wallet-header h2 {
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.wallet-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* ===============================
+   CARD
+   =============================== */
+
+.wallet-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* ===============================
+   FILTERS
+   =============================== */
+
+.filter-card {
+  padding-bottom: 16px;
+}
+
+.statement-filters {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-field label {
+  display: block;
+  font-size: 16px;
+  color: #111;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.filter-field input {
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  min-width: 180px;
+}
+
+/* ===============================
+   TABLE
+   =============================== */
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.statement-table {
+  width: 100%;
+  min-width: 1000px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.statement-table th,
+.statement-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  width:280px;
+}
+
+.statement-table th {
+  background: #fafafa;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  text-align: left;
+}
+
+.statement-table tr:hover {
+  background: #f9fafb;
+}
+
+/* Alignment */
+
+.right {
+  text-align: right;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+/* Credit / Debit */
+
+.credit {
+  color: #065f46;
+  font-weight: 500;
+}
+
+.debit {
+  color: #991b1b;
+  font-weight: 500;
+}
+
+/* Reference */
+
+.reference {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty */
+
+.statement-empty {
+  text-align: center;
+  padding: 32px;
+  color: #6b7280;
 }

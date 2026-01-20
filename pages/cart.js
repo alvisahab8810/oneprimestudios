@@ -1,4 +1,3 @@
-
 // pages/cart.js
 "use client";
 
@@ -15,14 +14,12 @@ import FaqAccordion from "@/components/home-page/Faq";
 import Offcanvas from "@/components/header/Offcanvas";
 
 export default function CartPage() {
-
   // These Coupon States
 
-   const [couponCode, setCouponCode] = useState("");
-   const [appliedCoupon, setAppliedCoupon] = useState(null);
-   // appliedCoupon = { code, discount }
-   const [applyingCoupon, setApplyingCoupon] = useState(false);
-
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  // appliedCoupon = { code, discount }
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const [cartItems, setCartItems] = useState([]);
   const [tempQty, setTempQty] = useState({}); // { [index]: "123" } - string for free typing
@@ -31,23 +28,23 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-
   // Build quantity ladders based on product tiers & min qty
-const buildQuantityLadder = (product) => {
-  if (!product) return [1];
+  const buildQuantityLadder = (product) => {
+    if (!product) return [1];
 
-  const minQty = Number(product.minOrderQty || 1);
+    const minQty = Number(product.minOrderQty || 1);
 
-  // collect tier quantities
-  const tierQtys = (product.pricingTiers || [])
-    .map(t => Number(t.minQty))
-    .filter(n => !isNaN(n) && n > 0);
+    // collect tier quantities
+    const tierQtys = (product.pricingTiers || [])
+      .map((t) => Number(t.minQty))
+      .filter((n) => !isNaN(n) && n > 0);
 
-  const all = Array.from(new Set([minQty, ...tierQtys])).sort((a, b) => a - b);
+    const all = Array.from(new Set([minQty, ...tierQtys])).sort(
+      (a, b) => a - b,
+    );
 
-  return all;
-};
-
+    return all;
+  };
 
   // fetch cart from API
   const fetchCart = async () => {
@@ -115,7 +112,7 @@ const buildQuantityLadder = (product) => {
       await axios.put(
         "/api/cart",
         { itemIndex: index, quantity: numericQty },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       // re-sync with server canonical state
@@ -142,35 +139,34 @@ const buildQuantityLadder = (product) => {
 
   // called when user leaves input: validate and update
   const handleQtyBlur = (index) => {
-  const item = cartItems[index];
-  if (!item) return;
+    const item = cartItems[index];
+    if (!item) return;
 
-  const ladder = buildQuantityLadder(item.product);
-  const raw = tempQty[index];
+    const ladder = buildQuantityLadder(item.product);
+    const raw = tempQty[index];
 
-  if (!raw || raw.trim() === "") {
-    const min = ladder[0];
-    toast.error(`Minimum quantity is ${min}`);
-    setTempQty((p) => ({ ...p, [index]: String(min) }));
-    return updateQuantity(index, min);
-  }
-
-  let num = Number(raw);
-  if (isNaN(num)) num = ladder[0];
-
-  // Snap to nearest tier
-  let nearest = ladder[0];
-  for (let i = 0; i < ladder.length; i++) {
-    if (num <= ladder[i]) {
-      nearest = ladder[i];
-      break;
+    if (!raw || raw.trim() === "") {
+      const min = ladder[0];
+      toast.error(`Minimum quantity is ${min}`);
+      setTempQty((p) => ({ ...p, [index]: String(min) }));
+      return updateQuantity(index, min);
     }
-  }
 
-  setTempQty((p) => ({ ...p, [index]: String(nearest) }));
-  updateQuantity(index, nearest);
-};
+    let num = Number(raw);
+    if (isNaN(num)) num = ladder[0];
 
+    // Snap to nearest tier
+    let nearest = ladder[0];
+    for (let i = 0; i < ladder.length; i++) {
+      if (num <= ladder[i]) {
+        nearest = ladder[i];
+        break;
+      }
+    }
+
+    setTempQty((p) => ({ ...p, [index]: String(nearest) }));
+    updateQuantity(index, nearest);
+  };
 
   // handy keyboard handler: Enter triggers blur/validate
   const handleQtyKeyDown = (e, index) => {
@@ -207,9 +203,9 @@ const buildQuantityLadder = (product) => {
   }, 0);
 
   // ✅ ADD THIS
-const finalAmount = appliedCoupon
-  ? Math.max(total - appliedCoupon.discount, 0)
-  : total;
+  const finalAmount = appliedCoupon
+    ? Math.max(total - appliedCoupon.discount, 0)
+    : total;
 
   const getImageUrl = (imgPath) => {
     if (!imgPath) return "/no-image.png";
@@ -219,157 +215,170 @@ const finalAmount = appliedCoupon
     return imgPath;
   };
 
-
   // for coupon genration function
 
   const applyCoupon = async () => {
-  if (!couponCode.trim()) {
-    toast.error("Please enter a coupon code");
-    return;
-  }
+    if (!couponCode.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
 
-  try {
-    setApplyingCoupon(true);
-    const token = localStorage.getItem("token");
+    try {
+      setApplyingCoupon(true);
+      const token = localStorage.getItem("token");
 
-    const res = await axios.post(
-      "/api/coupons/apply",
-      {
-        code: couponCode,
-        cartTotal: total,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+      const res = await axios.post(
+        "/api/coupons/apply",
+        {
+          code: couponCode,
+          cartTotal: total,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
-   const couponData = {
-  code: res.data.coupon.code,
-  discount: res.data.discount,
-};
+      const couponData = {
+        code: res.data.coupon.code,
+        discount: res.data.discount,
+      };
 
-setAppliedCoupon(couponData);
+      setAppliedCoupon(couponData);
 
-// ✅ ADD THIS (VERY IMPORTANT)
-localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
+      // ✅ ADD THIS (VERY IMPORTANT)
+      localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
 
-
-    toast.success("Coupon applied successfully");
-  } catch (err) {
-    toast.error(err?.response?.data?.message || "Invalid coupon");
-    setAppliedCoupon(null);
-  } finally {
-    setApplyingCoupon(false);
-  }
-};
-
+      toast.success("Coupon applied successfully");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Invalid coupon");
+      setAppliedCoupon(null);
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
 
   if (loading) {
     return (
-    <div className="cart-loader-wrapper">
-  <div className="cart-loader-box">
-    <div className="cart-loader-animation"></div>
+      <div className="cart-loader-wrapper">
+        <div className="cart-loader-box">
+          <div className="cart-loader-animation"></div>
 
-    <h4 className="cart-loader-text">Loading your cart...</h4>
-  </div>
+          <h4 className="cart-loader-text">Loading your cart...</h4>
+        </div>
 
-  <style jsx>{`
-    .cart-loader-wrapper {
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f7f9fc;
-    }
+        <style jsx>{`
+          .cart-loader-wrapper {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f7f9fc;
+          }
 
-    .cart-loader-box {
-      text-align: center;
-      animation: fadeIn 0.6s ease-out;
-    }
+          .cart-loader-box {
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+          }
 
-    .cart-loader-animation {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 20px;
-      border-radius: 50%;
-      border: 6px solid #d9d9ff;
-      border-top-color: #6a5cff;
-      border-right-color: #6a5cff;
-      animation: cart-spin 1s linear infinite, pulse 1.5s ease-in-out infinite;
-      box-shadow: 0 0 20px rgba(106, 92, 255, 0.3);
-    }
+          .cart-loader-animation {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 6px solid #d9d9ff;
+            border-top-color: #6a5cff;
+            border-right-color: #6a5cff;
+            animation:
+              cart-spin 1s linear infinite,
+              pulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(106, 92, 255, 0.3);
+          }
 
-    @keyframes cart-spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+          @keyframes cart-spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
 
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.15); }
-      100% { transform: scale(1); }
-    }
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.15);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
 
-    .cart-loader-text {
-      font-size: 18px;
-      font-weight: 600;
-      color: #555;
-      letter-spacing: 0.3px;
-      animation: blinkFade 1.6s infinite ease-in-out;
-    }
+          .cart-loader-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #555;
+            letter-spacing: 0.3px;
+            animation: blinkFade 1.6s infinite ease-in-out;
+          }
 
-    @keyframes blinkFade {
-      0% { opacity: 0.7; }
-      50% { opacity: 1; }
-      100% { opacity: 0.7; }
-    }
+          @keyframes blinkFade {
+            0% {
+              opacity: 0.7;
+            }
+            50% {
+              opacity: 1;
+            }
+            100% {
+              opacity: 0.7;
+            }
+          }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
 
-    /* Mobile responsive */
-    @media (max-width: 480px) {
-      .cart-loader-animation {
-        width: 55px;
-        height: 55px;
-      }
-      .cart-loader-text {
-        font-size: 16px;
-      }
-    }
-  `}</style>
-</div>
-
+          /* Mobile responsive */
+          @media (max-width: 480px) {
+            .cart-loader-animation {
+              width: 55px;
+              height: 55px;
+            }
+            .cart-loader-text {
+              font-size: 16px;
+            }
+          }
+        `}</style>
+      </div>
     );
   }
 
   if (!cartItems.length) {
     return (
       <div className="wishlist-main-page">
-          <Topbar />
+        <Topbar />
 
-          <div className="container text-center empty-wishlist-area">
+        <div className="container text-center empty-wishlist-area">
+          <img src="/assets/images/empty-cart.png" alt="Empty Cart" />
 
-            <img
-              src="/assets/images/empty-cart.png"
-              alt="Empty Cart"
-            />
-
-            <h3>Your Cart is Empty</h3>
-            {/* <p className="text-muted mb-4">
+          <h3>Your Cart is Empty</h3>
+          {/* <p className="text-muted mb-4">
               Looks like you haven’t added anything yet. Your designs will still
               be available in <strong>My Projects</strong>.
             </p> */}
 
-            <Link
-              href="/products"
-              className="continue-shoppin-btn"
-            >
-              <i className="bi bi-arrow-left me-2"></i> Continue Shopping
-            </Link>
-            </div>
+          <Link href="/products" className="continue-shoppin-btn">
+            <i className="bi bi-arrow-left me-2"></i> Continue Shopping
+          </Link>
+        </div>
 
         <Footer />
       </div>
@@ -379,8 +388,7 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
   return (
     <div className="cart-page-area">
       <Topbar />
-      <Offcanvas/>
-      
+      <Offcanvas />
 
       <div className="container padding-top-40 ">
         {/* <h2 className="mb-4 fw-bold cart-m-heading">Your Cart</h2> */}
@@ -427,27 +435,26 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
 
                     {/* QTY BUTTONS */}
                     <div className="cart-qty-row">
-                    <button
-                            onClick={() => {
-                              const ladder = buildQuantityLadder(item.product);
-                              const current = Number(tempValue);
+                      <button
+                        onClick={() => {
+                          const ladder = buildQuantityLadder(item.product);
+                          const current = Number(tempValue);
 
-                              // find previous tier
-                              let prev = ladder[0];
-                              for (let i = ladder.length - 1; i >= 0; i--) {
-                                if (ladder[i] < current) {
-                                  prev = ladder[i];
-                                  break;
-                                }
-                              }
+                          // find previous tier
+                          let prev = ladder[0];
+                          for (let i = ladder.length - 1; i >= 0; i--) {
+                            if (ladder[i] < current) {
+                              prev = ladder[i];
+                              break;
+                            }
+                          }
 
-                              setTempQty((p) => ({ ...p, [idx]: String(prev) }));
-                              updateQuantity(idx, prev);
-                            }}
-                          >
-                            -
-                          </button>
-
+                          setTempQty((p) => ({ ...p, [idx]: String(prev) }));
+                          updateQuantity(idx, prev);
+                        }}
+                      >
+                        -
+                      </button>
 
                       <input
                         type="text"
@@ -459,27 +466,26 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
                         onKeyDown={(e) => handleQtyKeyDown(e, idx)}
                       />
 
-                     <button
-  onClick={() => {
-    const ladder = buildQuantityLadder(item.product);
-    const current = Number(tempValue);
+                      <button
+                        onClick={() => {
+                          const ladder = buildQuantityLadder(item.product);
+                          const current = Number(tempValue);
 
-    // find next tier
-    let next = ladder[ladder.length - 1];
-    for (let i = 0; i < ladder.length; i++) {
-      if (ladder[i] > current) {
-        next = ladder[i];
-        break;
-      }
-    }
+                          // find next tier
+                          let next = ladder[ladder.length - 1];
+                          for (let i = 0; i < ladder.length; i++) {
+                            if (ladder[i] > current) {
+                              next = ladder[i];
+                              break;
+                            }
+                          }
 
-    setTempQty((p) => ({ ...p, [idx]: String(next) }));
-    updateQuantity(idx, next);
-  }}
->
-  +
-</button>
-
+                          setTempQty((p) => ({ ...p, [idx]: String(next) }));
+                          updateQuantity(idx, next);
+                        }}
+                      >
+                        +
+                      </button>
                     </div>
 
                     {/* ATTRIBUTES */}
@@ -511,46 +517,43 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
             </div> */}
 
             <div className="promo-row">
-                <input
-                  type="text"
-                  placeholder="Promo code"
-                  value={couponCode}
-                  disabled={!!appliedCoupon}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                />
+              <input
+                type="text"
+                placeholder="Promo code"
+                value={couponCode}
+                disabled={!!appliedCoupon}
+                onChange={(e) => setCouponCode(e.target.value)}
+              />
 
-                {appliedCoupon ? (
-                  <button
-                    onClick={() => {
-                       setAppliedCoupon(null);
-                        setCouponCode("");
-                        localStorage.removeItem("appliedCoupon"); // ✅ ADD
-                        toast.success("Coupon removed");
-
-                    }}
-                  >
-                    Remove
-                  </button>
-                ) : (
-                  <button onClick={applyCoupon} disabled={applyingCoupon}>
-                    {applyingCoupon ? "Applying..." : "Apply"}
-                  </button>
-                )}
-              </div>
-
+              {appliedCoupon ? (
+                <button
+                  onClick={() => {
+                    setAppliedCoupon(null);
+                    setCouponCode("");
+                    localStorage.removeItem("appliedCoupon"); // ✅ ADD
+                    toast.success("Coupon removed");
+                  }}
+                >
+                  Remove
+                </button>
+              ) : (
+                <button onClick={applyCoupon} disabled={applyingCoupon}>
+                  {applyingCoupon ? "Applying..." : "Apply"}
+                </button>
+              )}
+            </div>
 
             <div className="summary-line">
               <span>Sub-total</span>
               <strong>₹{total.toFixed(2)}</strong>
             </div>
 
-             <div className="summary-line">
+            <div className="summary-line">
               <span>Voucher</span>
               <strong className="text-success">
                 {appliedCoupon ? `-₹${appliedCoupon.discount.toFixed(2)}` : "-"}
               </strong>
             </div>
-
 
             {/* <div className="summary-line">
               <span>Delivery Fee</span>
@@ -564,20 +567,18 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
               <strong>₹{total.toFixed(2)}</strong>
             </div> */}
 
-
             <div className="summary-total">
-  <span>Total Amount</span>
-  <strong>₹{finalAmount.toFixed(2)}</strong>
-</div>
-
+              <span>Total Amount</span>
+              <strong>₹{finalAmount.toFixed(2)}</strong>
+            </div>
 
             <div className="mobile-none">
               <button
-              className="summary-checkout"
-              onClick={() => router.push("/checkout")}
-            >
-              Continue to Pay
-            </button>
+                className="summary-checkout"
+                onClick={() => router.push("/checkout")}
+              >
+                Continue to Pay
+              </button>
             </div>
           </div>
         </div>
@@ -634,17 +635,15 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
       </div>
 
       {/* MOBILE STICKY CHECKOUT BUTTON */}
-<div className="mobile-cart-sticky desktop-none">
-  <button
-    className="mobile-cart-button"
-    onClick={() => router.push("/checkout")}
-  >
-   Continue to Pay 
-    {/* ₹{total.toFixed(2)} */}
-   ₹{finalAmount.toFixed(2)}
-  </button>
-</div>
-
+      <div className="mobile-cart-sticky desktop-none">
+        <button
+          className="mobile-cart-button"
+          onClick={() => router.push("/checkout")}
+        >
+          Continue to Pay
+          {/* ₹{total.toFixed(2)} */}₹{finalAmount.toFixed(2)}
+        </button>
+      </div>
 
       <ProductSlider />
 
@@ -656,22 +655,6 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // // pages/cart.js
 // "use client";
@@ -695,9 +678,6 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
 //   const [confirmRemove, setConfirmRemove] = useState(null);
 //   const [loading, setLoading] = useState(true);
 //   const router = useRouter();
-
-
-  
 
 //   // fetch cart from API
 //   const fetchCart = async () => {
@@ -988,7 +968,6 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
 //     <div className="cart-page-area">
 //       <Topbar />
 //       <Offcanvas/>
-      
 
 //       <div className="container padding-top-40 ">
 //         {/* <h2 className="mb-4 fw-bold cart-m-heading">Your Cart</h2> */}
@@ -1192,7 +1171,6 @@ localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
 //    Continue to Pay  ₹{total.toFixed(2)}
 //   </button>
 // </div>
-
 
 //       <ProductSlider />
 
