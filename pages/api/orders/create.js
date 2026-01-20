@@ -1,4 +1,3 @@
-
 // pages/api/orders/create.js
 import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
@@ -9,7 +8,6 @@ import Coupon from "@/models/Coupon";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import mongoose from "mongoose";
-
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -26,12 +24,11 @@ export default async function handler(req, res) {
     }
 
     // 📦 REQUEST DATA
-    const {
-      items,
-      subtotal,
-      paymentMethod,
-      couponCode, // ✅ MUST COME FROM CHECKOUT
-    } = req.body;
+    const { items, subtotal, paymentMethod, couponCode } = req.body;
+
+    // 🔒 Normalize payment method (IMPORTANT)
+    const normalizedPaymentMethod =
+      typeof paymentMethod === "string" ? paymentMethod.toLowerCase() : "cod";
 
     // 🛑 BASIC VALIDATION
     if (!Array.isArray(items) || items.length === 0) {
@@ -79,9 +76,7 @@ export default async function handler(req, res) {
 
       // 🌍 GLOBAL USAGE LIMIT
       if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-        return res
-          .status(400)
-          .json({ message: "Coupon usage limit reached" });
+        return res.status(400).json({ message: "Coupon usage limit reached" });
       }
 
       // 👥 USER TYPE CHECK
@@ -101,9 +96,7 @@ export default async function handler(req, res) {
       });
 
       if (userUsageCount >= (coupon.perUserLimit || 1)) {
-        return res
-          .status(400)
-          .json({ message: "Coupon already used by you" });
+        return res.status(400).json({ message: "Coupon already used by you" });
       }
 
       // 💰 MIN ORDER CHECK
@@ -135,46 +128,7 @@ export default async function handler(req, res) {
       };
 
       finalTotal = subtotal - discountAmount;
-
-      // 📈 INCREMENT COUPON USAGE
-      coupon.usedCount += 1;
-      await coupon.save();
     }
-
-
-
-  // ===============================
-// 💳 WALLET PAYMENT HANDLING
-// ===============================
-if (paymentMethod === "Wallet") {
-  const wallet = await Wallet.findOne({ user: user._id });
-
-  if (!wallet) {
-    return res.status(400).json({ message: "Wallet not found" });
-  }
-
-  if (wallet.balance < finalTotal) {
-    return res.status(400).json({
-      message: "Insufficient wallet balance",
-    });
-  }
-
-  // 🔐 Deduct wallet balance (atomic)
-  wallet.balance -= finalTotal;
-  await wallet.save();
-
-  // 🧾 Create wallet transaction (DEBIT)
-  await WalletTransaction.create({
-    user: user._id,
-    type: "debit",
-    amount: finalTotal,
-    description: "Order Payment",
-    referenceType: "order_payment",
-    status: "success",
-  });
-}
-
-
 
     // =====================================================
     // 🧾 CREATE ORDER
@@ -212,122 +166,117 @@ if (paymentMethod === "Wallet") {
     //     .replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
     // });
 
-
     // =====================================================
-// 🧾 CREATE ORDER + WALLET (ATOMIC)
-// =====================================================
-const session = await mongoose.startSession();
-session.startTransaction();
+    // 🧾 CREATE ORDER + WALLET (ATOMIC)
+    // =====================================================
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-try {
-  // 💳 WALLET PAYMENT LOGIC
-  if (paymentMethod === "Wallet") {
-    const wallet = await Wallet.findOne({ user: user._id }).session(session);
+    try {
+      // 💳 WALLET PAYMENT LOGIC
+      if (normalizedPaymentMethod === "wallet") {
+        const wallet = await Wallet.findOne({ user: user._id }).session(
+          session,
+        );
 
-    if (!wallet) {
-      throw new Error("Wallet not found");
+        if (!wallet) {
+          throw new Error("Wallet not found");
+        }
+
+        if (wallet.balance < finalTotal) {
+          throw new Error("Insufficient wallet balance");
+        }
+
+        // 🔻 Debit wallet
+        wallet.balance -= finalTotal;
+        await wallet.save({ session });
+
+        // 🧾 Wallet transaction (DEBIT)
+        await WalletTransaction.create(
+          [
+            {
+              user: user._id,
+              type: "debit",
+              amount: finalTotal,
+              description: "Order Payment",
+              referenceType: "order_payment",
+              status: "success",
+            },
+          ],
+          { session },
+        );
+      }
+
+      // 📦 CREATE ORDER (UNCHANGED DATA)
+      const order = await Order.create(
+        [
+          {
+            user: fullUser._id,
+
+            items: items.map((i) => ({
+              product: i.product,
+              quantity: i.quantity,
+              price: i.price,
+            })),
+
+            subtotal, // ✅ original subtotal
+            total: finalTotal, // ✅ coupon-adjusted total
+
+            coupon: couponData, // ✅ coupon snapshot
+
+            customerRemarks,
+
+            shipping: {
+              name: fullUser.name,
+              phone: fullUser.phone,
+              street: fullUser.address || fullUser.businessAddress || "",
+              city: fullUser.city || "",
+              state: fullUser.state || "",
+              zip: fullUser.pincode || "",
+            },
+
+            paymentMethod:
+              normalizedPaymentMethod === "wallet"
+                ? "Wallet"
+                : "Cash on Delivery",
+
+            orderNumber: `ORD-${new Date()
+              .toISOString()
+              .split("T")[0]
+              .replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
+          },
+        ],
+        { session },
+      );
+
+      // 🎟️ Increment coupon usage ONLY if order succeeds
+      if (couponData) {
+        await Coupon.updateOne(
+          { code: couponData.code },
+          { $inc: { usedCount: 1 } },
+          { session },
+        );
+      }
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.status(201).json({
+        success: true,
+        order: order[0],
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+
+      return res.status(400).json({
+        message: error.message || "Order failed",
+      });
     }
-
-    if (wallet.balance < finalTotal) {
-      throw new Error("Insufficient wallet balance");
-    }
-
-    // 🔻 Debit wallet
-    wallet.balance -= finalTotal;
-    await wallet.save({ session });
-
-    // 🧾 Wallet transaction (DEBIT)
-    await WalletTransaction.create(
-      [
-        {
-          user: user._id,
-          type: "debit",
-          amount: finalTotal,
-          description: "Order Payment",
-          referenceType: "order_payment",
-          status: "success",
-        },
-      ],
-      { session }
-    );
-  }
-
-  // 📦 CREATE ORDER (UNCHANGED DATA)
-  const order = await Order.create(
-    [
-      {
-        user: fullUser._id,
-
-        items: items.map((i) => ({
-          product: i.product,
-          quantity: i.quantity,
-          price: i.price,
-        })),
-
-        subtotal,              // ✅ original subtotal
-        total: finalTotal,     // ✅ coupon-adjusted total
-
-        coupon: couponData,    // ✅ coupon snapshot
-
-        customerRemarks,
-
-        shipping: {
-          name: fullUser.name,
-          phone: fullUser.phone,
-          street: fullUser.address || fullUser.businessAddress || "",
-          city: fullUser.city || "",
-          state: fullUser.state || "",
-          zip: fullUser.pincode || "",
-        },
-
-        paymentMethod: paymentMethod || "Cash on Delivery",
-
-        orderNumber: `ORD-${new Date()
-          .toISOString()
-          .split("T")[0]
-          .replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
-      },
-    ],
-    { session }
-  );
-
-  await session.commitTransaction();
-  session.endSession();
-
-  return res.status(201).json({
-    success: true,
-    order: order[0],
-  });
-
-} catch (error) {
-  await session.abortTransaction();
-  session.endSession();
-
-  return res.status(400).json({
-    message: error.message || "Order failed",
-  });
-}
-
-
-    // ✅ SUCCESS
-    return res.status(201).json({
-      success: true,
-      order,
-    });
   } catch (error) {
     console.error("❌ Order creation failed:", error);
     return res.status(500).json({ message: error.message });
   }
 }
-
-
-
-
-
-
-
-
-
 
 // // pages/api/orders/create.js
 // import dbConnect from "@/lib/dbConnect";

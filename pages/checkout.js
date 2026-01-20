@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,15 +5,11 @@ import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
 import DealBanner from "@/components/home-page/Cta";
 import Offcanvas from "@/components/header/Offcanvas";
-
+import { toast } from "react-hot-toast";
 export default function CheckoutPage() {
-
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
-const [walletBalance, setWalletBalance] = useState(null);
-
-
-
+  const [walletBalance, setWalletBalance] = useState(null);
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,23 +41,21 @@ const [walletBalance, setWalletBalance] = useState(null);
     return imgPath;
   };
 
-
   useEffect(() => {
-  const fetchWallet = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/partner/wallet", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setWalletBalance(data.balance || 0);
-    } catch {
-      setWalletBalance(0);
-    }
-  };
-  fetchWallet();
-}, []);
-
+    const fetchWallet = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/partner/wallet", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setWalletBalance(data.balance || 0);
+      } catch {
+        setWalletBalance(0);
+      }
+    };
+    fetchWallet();
+  }, []);
 
   // 🧾 Fetch User Info
   useEffect(() => {
@@ -140,11 +133,10 @@ const [walletBalance, setWalletBalance] = useState(null);
 
   const total = cartItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
-    0
+    0,
   );
 
   const finalAmount = Math.max(total - discountAmount, 0);
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -177,16 +169,15 @@ const [walletBalance, setWalletBalance] = useState(null);
     else if (!/^\d{6}$/.test(zip)) newErrors.zip = "ZIP must be 6 digits.";
 
     if (userType === "partner") {
-  if (!companyName.trim()) {
-    newErrors.companyName = "Company name is required for partners.";
-  }
+      if (!companyName.trim()) {
+        newErrors.companyName = "Company name is required for partners.";
+      }
 
-  // ✅ GST validation ONLY if user entered it
-  if (gstNumber && !/^[0-9A-Z]{15}$/.test(gstNumber)) {
-    newErrors.gstNumber = "Invalid GST number format.";
-  }
-}
-
+      // ✅ GST validation ONLY if user entered it
+      if (gstNumber && !/^[0-9A-Z]{15}$/.test(gstNumber)) {
+        newErrors.gstNumber = "Invalid GST number format.";
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -235,107 +226,95 @@ const [walletBalance, setWalletBalance] = useState(null);
     }
   };
 
-  
-
 const placeOrder = async (method) => {
   if (submitting) return; // 🔒 HARD STOP
   if (!validateForm()) return;
 
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in again.");
-        return;
-      }
-
-      // Prepare payload matching backend fields
-      const orderPayload = {
-        items: cartItems.map((item) => ({
-          product: item.product?._id || item.product,
-          quantity: item.quantity,
-          price: item.price,
-            remarks: item.remarks || "", // ✅ THIS LINE IS REQUIRED
-        })),
-        subtotal: cartItems.reduce(
-          (sum, item) => sum + item.price * item.quantity,
-          0
-        ),
-        shippingCharge: 0, // or your shipping logic
-        // total: total,
-
-        total: finalAmount,
-
-        couponCode: appliedCoupon?.code || null,
-
-
-        paymentMethod: method,
-      };
-
-      const res = await fetch("/api/orders/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(orderPayload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Order failed");
-
-      // Redirect to success page
-      // ✅ Clear applied coupon
-localStorage.removeItem("appliedCoupon");
-
-// ✅ Clear cart after successful order
-await fetch("/api/cart/clear", {
-  method: "DELETE",
-  headers: { Authorization: `Bearer ${token}` },
-});
-
-// Redirect to success page
-router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
-
-    } catch (err) {
-  console.error("Order error:", err);
-
-  // 💳 Wallet-specific error handling
-  if (
-    method === "Wallet" &&
-    err.message &&
-    err.message.toLowerCase().includes("insufficient")
-  ) {
-    toast.error("Insufficient wallet balance. Please add money.");
-    router.push("/partner/wallet/add");
-    return;
-  }
-
-  // Generic error fallback
-  toast.error(err.message || "Failed to place order.");
-}
- finally {
-      setSubmitting(false);
+  try {
+    setSubmitting(true);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in again.");
+      return;
     }
-  };
 
+    const orderPayload = {
+      items: cartItems.map((item) => ({
+        product: item.product?._id || item.product,
+        quantity: item.quantity,
+        price: item.price,
+        remarks: item.remarks || "",
+      })),
+      subtotal: cartItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      ),
+      total: finalAmount,
+      couponCode: appliedCoupon?.code || null,
+      paymentMethod: method,
+    };
 
+    const res = await fetch("/api/orders/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(orderPayload),
+    });
 
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Order failed");
 
-  // for the coupon 
+    // ✅ Clear coupon
+    localStorage.removeItem("appliedCoupon");
+
+    // ✅ Clear cart
+    await fetch("/api/cart/clear", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // ✅ Update wallet balance locally (ONCE)
+    if (method === "Wallet") {
+      setWalletBalance((prev) => Math.max(prev - finalAmount, 0));
+    }
+
+    // ✅ Redirect ONCE
+    router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
+
+  } catch (err) {
+    console.error("Order error:", err);
+
+    if (
+      method === "Wallet" &&
+      err.message?.toLowerCase().includes("insufficient")
+    ) {
+      toast.error("Insufficient wallet balance. Please add money.");
+      router.push("/partner/wallet/add");
+      return;
+    }
+
+    toast.error(err.message || "Failed to place order.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+  // for the coupon
 
   useEffect(() => {
-  const storedCoupon = localStorage.getItem("appliedCoupon");
-  if (storedCoupon) {
-    try {
-      const parsed = JSON.parse(storedCoupon);
-      setAppliedCoupon(parsed);
-      setDiscountAmount(parsed.discount || 0);
-    } catch (e) {
-      console.error("Invalid coupon data");
+    const storedCoupon = localStorage.getItem("appliedCoupon");
+    if (storedCoupon) {
+      try {
+        const parsed = JSON.parse(storedCoupon);
+        setAppliedCoupon(parsed);
+        setDiscountAmount(parsed.discount || 0);
+      } catch (e) {
+        console.error("Invalid coupon data");
+      }
     }
-  }
-}, []);
+  }, []);
 
   if (loading)
     return (
@@ -368,7 +347,8 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
             border: 6px solid #d9d9ff;
             border-top-color: #6a5cff;
             border-right-color: #6a5cff;
-            animation: cart-spin 1s linear infinite,
+            animation:
+              cart-spin 1s linear infinite,
               pulse 1.5s ease-in-out infinite;
             box-shadow: 0 0 20px rgba(106, 92, 255, 0.3);
           }
@@ -709,24 +689,22 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
                   </div>
                 ))}
 
-
                 <div className="d-flex justify-content-between mt-3">
-                    <span>Subtotal</span>
-                    <span>₹{total.toFixed(2)}</span>
+                  <span>Subtotal</span>
+                  <span>₹{total.toFixed(2)}</span>
+                </div>
+
+                {appliedCoupon && (
+                  <div className="d-flex justify-content-between text-success">
+                    <span>Coupon ({appliedCoupon.code})</span>
+                    <span>- ₹{discountAmount.toFixed(2)}</span>
                   </div>
+                )}
 
-                  {appliedCoupon && (
-                    <div className="d-flex justify-content-between text-success">
-                      <span>Coupon ({appliedCoupon.code})</span>
-                      <span>- ₹{discountAmount.toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  <div className="d-flex justify-content-between border-top pt-2 fw-bold">
-                    <span>Amount Payable</span>
-                    <span>₹{finalAmount.toFixed(2)}</span>
-                  </div>
-
+                <div className="d-flex justify-content-between border-top pt-2 fw-bold">
+                  <span>Amount Payable</span>
+                  <span>₹{finalAmount.toFixed(2)}</span>
+                </div>
 
                 {/* <div className="mt-3">
                   <label className="form-label fw-semibold mb-2">
@@ -742,55 +720,53 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
                   </select>
                 </div> */}
 
-
-
                 {walletBalance !== null && (
-  <div className="alert alert-light mb-2">
-    Wallet Balance: <strong>₹{walletBalance.toFixed(2)}</strong>
-  </div>
-)}
+                  <div className="alert alert-light mb-2">
+                    Wallet Balance: <strong>₹{walletBalance.toFixed(2)}</strong>
+                  </div>
+                )}
 
+                <select
+                  className="form-select"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="cod">Cash on Delivery</option>
 
-
-     <select
-  className="form-select"
-  value={paymentMethod}
-  onChange={(e) => setPaymentMethod(e.target.value)}
->
-  <option value="cod">Cash on Delivery</option>
-
-  <option
-    value="wallet"
-    disabled={walletBalance !== null && walletBalance < finalAmount}
-  >
-    Pay using Wallet
-    {walletBalance !== null && walletBalance < finalAmount
-      ? " (Insufficient balance)"
-      : ""}
-  </option>
-</select>
-
-
+                  <option
+                    value="wallet"
+                    disabled={
+                      walletBalance !== null && walletBalance < finalAmount
+                    }
+                  >
+                    Pay using Wallet
+                    {walletBalance !== null && walletBalance < finalAmount
+                      ? " (Insufficient balance)"
+                      : ""}
+                  </option>
+                </select>
 
                 <button
-  className="place-order-btn mt-4"
-  disabled={submitting}
-  onClick={() => {
-    if (submitting) return; // 🔒 SECOND LOCK
-    if (!validateForm()) return;
-    if (cartItems.length === 0) {
-      toast.error("Your cart is empty.");
-      return;
-    }
+                  className="place-order-btn mt-4"
+                  disabled={submitting}
+                  onClick={() => {
+                    if (submitting) return; // 🔒 SECOND LOCK
+                    if (!validateForm()) return;
+                    if (cartItems.length === 0) {
+                      toast.error("Your cart is empty.");
+                      return;
+                    }
 
-    paymentMethod === "wallet"
-      ? placeOrder("Wallet")
-      : placeOrder("Cash on Delivery");
-  }}
-> 
- Place Order
-
-
+                    paymentMethod === "wallet"
+                      ? placeOrder("Wallet")
+                      : placeOrder("Cash on Delivery");
+                  }}
+                >
+                  {submitting
+                    ? "Processing..."
+                    : paymentMethod === "wallet"
+                      ? "Pay Using Wallet"
+                      : "Place Order (Cash on Delivery)"}
                 </button>
               </div>
             </div>
@@ -806,20 +782,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
   );
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // "use client";
 // import { useEffect, useState } from "react";
 // import { useRouter } from "next/navigation";
@@ -832,9 +794,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 
 //   const [appliedCoupon, setAppliedCoupon] = useState(null);
 //   const [discountAmount, setDiscountAmount] = useState(0);
-
-
-
 
 //   const [cartItems, setCartItems] = useState([]);
 //   const [loading, setLoading] = useState(true);
@@ -947,7 +906,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 
 //   const finalAmount = Math.max(total - discountAmount, 0);
 
-
 //   const handleChange = (e) => {
 //     const { name, value } = e.target;
 //     setFormData({ ...formData, [name]: value });
@@ -995,7 +953,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 //     newErrors.gstNumber = "Invalid GST number format.";
 //   }
 // }
-
 
 //     setErrors(newErrors);
 //     return Object.keys(newErrors).length === 0;
@@ -1114,7 +1071,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 
 //         couponCode: appliedCoupon?.code || null,
 
-
 //         paymentMethod: method,
 //       };
 
@@ -1140,10 +1096,7 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 //     }
 //   };
 
-
-
-
-//   // for the coupon 
+//   // for the coupon
 
 //   useEffect(() => {
 //   const storedCoupon = localStorage.getItem("appliedCoupon");
@@ -1535,7 +1488,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 //                   <strong>₹{total}</strong>
 //                 </div> */}
 
-
 //                 <div className="d-flex justify-content-between mt-3">
 //   <span>Subtotal</span>
 //   <span>₹{total.toFixed(2)}</span>
@@ -1552,7 +1504,6 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
 //   <span>Amount Payable</span>
 //   <span>₹{finalAmount.toFixed(2)}</span>
 // </div>
-
 
 //                 <div className="mt-3">
 //                   <label className="form-label fw-semibold mb-2">
