@@ -221,13 +221,26 @@ export default function WalletPay() {
 
             <p className="pay-amount">₹{amount}</p>
 
-            {qr && (
+            {/* {qr && (
               <img
                 src={qr}
                 alt="UPI QR Code"
                 className="qr-image"
               />
-            )}
+            )} */}
+
+            {qr ? (
+  <img
+    src={qr}
+    alt="UPI QR Code"
+    className="qr-image"
+  />
+) : (
+  <div className="qr-placeholder">
+    Loading QR…
+  </div>
+)}
+
 
             <div className="timer">
               QR expires in <strong>{formatTime(timeLeft)}</strong>
@@ -235,6 +248,9 @@ export default function WalletPay() {
 
             <p className="pay-note">
               Scan this QR using any UPI app to complete the payment.
+
+              <br />
+  <strong>Do not refresh this page.</strong>
             </p>
           </div>
         )}
