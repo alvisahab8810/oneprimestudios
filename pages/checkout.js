@@ -787,7 +787,9 @@ router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
       ? placeOrder("Wallet")
       : placeOrder("Cash on Delivery");
   }}
->
+> 
+ Place Order
+
 
                 </button>
               </div>
