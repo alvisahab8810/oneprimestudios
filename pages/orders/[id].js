@@ -520,6 +520,34 @@ export default function OrderDetailPage() {
             ← Back to My Orders
           </button>
         </div>
+
+        {["Pending", "Order Received", "In Packaging"].includes(order.status) && (
+  <button
+    className="btn btn-danger mt-3"
+    onClick={async () => {
+      if (!confirm("Are you sure you want to cancel this order?")) return;
+
+      try {
+        const token = localStorage.getItem("token");
+        await axios.post(
+          `/api/orders/${order._id}/cancel`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        toast.success("Order cancelled. Wallet refunded.");
+        window.location.reload();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Cancel failed");
+      }
+    }}
+  >
+    Cancel Order
+  </button>
+)}
+
       </div>
 
       <Footer />

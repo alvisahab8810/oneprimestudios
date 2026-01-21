@@ -1,7 +1,3 @@
-
-
-
-
 // "use client";
 // import { useEffect, useState } from "react";
 // import { useRouter } from "next/router";
@@ -30,7 +26,6 @@
 //     },
 //   }
 // );
-
 
 //         if (res.data.status === "success") {
 //           clearInterval(interval);
@@ -118,9 +113,6 @@
 //   );
 // }
 
-
-
-
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -151,7 +143,7 @@ export default function WalletPay() {
               Authorization: `Bearer ${token}`,
               "Cache-Control": "no-cache",
             },
-          }
+          },
         );
 
         if (res.data.status === "success") {
@@ -191,7 +183,7 @@ export default function WalletPay() {
     const timer = setInterval(() => {
       const diff = Math.max(
         0,
-        Math.floor((Number(expiresAt) - Date.now()) / 1000)
+        Math.floor((Number(expiresAt) - Date.now()) / 1000),
       );
       setTimeLeft(diff);
 
@@ -230,17 +222,10 @@ export default function WalletPay() {
             )} */}
 
             {qr ? (
-  <img
-    src={qr}
-    alt="UPI QR Code"
-    className="qr-image"
-  />
-) : (
-  <div className="qr-placeholder">
-    Loading QR…
-  </div>
-)}
-
+              <img src={qr} alt="UPI QR Code" className="qr-image" />
+            ) : (
+              <div className="qr-placeholder">Loading QR…</div>
+            )}
 
             <div className="timer">
               QR expires in <strong>{formatTime(timeLeft)}</strong>
@@ -248,9 +233,8 @@ export default function WalletPay() {
 
             <p className="pay-note">
               Scan this QR using any UPI app to complete the payment.
-
               <br />
-  <strong>Do not refresh this page.</strong>
+              <strong>Do not refresh this page.</strong>
             </p>
           </div>
         )}

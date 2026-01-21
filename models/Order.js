@@ -76,6 +76,17 @@ const OrderSchema = new mongoose.Schema(
     },
 
 
+
+    paymentStatus: {
+  type: String,
+  enum: ["UNPAID", "PAID", "REFUNDED"],
+  default: "UNPAID",
+},
+
+refundedAt: Date,
+
+
+
   coupon: {
   code: { type: String },
   discountType: { type: String },
