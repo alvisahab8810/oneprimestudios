@@ -96,7 +96,7 @@ import Link from "next/link";
 import { FaTruck } from "react-icons/fa";
 
 import { FaHandshake } from "react-icons/fa";
-import { FaUserPlus } from "react-icons/fa";
+import { FaUserPlus, FaChartLine } from "react-icons/fa";
 import { FaTags } from "react-icons/fa";
 
 
@@ -177,6 +177,13 @@ export default function Sidebar({ sidebarOpen }) {
           className={`ops-item ${isActive("/dashboard/admin/leads") ? "active" : ""}`}
         >
           <FaUserPlus className="me-2" /> Leads
+        </Link>
+
+        <Link
+          href="/dashboard/admin/reports/partner-sales"
+          className={`ops-item ${isActive("/dashboard/admin/reports/partner-sales") ? "active" : ""}`}
+        >
+          <FaChartLine className="me-2" /> Partner Sales Report
         </Link>
 
         {/* Section Label */}

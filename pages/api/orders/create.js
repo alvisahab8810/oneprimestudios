@@ -26,9 +26,15 @@ export default async function handler(req, res) {
     // 📦 REQUEST DATA
     const { items, subtotal, paymentMethod, couponCode } = req.body;
 
-    // 🔒 Normalize payment method (IMPORTANT)
     const normalizedPaymentMethod =
-      typeof paymentMethod === "string" ? paymentMethod.toLowerCase() : "cod";
+  typeof paymentMethod === "string"
+    ? paymentMethod.toLowerCase()
+    : null;
+
+if (!normalizedPaymentMethod) {
+  return res.status(400).json({ message: "Payment method required" });
+}
+
 
     // 🛑 BASIC VALIDATION
     if (!Array.isArray(items) || items.length === 0) {
@@ -44,6 +50,28 @@ export default async function handler(req, res) {
     if (!fullUser) {
       return res.status(400).json({ message: "User not found" });
     }
+
+
+
+    // =====================================================
+// 🔐 PAYMENT METHOD HARD LOCK (CRITICAL)
+// =====================================================
+if (fullUser.userType === "partner") {
+  if (normalizedPaymentMethod !== "wallet") {
+    return res.status(403).json({
+      message: "Partners can pay only using Wallet",
+    });
+  }
+}
+
+if (fullUser.userType === "customer") {
+  if (normalizedPaymentMethod !== "razorpay") {
+    return res.status(403).json({
+      message: "Customers can pay only via Razorpay",
+    });
+  }
+}
+
 
     // 📝 CUSTOMER REMARKS (FROM CART ITEMS)
     const customerRemarks = items
@@ -235,16 +263,37 @@ export default async function handler(req, res) {
               zip: fullUser.pincode || "",
             },
 
-            paymentMethod:
-              normalizedPaymentMethod === "wallet"
-                ? "Wallet"
-                : "Cash on Delivery",
+            // paymentMethod:
+            //   normalizedPaymentMethod === "wallet"
+            //     ? "Wallet"
+            //     : "Cash on Delivery",
 
-            paymentStatus:
-              normalizedPaymentMethod === "wallet"
-                ? "PAID"
-                : "UNPAID",
+            // paymentStatus:
+            //   normalizedPaymentMethod === "wallet"
+            //     ? "PAID"
+            //     : "UNPAID",
+
+
+            paymentMethod:
+  normalizedPaymentMethod === "wallet"
+    ? "Wallet"
+    : "Razorpay",
+
+paymentStatus:
+  normalizedPaymentMethod === "wallet"
+    ? "PAID"
+    : "UNPAID",
+
+
             
+razorpay:
+  normalizedPaymentMethod === "razorpay"
+    ? {
+        orderId: req.body.razorpayOrderId || null,
+        paymentId: null,
+        signature: null,
+      }
+    : undefined,
 
             orderNumber: `ORD-${new Date()
               .toISOString()
@@ -284,12 +333,35 @@ export default async function handler(req, res) {
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // // pages/api/orders/create.js
 // import dbConnect from "@/lib/dbConnect";
 // import getUserFromToken from "@/lib/getUserFromToken";
 // import Order from "@/models/Order";
 // import User from "@/models/User";
 // import Coupon from "@/models/Coupon";
+
+// import Wallet from "@/models/Wallet";
+// import WalletTransaction from "@/models/WalletTransaction";
+// import mongoose from "mongoose";
 
 // export default async function handler(req, res) {
 //   await dbConnect();
@@ -306,12 +378,11 @@ export default async function handler(req, res) {
 //     }
 
 //     // 📦 REQUEST DATA
-//     const {
-//       items,
-//       subtotal,
-//       paymentMethod,
-//       couponCode, // ✅ MUST COME FROM CHECKOUT
-//     } = req.body;
+//     const { items, subtotal, paymentMethod, couponCode } = req.body;
+
+//     // 🔒 Normalize payment method (IMPORTANT)
+//     const normalizedPaymentMethod =
+//       typeof paymentMethod === "string" ? paymentMethod.toLowerCase() : "cod";
 
 //     // 🛑 BASIC VALIDATION
 //     if (!Array.isArray(items) || items.length === 0) {
@@ -359,9 +430,7 @@ export default async function handler(req, res) {
 
 //       // 🌍 GLOBAL USAGE LIMIT
 //       if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-//         return res
-//           .status(400)
-//           .json({ message: "Coupon usage limit reached" });
+//         return res.status(400).json({ message: "Coupon usage limit reached" });
 //       }
 
 //       // 👥 USER TYPE CHECK
@@ -381,9 +450,7 @@ export default async function handler(req, res) {
 //       });
 
 //       if (userUsageCount >= (coupon.perUserLimit || 1)) {
-//         return res
-//           .status(400)
-//           .json({ message: "Coupon already used by you" });
+//         return res.status(400).json({ message: "Coupon already used by you" });
 //       }
 
 //       // 💰 MIN ORDER CHECK
@@ -415,53 +482,156 @@ export default async function handler(req, res) {
 //       };
 
 //       finalTotal = subtotal - discountAmount;
-
-//       // 📈 INCREMENT COUPON USAGE
-//       coupon.usedCount += 1;
-//       await coupon.save();
 //     }
 
 //     // =====================================================
 //     // 🧾 CREATE ORDER
 //     // =====================================================
-//     const order = await Order.create({
-//       user: fullUser._id,
+//     // const order = await Order.create({
+//     //   user: fullUser._id,
 
-//       items: items.map((i) => ({
-//         product: i.product,
-//         quantity: i.quantity,
-//         price: i.price,
-//       })),
+//     //   items: items.map((i) => ({
+//     //     product: i.product,
+//     //     quantity: i.quantity,
+//     //     price: i.price,
+//     //   })),
 
-//       subtotal, // ✅ ORIGINAL AMOUNT
-//       total: finalTotal, // ✅ FINAL PAYABLE
+//     //   subtotal, // ✅ ORIGINAL AMOUNT
+//     //   total: finalTotal, // ✅ FINAL PAYABLE
 
-//       coupon: couponData, // ✅ STORED SNAPSHOT
+//     //   coupon: couponData, // ✅ STORED SNAPSHOT
 
-//       customerRemarks,
+//     //   customerRemarks,
 
-//       shipping: {
-//         name: fullUser.name,
-//         phone: fullUser.phone,
-//         street: fullUser.address || fullUser.businessAddress || "",
-//         city: fullUser.city || "",
-//         state: fullUser.state || "",
-//         zip: fullUser.pincode || "",
-//       },
+//     //   shipping: {
+//     //     name: fullUser.name,
+//     //     phone: fullUser.phone,
+//     //     street: fullUser.address || fullUser.businessAddress || "",
+//     //     city: fullUser.city || "",
+//     //     state: fullUser.state || "",
+//     //     zip: fullUser.pincode || "",
+//     //   },
 
-//       paymentMethod: paymentMethod || "Cash on Delivery",
+//     //   paymentMethod: paymentMethod || "Cash on Delivery",
 
-//       orderNumber: `ORD-${new Date()
-//         .toISOString()
-//         .split("T")[0]
-//         .replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
-//     });
+//     //   orderNumber: `ORD-${new Date()
+//     //     .toISOString()
+//     //     .split("T")[0]
+//     //     .replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
+//     // });
 
-//     // ✅ SUCCESS
-//     return res.status(201).json({
-//       success: true,
-//       order,
-//     });
+//     // =====================================================
+//     // 🧾 CREATE ORDER + WALLET (ATOMIC)
+//     // =====================================================
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+
+//     try {
+//       // 💳 WALLET PAYMENT LOGIC
+//       if (normalizedPaymentMethod === "wallet") {
+//         const wallet = await Wallet.findOne({ user: user._id }).session(
+//           session,
+//         );
+
+//         if (!wallet) {
+//           throw new Error("Wallet not found");
+//         }
+
+//         if (wallet.balance < finalTotal) {
+//           throw new Error("Insufficient wallet balance");
+//         }
+
+//         // 🔻 Debit wallet
+//         wallet.balance -= finalTotal;
+//         await wallet.save({ session });
+
+//         // 🧾 Wallet transaction (DEBIT)
+//         await WalletTransaction.create(
+//           [
+//             {
+//               user: user._id,
+//               type: "debit",
+//               amount: finalTotal,
+//               description: "Order Payment",
+//               referenceType: "order_payment",
+//               status: "success",
+//             },
+//           ],
+//           { session },
+//         );
+//       }
+
+//       // 📦 CREATE ORDER (UNCHANGED DATA)
+//       const order = await Order.create(
+//         [
+//           {
+//             user: fullUser._id,
+
+//             items: items.map((i) => ({
+//               product: i.product,
+//               quantity: i.quantity,
+//               price: i.price,
+//             })),
+
+//             subtotal, // ✅ original subtotal
+//             total: finalTotal, // ✅ coupon-adjusted total
+
+//             coupon: couponData, // ✅ coupon snapshot
+
+//             customerRemarks,
+
+//             shipping: {
+//               name: fullUser.name,
+//               phone: fullUser.phone,
+//               street: fullUser.address || fullUser.businessAddress || "",
+//               city: fullUser.city || "",
+//               state: fullUser.state || "",
+//               zip: fullUser.pincode || "",
+//             },
+
+//             paymentMethod:
+//               normalizedPaymentMethod === "wallet"
+//                 ? "Wallet"
+//                 : "Cash on Delivery",
+
+//             paymentStatus:
+//               normalizedPaymentMethod === "wallet"
+//                 ? "PAID"
+//                 : "UNPAID",
+            
+
+//             orderNumber: `ORD-${new Date()
+//               .toISOString()
+//               .split("T")[0]
+//               .replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
+//           },
+//         ],
+//         { session },
+//       );
+
+//       // 🎟️ Increment coupon usage ONLY if order succeeds
+//       if (couponData) {
+//         await Coupon.updateOne(
+//           { code: couponData.code },
+//           { $inc: { usedCount: 1 } },
+//           { session },
+//         );
+//       }
+//       await session.commitTransaction();
+//       session.endSession();
+
+//       return res.status(201).json({
+//         success: true,
+//         order: order[0],
+//       });
+//     } catch (error) {
+//       await session.abortTransaction();
+//       session.endSession();
+
+//       return res.status(400).json({
+//         message: error.message || "Order failed",
+//       });
+//     }
 //   } catch (error) {
 //     console.error("❌ Order creation failed:", error);
 //     return res.status(500).json({ message: error.message });

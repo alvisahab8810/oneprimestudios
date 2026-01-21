@@ -7,7 +7,7 @@ const PartnerStatsBanner = () => {
 
   const today = new Date();
   const diffInDays = Math.floor(
-    (today - START_DATE) / (1000 * 60 * 60 * 24)
+    (today - START_DATE) / (4000 * 60 * 60 * 24)
   );
 
   // 1 or 2 growth per day (deterministic, not random every render)

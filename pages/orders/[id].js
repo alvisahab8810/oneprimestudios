@@ -225,7 +225,7 @@ export default function OrderDetailPage() {
               </small>
             </div>
 
-            <div>
+            <div className="top-buttons-area">
               <span
                 className={`badge px-3 py-2 fs-6 ${getStatusBadgeClass(
                   order.status,
@@ -233,6 +233,42 @@ export default function OrderDetailPage() {
               >
                 {order.status}
               </span>
+
+
+                {["Pending", "Order Received", "In Packaging"].includes(
+          order.status,
+        ) && (
+          <button
+            className="badge px-3 py-2 fs-6 bg-danger border-0"
+            onClick={async () => {
+              if (!confirm("Are you sure you want to cancel this order?"))
+                return;
+
+              try {
+                const token = localStorage.getItem("token");
+                await axios.post(
+                  `/api/orders/${order._id}/cancel`,
+                  {},
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  },
+                );
+
+                toast.success("Order cancelled. Wallet refunded.");
+                window.location.reload();
+              } catch (err) {
+                toast.error(err.response?.data?.message || "Cancel failed");
+              }
+            }}
+          >
+            Cancel Order
+          </button>
+        )}
+
+
+
+
+
 
               {/* ✔ If order is READY — show button */}
               {order.status === "Order Ready" &&
@@ -521,33 +557,7 @@ export default function OrderDetailPage() {
           </button>
         </div>
 
-        {["Pending", "Order Received", "In Packaging"].includes(order.status) && (
-  <button
-    className="btn btn-danger mt-3"
-    onClick={async () => {
-      if (!confirm("Are you sure you want to cancel this order?")) return;
-
-      try {
-        const token = localStorage.getItem("token");
-        await axios.post(
-          `/api/orders/${order._id}/cancel`,
-          {},
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        toast.success("Order cancelled. Wallet refunded.");
-        window.location.reload();
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Cancel failed");
-      }
-    }}
-  >
-    Cancel Order
-  </button>
-)}
-
+      
       </div>
 
       <Footer />

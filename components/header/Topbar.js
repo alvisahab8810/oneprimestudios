@@ -246,6 +246,8 @@ export default function Topbar() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [openProfileCard, setOpenProfileCard] = useState(false);
 
+  const isPartner = user?.userType === "partner";
+
   // const dropdownRef = useRef(null);x
   const desktopDropdownRef = useRef(null);
   const mobileDropdownRef = useRef(null);
@@ -492,11 +494,16 @@ export default function Topbar() {
                         {/* Menu */}
                         <ul className="ops-menu-list">
 
+                           {user.userType === "partner" && user.memberId && (
+
+
                           <li>
                               <Link href="/profile" className="gap-2">
                                  <i className="ri-user-line"></i>  My Profile
                               </Link>
                             </li>
+
+                            )}
 
                           <li>
                             <Link href="/orders">
@@ -504,7 +511,21 @@ export default function Topbar() {
                               Orders & Tracking
                             </Link>
                           </li>
+
+                           {/* {user.userType === "partner" && user.memberId && (
                           <li><Link href="/partner/wallet"><img src="/assets/images/icons/wallet.png"></img>Wallet</Link></li>
+
+
+                           )} */}
+
+                           {user.userType === "partner" && user.memberId && (
+  <li>
+    <Link href="/partner/wallet" target="_blank">  
+      <img src="/assets/images/icons/wallet.png" />
+      Wallet
+    </Link>
+  </li>
+)}
                           <li className="logout" onClick={handleLogout}>
                             <img src="/assets/images/icons/logout.png"></img>{" "}
                             Logout

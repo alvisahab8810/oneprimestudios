@@ -97,7 +97,7 @@ import { PiMapPinLight } from "react-icons/pi";
 const Footer = () => {
   return (
     <footer className="raj-footer">
-      <h1 className="one-prime-studios-area">ONEPRIMESTUDIOS</h1>
+      {/* <h1 className="one-prime-studios-area">ONEPRIMESTUDIOS</h1> */}
 
       <div className="container footer-container">
         {/* Logo */}
