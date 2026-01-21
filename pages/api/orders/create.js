@@ -240,6 +240,12 @@ export default async function handler(req, res) {
                 ? "Wallet"
                 : "Cash on Delivery",
 
+            paymentStatus:
+              normalizedPaymentMethod === "wallet"
+                ? "PAID"
+                : "UNPAID",
+            
+
             orderNumber: `ORD-${new Date()
               .toISOString()
               .split("T")[0]
