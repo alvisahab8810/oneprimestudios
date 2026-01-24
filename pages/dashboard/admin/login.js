@@ -74,19 +74,48 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post("/api/admin/login", { email, password });
-      if (res.data.success) {
-        toast.success("Login successful!");
-        setTimeout(() => {
-          window.location.href = res.data.redirect; // 🔁 re-run middleware
-        }, 500);
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
+  e.preventDefault();
+
+  try {
+    const res = await axios.post(
+      "/api/admin/login",
+      { email, password },
+      { withCredentials: true }
+    );
+
+    // 🔥 DO NOT depend on success flag
+    const redirect = res.data?.redirect;
+
+    if (!redirect) {
+      toast.error("Login failed: no redirect");
+      return;
     }
-  };
+
+    toast.success("Login successful!");
+
+    // 🔥 HARD REDIRECT (bypass React / middleware confusion)
+    window.location.replace(redirect);
+
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Login failed");
+  }
+};
+
+
+  // const handleLogin = async (e) => {
+  //   e.preventDefault();
+  //   try {
+  //     const res = await axios.post("/api/admin/login", { email, password });
+  //     if (res.data.success) {
+  //       toast.success("Login successful!");
+  //       setTimeout(() => {
+  //         window.location.href = res.data.redirect; // 🔁 re-run middleware
+  //       }, 500);
+  //     }
+  //   } catch (err) {
+  //     toast.error(err.response?.data?.message || "Login failed");
+  //   }
+  // };
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">

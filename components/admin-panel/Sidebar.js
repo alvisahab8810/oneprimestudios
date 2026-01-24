@@ -1,113 +1,182 @@
+
+
+
 // "use client";
-// import React, { useState } from "react";
+// import React from "react";
 // import Link from "next/link";
-// import { FaChartPie, FaUsers, FaUser, FaCogs, FaBoxOpen, FaChevronDown } from "react-icons/fa";
+// import { FaTruck } from "react-icons/fa";
+
+// import { FaHandshake } from "react-icons/fa";
+// import { FaUserPlus, FaChartLine } from "react-icons/fa";
+// import { FaTags } from "react-icons/fa";
+
+
+
+
+// import { usePathname } from "next/navigation";
 
 // export default function Sidebar({ sidebarOpen }) {
-//   const [productsOpen, setProductsOpen] = useState(false);
+//   const pathname = usePathname();
 
-//   const toggleProducts = () => setProductsOpen(!productsOpen);
+//   const isActive = (route) => pathname === route;
 
 //   return (
-//     <aside
-//       className={`bg-dark text-white vh-100 p-3 position-fixed ${
-//         sidebarOpen ? "d-block" : "d-none"
-//       }`}
-//       style={{ width: "220px", transition: "0.3s" }}
-//     >
-//       <div className="d-flex flex-column align-items-start">
+//     <aside className={`ops-admin-sidebar ${sidebarOpen ? "open" : ""}`}>
+//       <div className="ops-sidebar-inner">
+
 //         {/* Logo */}
-//         <Link className="navbar-brand d-flex align-items-center mb-4" href="/">
-//           <img
-//             src="/assets/images/logo.png"
-//             alt="Logo"
-//             className="me-2"
-//           />
+//         <Link href="/" className="ops-logo">
+//           <img src="/assets/images/logo.png" alt="Logo" />
 //         </Link>
-
+        
 //         {/* Dashboard */}
-//         <Link href="/dashboard" className="text-white mb-3 d-flex align-items-center">
-//           <img src="/assets/images/admin/home.svg" className="me-2" /> Dashboard
+//         <Link
+//           href="/dashboard"
+//           className={`ops-item ${isActive("/dashboard") ? "active" : ""}`}
+//         >
+//           <img src="/assets/images/admin/home1.svg" /> Dashboard
 //         </Link>
 
-//         {/* Users */}
-//         <Link href="/dashboard/admin/orders" className="text-white mb-3 d-flex align-items-center">
-//           <img src="/assets/images/admin/order.svg" className="me-2" /> Order Managment
+//         {/* Order Management */}
+//         <Link
+//           href="/dashboard/admin/orders"
+//           className={`ops-item ${isActive("/dashboard/admin/orders") ? "active" : ""}`}
+//         >
+//           <img src="/assets/images/admin/order.svg" /> Order Management
 //         </Link>
 
 //         {/* Partners */}
-//         <Link href="/dashboard/admin/partners" className="text-white mb-3 d-flex align-items-center">
-//           <img src="/assets/images/admin/partner.svg" className="me-2" /> Partners
+//         <Link
+//           href="/dashboard/admin/partners"
+//           className={`ops-item ${isActive("/dashboard/admin/partners") ? "active" : ""}`}
+//         >
+//           <FaHandshake className="me-2" /> Partners
 //         </Link>
 
-//         {/* Products Dropdown */}
-//         {/* <div className="mb-3">
-//           <button
-//             className="btn btn-dark w-100 d-flex justify-content-between align-items-center text-white"
-//             onClick={toggleProducts}
-//             style={{ border: "none", padding: "0" }}
-//           >
-//             <span className="d-flex align-items-center">
-//               <FaBoxOpen className="me-2" /> Products
-//             </span>
-//             <FaChevronDown />
-//           </button>
-//           {productsOpen && (
-//             <div className="ms-3 mt-2 d-flex flex-column">
-//               <Link href="/dashboard/admin/add-product" className="text-white mb-2">
-//                 Add New Product
-//               </Link>
-//               <Link href="/dashboard/admin/products" className="text-white">
-//                 Product List
-//               </Link>
-//             </div>
-//           )}
-//         </div> */}
 
-
-//         {/* Partners */}
-//         <Link href="#" className="text-white mb-3 d-flex align-items-center">
-//           Products
+//         {/* Customers */}
+//         <Link
+//           href="/dashboard/admin/customers"
+//           className={`ops-item ${isActive("/dashboard/admin/customers") ? "active" : ""}`}
+//         >
+//           <img src="/assets/images/admin/partner.svg" /> Customers
 //         </Link>
 
-//          {/* Orders */}
-//         <Link href="/dashboard/admin/add-product" className="text-white mb-3 d-flex align-items-center">
-//           <img src="/assets/images/admin/add-order.svg" className="me-2" /> Add Product
+
+
+//            {/* Customers */}
+//         <Link
+//           href="/dashboard/admin/dispatch-requests"
+//           className={`ops-item ${isActive("/dashboard/admin/dispatch-requests") ? "active" : ""}`}
+//         >
+//             <FaTruck className="me-2" /> Dispatched Requests
 //         </Link>
 
-//           <Link href="/dashboard/admin/products" className="text-white mb-3 d-flex align-items-center">
-//           <img src="/assets/images/admin/product-list.svg" className="me-2" /> Product List
-                
-//           </Link>
+        
 
-//         {/* Settings */}
-//         <Link href="#" className="text-white mb-3 d-flex align-items-center">
-//           <FaCogs className="me-2" /> Settings
+//           {/* Partners */}
+//         <Link
+//           href="/dashboard/admin/categories"
+//           className={`ops-item ${isActive("/dashboard/admin/categories") ? "active" : ""}`}
+//         >
+//           <img src="/assets/images/admin/add-order.svg" /> Add Category
 //         </Link>
+
+
+//         <Link
+//           href="/dashboard/admin/leads"
+//           className={`ops-item ${isActive("/dashboard/admin/leads") ? "active" : ""}`}
+//         >
+//           <FaUserPlus className="me-2" /> Leads
+//         </Link>
+
+//         <Link
+//           href="/dashboard/admin/reports/partner-sales"
+//           className={`ops-item ${isActive("/dashboard/admin/reports/partner-sales") ? "active" : ""}`}
+//         >
+//           <FaChartLine className="me-2" /> Partner Sales Report
+//         </Link>
+
+//         {/* Section Label */}
+//         <span className="ops-section-title">PRODUCTS</span>
+
+//         {/* Add Product */}
+//         <Link
+//           href="/dashboard/admin/add-product"
+//           className={`ops-item ${isActive("/dashboard/admin/add-product") ? "active" : ""}`}
+//         >
+//           <img src="/assets/images/admin/add-order.svg" /> Add Products
+//         </Link>
+
+//         {/* Product List */}
+//         <Link
+//           href="/dashboard/admin/products"
+//           className={`ops-item ${isActive("/dashboard/admin/products") ? "active" : ""}`}
+//         >
+//           <img src="/assets/images/admin/product-list.svg" /> Product List
+//         </Link>
+
+
+//              {/* Add Product */}
+//         <Link
+//           href="/dashboard/admin/coupons"
+//           className={`ops-item ${isActive("/dashboard/admin/coupons") ? "active" : ""}`}
+//         >
+//           <FaTags className="me-2" /> Coupons
+//         </Link>
+
 //       </div>
 //     </aside>
 //   );
+
 // }
 
 
+
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { FaTruck } from "react-icons/fa";
-
-import { FaHandshake } from "react-icons/fa";
-import { FaUserPlus, FaChartLine } from "react-icons/fa";
-import { FaTags } from "react-icons/fa";
-
-
-
-
 import { usePathname } from "next/navigation";
+import toast from "react-hot-toast";
+
+import {
+  FaTruck,
+  FaHandshake,
+  FaUserPlus,
+  FaChartLine,
+  FaTags,
+} from "react-icons/fa";
+
+import { canAccess } from "@/lib/canAccess";
 
 export default function Sidebar({ sidebarOpen }) {
   const pathname = usePathname();
+  const [user, setUser] = useState(null);
 
   const isActive = (route) => pathname === route;
+
+  // 🔐 Fetch logged-in user (role + permissions)
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const res = await fetch("/api/admin/me", {
+          credentials: "include",
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        setUser(data);
+      } catch {
+        toast.error("Session expired");
+        window.location.href = "/dashboard/admin/login";
+      }
+    };
+
+    fetchMe();
+  }, []);
+
+  if (!user) return null; // prevent flicker
 
   return (
     <aside className={`ops-admin-sidebar ${sidebarOpen ? "open" : ""}`}>
@@ -117,102 +186,167 @@ export default function Sidebar({ sidebarOpen }) {
         <Link href="/" className="ops-logo">
           <img src="/assets/images/logo.png" alt="Logo" />
         </Link>
-        
-        {/* Dashboard */}
-        <Link
-          href="/dashboard"
-          className={`ops-item ${isActive("/dashboard") ? "active" : ""}`}
-        >
-          <img src="/assets/images/admin/home1.svg" /> Dashboard
-        </Link>
 
-        {/* Order Management */}
-        <Link
-          href="/dashboard/admin/orders"
-          className={`ops-item ${isActive("/dashboard/admin/orders") ? "active" : ""}`}
-        >
-          <img src="/assets/images/admin/order.svg" /> Order Management
-        </Link>
+        {/* ================= DASHBOARD ================= */}
+        {canAccess(user, "dashboard") && (
+          <Link
+            href={
+              user.role === "manager"
+                ? "/dashboard/manager"
+                : user.role === "designer"
+                ? "/dashboard/designer"
+                : user.role === "product_manager"
+                ? "/dashboard/product-manager"
+                : "/dashboard"
+            }
+            className={`ops-item ${
+              pathname === "/dashboard" ||
+              pathname === "/dashboard/manager" ||
+              pathname === "/dashboard/designer" ||
+              pathname === "/dashboard/product-manager"
+                ? "active"
+                : ""
+            }`}
+          >
+            <img src="/assets/images/admin/home1.svg" /> Dashboard
+          </Link>
+        )}
 
-        {/* Partners */}
-        <Link
-          href="/dashboard/admin/partners"
-          className={`ops-item ${isActive("/dashboard/admin/partners") ? "active" : ""}`}
-        >
-          <FaHandshake className="me-2" /> Partners
-        </Link>
+        {/* ================= ORDER MANAGEMENT ================= */}
+        {canAccess(user, "orders") && (
+          <Link
+            href="/dashboard/admin/orders"
+            className={`ops-item ${
+              isActive("/dashboard/admin/orders") ? "active" : ""
+            }`}
+          >
+            <img src="/assets/images/admin/order.svg" /> Order Management
+          </Link>
+        )}
 
+        {/* ================= PARTNERS ================= */}
+        {canAccess(user, "partners") && (
+          <Link
+            href="/dashboard/admin/partners"
+            className={`ops-item ${
+              isActive("/dashboard/admin/partners") ? "active" : ""
+            }`}
+          >
+            <FaHandshake className="me-2" /> Partners
+          </Link>
+        )}
 
-        {/* Customers */}
-        <Link
-          href="/dashboard/admin/customers"
-          className={`ops-item ${isActive("/dashboard/admin/customers") ? "active" : ""}`}
-        >
-          <img src="/assets/images/admin/partner.svg" /> Customers
-        </Link>
+        {/* ================= CUSTOMERS ================= */}
+        {canAccess(user, "customers") && (
+          <Link
+            href="/dashboard/admin/customers"
+            className={`ops-item ${
+              isActive("/dashboard/admin/customers") ? "active" : ""
+            }`}
+          >
+            <img src="/assets/images/admin/partner.svg" /> Customers
+          </Link>
+        )}
 
-
-
-           {/* Customers */}
-        <Link
-          href="/dashboard/admin/dispatch-requests"
-          className={`ops-item ${isActive("/dashboard/admin/dispatch-requests") ? "active" : ""}`}
-        >
+        {/* ================= DISPATCH REQUESTS ================= */}
+        {canAccess(user, "dispatch_requests") && (
+          <Link
+            href="/dashboard/admin/dispatch-requests"
+            className={`ops-item ${
+              isActive("/dashboard/admin/dispatch-requests") ? "active" : ""
+            }`}
+          >
             <FaTruck className="me-2" /> Dispatched Requests
-        </Link>
+          </Link>
+        )}
 
-        
+        {/* ================= CATEGORIES ================= */}
+        {canAccess(user, "categories") && (
+          <Link
+            href="/dashboard/admin/categories"
+            className={`ops-item ${
+              isActive("/dashboard/admin/categories") ? "active" : ""
+            }`}
+          >
+            <img src="/assets/images/admin/add-order.svg" /> Add Category
+          </Link>
+        )}
 
-          {/* Partners */}
-        <Link
-          href="/dashboard/admin/categories"
-          className={`ops-item ${isActive("/dashboard/admin/categories") ? "active" : ""}`}
-        >
-          <img src="/assets/images/admin/add-order.svg" /> Add Category
-        </Link>
+        {/* ================= LEADS ================= */}
+        {canAccess(user, "leads") && (
+          <Link
+            href="/dashboard/admin/leads"
+            className={`ops-item ${
+              isActive("/dashboard/admin/leads") ? "active" : ""
+            }`}
+          >
+            <FaUserPlus className="me-2" /> Leads
+          </Link>
+        )}
+
+        {/* ================= REPORTS ================= */}
+        {canAccess(user, "reports.partner_sales") && (
+          <Link
+            href="/dashboard/admin/reports/partner-sales"
+            className={`ops-item ${
+              isActive("/dashboard/admin/reports/partner-sales")
+                ? "active"
+                : ""
+            }`}
+          >
+            <FaChartLine className="me-2" /> Partner Sales Report
+          </Link>
+        )}
+
+        {/* ================= PRODUCTS ================= */}
+        {canAccess(user, "products") && (
+          <>
+            <span className="ops-section-title">PRODUCTS</span>
+
+            <Link
+              href="/dashboard/admin/add-product"
+              className={`ops-item ${
+                isActive("/dashboard/admin/add-product") ? "active" : ""
+              }`}
+            >
+              <img src="/assets/images/admin/add-order.svg" /> Add Products
+            </Link>
+
+            <Link
+              href="/dashboard/admin/products"
+              className={`ops-item ${
+                isActive("/dashboard/admin/products") ? "active" : ""
+              }`}
+            >
+              <img src="/assets/images/admin/product-list.svg" /> Product List
+            </Link>
+          </>
+        )}
+
+        {/* ================= COUPONS ================= */}
+        {canAccess(user, "coupons") && (
+          <Link
+            href="/dashboard/admin/coupons"
+            className={`ops-item ${
+              isActive("/dashboard/admin/coupons") ? "active" : ""
+            }`}
+          >
+            <FaTags className="me-2" /> Coupons
+          </Link>
+        )}
 
 
-        <Link
-          href="/dashboard/admin/leads"
-          className={`ops-item ${isActive("/dashboard/admin/leads") ? "active" : ""}`}
-        >
-          <FaUserPlus className="me-2" /> Leads
-        </Link>
 
-        <Link
-          href="/dashboard/admin/reports/partner-sales"
-          className={`ops-item ${isActive("/dashboard/admin/reports/partner-sales") ? "active" : ""}`}
-        >
-          <FaChartLine className="me-2" /> Partner Sales Report
-        </Link>
-
-        {/* Section Label */}
-        <span className="ops-section-title">PRODUCTS</span>
-
-        {/* Add Product */}
-        <Link
-          href="/dashboard/admin/add-product"
-          className={`ops-item ${isActive("/dashboard/admin/add-product") ? "active" : ""}`}
-        >
-          <img src="/assets/images/admin/add-order.svg" /> Add Products
-        </Link>
-
-        {/* Product List */}
-        <Link
-          href="/dashboard/admin/products"
-          className={`ops-item ${isActive("/dashboard/admin/products") ? "active" : ""}`}
-        >
-          <img src="/assets/images/admin/product-list.svg" /> Product List
-        </Link>
-
-
-             {/* Add Product */}
-        <Link
-          href="/dashboard/admin/coupons"
-          className={`ops-item ${isActive("/dashboard/admin/coupons") ? "active" : ""}`}
-        >
-          <FaTags className="me-2" /> Coupons
-        </Link>
+         {canAccess(user, "OPS Users") && (
+          <Link
+            href="/dashboard/admin/users"
+            className={`ops-item ${
+              isActive("/dashboard/admin/users") ? "active" : ""
+            }`}
+          >
+            <img src="/assets/images/admin/partner.svg" /> OPS Users
+          </Link>
+        )}
 
       </div>
     </aside>
