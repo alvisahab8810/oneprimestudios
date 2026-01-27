@@ -250,8 +250,8 @@ export default function CreateCoupon() {
                     </label> */}
 
                     <label className="form-check-label text-capitalize">
-  {type === "customer" ? "Customer" : "Partner"}
-</label>
+                      {type === "customer" ? "Customer" : "Partner"}
+                    </label>
 
                   </div>
                 ))}

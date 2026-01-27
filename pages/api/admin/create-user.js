@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const token = req.cookies.admin_auth;
 
     console.log("COOKIES:", req.cookies);
-console.log("TOKEN:", req.cookies?.admin_auth);
+    console.log("TOKEN:", req.cookies?.admin_auth);
 
     if (!token) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -66,12 +66,12 @@ console.log("TOKEN:", req.cookies?.admin_auth);
 
 await sendEmail({
   to: email,
-  subject: "You are invited to Viralon Prints Admin Panel",
+  subject: "You are invited to One Prime Studios Admin Panel",
   html: `
     <div style="font-family: Arial, sans-serif;">
       <p>Hi <b>${name}</b>,</p>
 
-      <p>You have been invited to join <b>Viralon Prints</b> as a <b>${role.replace("_", " ")}</b>.</p>
+      <p>You have been invited to join <b>One Prime Studios</b> as a <b>${role.replace("_", " ")}</b>.</p>
 
       <p>Please click the button below to set your password:</p>
 
@@ -94,7 +94,7 @@ await sendEmail({
       <p>If you did not expect this email, you can safely ignore it.</p>
 
       <br/>
-      <p>— Viralon Prints Team</p>
+      <p>— One Prime Studios Team</p>
     </div>
   `,
 });
