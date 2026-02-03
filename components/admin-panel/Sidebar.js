@@ -145,6 +145,7 @@ import {
   FaUserPlus,
   FaChartLine,
   FaTags,
+  FaFileInvoice ,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
@@ -295,6 +296,21 @@ export default function Sidebar({ sidebarOpen }) {
             }`}
           >
             <FaChartLine className="me-2" /> Partner Sales Report
+          </Link>
+        )}
+
+
+          {/* ================= Invoices ================= */}
+        {canAccess(user, "invoices") && (
+          <Link
+            href="/dashboard/admin/invoices/"
+            className={`ops-item ${
+              isActive("/dashboard/admin/invoices/")
+                ? "active"
+                : ""
+            }`}
+          >
+            <FaFileInvoice  className="me-2" /> Create Invoice
           </Link>
         )}
 

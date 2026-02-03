@@ -68,12 +68,16 @@ export default async function handler(req, res) {
     return res.status(403).json({ message: "Forbidden" });
 
   // ❌ Block late-stage cancellations
-  const BLOCKED_STATUSES = [
-    "Printing",
-    "Order Dispatched",
-    "Order Delivered",
-    "Delivered",
-  ];
+const BLOCKED_STATUSES = [
+  "Design Approved",
+  "In Progress",
+  "Order Ready",
+  "Printing",
+  "Order Dispatched",
+  "Order Delivered",
+  "Delivered",
+];
+
 
   if (BLOCKED_STATUSES.includes(order.status)) {
     return res
@@ -115,15 +119,34 @@ export default async function handler(req, res) {
     await wallet.save();
 
     // wallet transaction entry
+    // await WalletTransaction.create({
+    //   user: user._id,
+    //   type: "credit",
+    //   amount: order.total,
+    //   description: `Refund for cancelled order #${order.orderNumber || order._id}`,
+    //   referenceType: "refund",
+    //   referenceId: order._id.toString(),
+    //   status: "success",
+    // });
+
     await WalletTransaction.create({
-      user: user._id,
-      type: "credit",
-      amount: order.total,
-      description: `Refund for cancelled order #${order.orderNumber || order._id}`,
-      referenceType: "refund",
-      referenceId: order._id.toString(),
-      status: "success",
-    });
+  user: user._id,
+  type: "credit",
+  amount: order.total,
+
+  // ✅ PRODUCT NAME IN STATEMENT
+  description: `Refund - ${order.items
+    .map((i) => i.product?.name || "Product")
+    .join(", ")}`,
+
+  referenceType: "refund",
+
+  // ✅ ObjectId (CRITICAL)
+  referenceId: order._id,
+
+  status: "success",
+});
+
 
     order.paymentStatus = "REFUNDED";
     order.refundedAt = new Date();

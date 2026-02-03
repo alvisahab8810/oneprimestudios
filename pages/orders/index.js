@@ -1,6 +1,7 @@
 
 
 
+
 // "use client";
 // import { useEffect, useState } from "react";
 // import axios from "axios";
@@ -44,52 +45,39 @@
 //   }, []);
 
 //   // ✅ Map backend status to frontend display category
+
 //   const getDisplayStatus = (status) => {
 //     const s = status?.toLowerCase() || "";
-//     if (
-//       [
-//         "pending",
-//         "processing",
-//         "in progress",
-//         "design approved",
-//         "printing",
-//         "shipped",
-//       ].includes(s)
-//     )
-//       return "In Progress";
+
+//     if (s === "cancelled") return "Cancelled";
+
+//     if (s === "rejected" || s === "design rejected") return "Rejected";
+
 //     if (s === "delivered" || s === "order delivered") return "Delivered";
-//     if (["rejected", "design rejected", "cancelled"].includes(s))
-//       return "Rejected";
+
 //     return "In Progress";
 //   };
 
 //   // ✅ Tabs
-//   const tabs = ["All", "In Progress", "Delivered", "Rejected"];
+//   // const tabs = ["All", "In Progress", "Delivered", "Rejected"];
 
-//   // ✅ Count per tab
+//   const tabs = ["All", "In Progress", "Delivered", "Cancelled", "Rejected"];
+
 //   const counts = {
 //     All: orders.length,
+
 //     "In Progress": orders.filter(
-//       (o) =>
-//         [
-//           "pending",
-//           "processing",
-//           "in progress",
-//           "design approved",
-//           "printing",
-//           "shipped",
-//         ].includes(o.status?.toLowerCase())
+//       (o) => getDisplayStatus(o.status) === "In Progress",
 //     ).length,
-//     Delivered: orders.filter(
-//       (o) =>
-//         o.status?.toLowerCase() === "delivered" ||
-//         o.status?.toLowerCase() === "order delivered"
-//     ).length,
-//     Rejected: orders.filter((o) =>
-//       ["rejected", "design rejected", "cancelled"].includes(
-//         o.status?.toLowerCase()
-//       )
-//     ).length,
+
+//     Delivered: orders.filter((o) => getDisplayStatus(o.status) === "Delivered")
+//       .length,
+
+//     Cancelled: orders.filter((o) => getDisplayStatus(o.status) === "Cancelled")
+//       .length,
+
+//     Rejected: orders.filter((o) => getDisplayStatus(o.status) === "Rejected")
+//       .length,
 //   };
 
 //   const filteredOrders =
@@ -97,17 +85,27 @@
 //       ? orders
 //       : orders.filter((o) => getDisplayStatus(o.status) === activeTab);
 
+//   const getOrderProductTitle = (order) => {
+//     if (!order?.items || order.items.length === 0) return "Order";
+
+//     const firstItem = order.items[0];
+//     const firstName = firstItem.product?.name || "Product";
+
+//     if (order.items.length === 1) return firstName;
+
+//     return `${firstName} + ${order.items.length - 1} more`;
+//   };
+
 //   if (loading)
 //     return <div className="container py-5 text-center">Loading...</div>;
 
 //   return (
 //     <>
 //       <Topbar />
-//       <Offcanvas/>
+//       <Offcanvas />
 
 //       <div className="orders-page container padding-top-40 ">
 //         <h3 className="mb-4 fw-semibold">My Orders</h3>
- 
 
 //         {/* ✅ Tabs */}
 //         <div className="tabs mb-4 d-flex flex-wrap gap-2">
@@ -125,8 +123,7 @@
 //         {/* ✅ Orders */}
 //         {filteredOrders.length === 0 ? (
 //           <div className="empty-state text-center py-5 empty-wishlist-area">
-
-//              {/* <img
+//             {/* <img
 //               src="/assets/images/empty-cart.png"
 //               alt="Empty Cart"
 //             /> */}
@@ -138,7 +135,8 @@
 //             />
 //             <h5 className="fw-semibold mb-2">No {activeTab} Orders</h5>
 //             <p className="text-muted small mb-3">
-//               Looks like you don't have any {activeTab.toLowerCase()} orders yet.
+//               Looks like you don't have any {activeTab.toLowerCase()} orders
+//               yet.
 //             </p>
 //             <Link href="/products" className="continue-shoppin-btn">
 //               Browse Products
@@ -152,18 +150,37 @@
 //                 displayStatus === "Delivered"
 //                   ? "completed"
 //                   : displayStatus === "Rejected"
-//                   ? "rejected"
-//                   : "progress";
+//                     ? "rejected"
+//                     : displayStatus === "Cancelled"
+//                       ? "cancelled"
+//                       : "progress";
 
 //               return (
 //                 <div key={o._id} className="order-card mb-3">
-//                   <div className="order-header d-flex justify-content-between align-items-start">
+//                   {/* <div className="order-header d-flex justify-content-between align-items-start">
 //                     <div>
 //                       <h6 className="fw-semibold mb-1">{displayStatus}</h6>
 //                       <div className="small text-muted">
 //                         {new Date(o.createdAt).toLocaleString()}
 //                       </div>
 //                     </div>
+//                     <span className={`status-badge ${badgeClass}`}>
+//                       {displayStatus}
+//                     </span>
+//                   </div> */}
+
+//                   <div className="order-header d-flex justify-content-between align-items-start">
+//                     <div>
+//                       {/* ✅ PRODUCT NAME (same as Order Detail source) */}
+//                       <h6 className="fw-semibold mb-1">
+//                         {getOrderProductTitle(o)}
+//                       </h6>
+
+//                       <div className="small text-muted">
+//                         {new Date(o.createdAt).toLocaleString()}
+//                       </div>
+//                     </div>
+
 //                     <span className={`status-badge ${badgeClass}`}>
 //                       {displayStatus}
 //                     </span>
@@ -297,6 +314,9 @@
 
 
 
+
+
+
 "use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -310,6 +330,31 @@ export default function OrdersListPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("All");
+
+
+  const STATUS_TABS = [
+  "All",
+  "Design Approved",
+  "Design Rejected",
+  "In Progress",
+  "Order Ready",
+  "In Packaging",
+  "Order Dispatched",
+  "Order Delivered",
+];
+
+
+const statusClassMap = {
+  "Design Approved": "progress",
+  "Design Rejected": "rejected",
+  "In Progress": "progress",
+  "Order Ready": "progress",
+  "In Packaging": "progress",
+  "Order Dispatched": "progress",
+  "Order Delivered": "completed",
+};
+
+
 
   // ✅ Fetch Orders
   const loadOrders = async () => {
@@ -342,80 +387,34 @@ export default function OrdersListPage() {
   // ✅ Map backend status to frontend display category
 
 
-  const getDisplayStatus = (status) => {
-  const s = status?.toLowerCase() || "";
+const tabs = STATUS_TABS;
 
-  if (s === "cancelled") return "Cancelled";
-
-  if (s === "rejected" || s === "design rejected")
-    return "Rejected";
-
-  if (s === "delivered" || s === "order delivered")
-    return "Delivered";
-
-  return "In Progress";
-};
-
-
-  // ✅ Tabs
-  // const tabs = ["All", "In Progress", "Delivered", "Rejected"];
-
-  const tabs = ["All", "In Progress", "Delivered", "Cancelled", "Rejected"];
-
-
-  // ✅ Count per tab
-  // const counts = {
-  //   All: orders.length,
-  //   "In Progress": orders.filter(
-  //     (o) =>
-  //       [
-  //         "pending",
-  //         "processing",
-  //         "in progress",
-  //         "design approved",
-  //         "printing",
-  //         "shipped",
-  //       ].includes(o.status?.toLowerCase())
-  //   ).length,
-  //   Delivered: orders.filter(
-  //     (o) =>
-  //       o.status?.toLowerCase() === "delivered" ||
-  //       o.status?.toLowerCase() === "order delivered"
-  //   ).length,
-  //   Rejected: orders.filter((o) =>
-  //     ["rejected", "design rejected", "cancelled"].includes(
-  //       o.status?.toLowerCase()
-  //     )
-  //   ).length,
-  // };
-
-
-const counts = {
+ const counts = {
   All: orders.length,
-
-  "In Progress": orders.filter(
-    (o) => getDisplayStatus(o.status) === "In Progress"
-  ).length,
-
-  Delivered: orders.filter(
-    (o) => getDisplayStatus(o.status) === "Delivered"
-  ).length,
-
-  Cancelled: orders.filter(
-    (o) => getDisplayStatus(o.status) === "Cancelled"
-  ).length,
-
-  Rejected: orders.filter(
-    (o) => getDisplayStatus(o.status) === "Rejected"
-  ).length,
 };
 
+STATUS_TABS.forEach((status) => {
+  if (status === "All") return;
+  counts[status] = orders.filter((o) => o.status === status).length;
+});
 
 
-  const filteredOrders =
-    activeTab === "All"
-      ? orders
-      : orders.filter((o) => getDisplayStatus(o.status) === activeTab);
+const filteredOrders =
+  activeTab === "All"
+    ? orders
+    : orders.filter((o) => o.status === activeTab);
+
+
+  const getOrderProductTitle = (order) => {
+    if (!order?.items || order.items.length === 0) return "Order";
+
+    const firstItem = order.items[0];
+    const firstName = firstItem.product?.name || "Product";
+
+    if (order.items.length === 1) return firstName;
+
+    return `${firstName} + ${order.items.length - 1} more`;
+  };
 
   if (loading)
     return <div className="container py-5 text-center">Loading...</div>;
@@ -423,11 +422,10 @@ const counts = {
   return (
     <>
       <Topbar />
-      <Offcanvas/>
+      <Offcanvas />
 
       <div className="orders-page container padding-top-40 ">
         <h3 className="mb-4 fw-semibold">My Orders</h3>
- 
 
         {/* ✅ Tabs */}
         <div className="tabs mb-4 d-flex flex-wrap gap-2">
@@ -445,8 +443,7 @@ const counts = {
         {/* ✅ Orders */}
         {filteredOrders.length === 0 ? (
           <div className="empty-state text-center py-5 empty-wishlist-area">
-
-             {/* <img
+            {/* <img
               src="/assets/images/empty-cart.png"
               alt="Empty Cart"
             /> */}
@@ -456,9 +453,10 @@ const counts = {
               width={120}
               className="mb-3 opacity-75"
             />
-            <h5 className="fw-semibold mb-2">No {activeTab} Orders</h5>
+            <h5 className="fw-semibold mb-2">No orders found for "{activeTab}"</h5>
             <p className="text-muted small mb-3">
-              Looks like you don't have any {activeTab.toLowerCase()} orders yet.
+              Looks like you don't have any {activeTab.toLowerCase()} orders
+              yet.
             </p>
             <Link href="/products" className="continue-shoppin-btn">
               Browse Products
@@ -466,47 +464,44 @@ const counts = {
           </div>
         ) : (
           <div className="order-grid">
-            {filteredOrders.map((o) => {
-              const displayStatus = getDisplayStatus(o.status);
-             const badgeClass =
-  displayStatus === "Delivered"
-    ? "completed"
-    : displayStatus === "Rejected"
-    ? "rejected"
-    : displayStatus === "Cancelled"
-    ? "cancelled"
-    : "progress";
+         {filteredOrders.map((o) => {
+  const badgeClass = statusClassMap[o.status] || "progress";
 
+  return (
+    <div key={o._id} className="order-card mb-3">
+      <div className="order-header d-flex justify-content-between align-items-start">
+        <div>
+          <h6 className="fw-semibold mb-1">
+            {getOrderProductTitle(o)}
+          </h6>
 
-              return (
-                <div key={o._id} className="order-card mb-3">
-                  <div className="order-header d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 className="fw-semibold mb-1">{displayStatus}</h6>
-                      <div className="small text-muted">
-                        {new Date(o.createdAt).toLocaleString()}
-                      </div>
-                    </div>
-                    <span className={`status-badge ${badgeClass}`}>
-                      {displayStatus}
-                    </span>
-                  </div>
+          <div className="small text-muted">
+            {new Date(o.createdAt).toLocaleString()}
+          </div>
+        </div>
 
-                  <div className="order-body mt-3">
-                    <div className="fw-semibold fs-5">₹{o.total}</div>
-                    <div className="small text-muted">
-                      Payment: {o.paymentMethod}
-                    </div>
-                  </div>
+        {/* ✅ STATUS BADGE (FIXED) */}
+        <span className={`status-badge ${badgeClass}`}>
+          {o.status}
+        </span>
+      </div>
 
-                  <div className="order-footer d-flex justify-content-end mt-3">
-                    <Link href={`/orders/${o._id}`} className="view-link">
-                      View Order Details →
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+      <div className="order-body mt-3">
+        <div className="fw-semibold fs-5">₹{o.total}</div>
+        <div className="small text-muted">
+          Payment: {o.paymentMethod}
+        </div>
+      </div>
+
+      <div className="order-footer d-flex justify-content-end mt-3">
+        <Link href={`/orders/${o._id}`} className="view-link">
+          View Order Details →
+        </Link>
+      </div>
+    </div>
+  );
+})}
+
           </div>
         )}
       </div>

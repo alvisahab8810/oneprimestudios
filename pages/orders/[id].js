@@ -235,7 +235,7 @@ export default function OrderDetailPage() {
               </span>
 
 
-                {["Pending", "Order Received", "In Packaging"].includes(
+                {["Pending", "Order Received", "In Packaging", "Design Rejected",].includes(
           order.status,
         ) && (
           <button

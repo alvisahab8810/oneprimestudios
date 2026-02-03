@@ -10,49 +10,75 @@
 // }
 
 
-// // pages/api/categories/list.js
+// // // pages/api/categories/list.js
+
+
+// import dbConnect from "@/lib/dbConnect";
+// import Product from "@/models/Product";
+// import Category from "@/models/Category";
+
+// export default async function handler(req, res) {
+//   await dbConnect();
+
+//   const {
+//     page = 1,
+//     limit = 10,
+//     search = "",
+//     status = "",
+//     category = "",
+//     stockStatus = "",
+//     productFor = "", // <-- add productFor
+//   } = req.query;
+
+//   const filter = {};
+
+//   if (search) filter.name = { $regex: search, $options: "i" };
+//   if (status) filter.status = status;
+//   if (category) filter.category = category;
+//   if (stockStatus) filter.stockStatus = stockStatus;
+//   if (productFor) filter.productFor = productFor; // <-- add this line
+
+//   const products = await Product.find(filter)
+//     .populate("category", "name")
+//     .sort({ createdAt: -1 })
+//     .skip((page - 1) * limit)
+//     .limit(Number(limit));
+
+//   const total = await Product.countDocuments(filter);
+
+//   res.status(200).json({
+//     success: true,
+//     data: products,
+//     pagination: {
+//       total,
+//       page: Number(page),
+//       pages: Math.ceil(total / limit),
+//     },
+//   });
+// }
+
 
 
 import dbConnect from "@/lib/dbConnect";
-import Product from "@/models/Product";
 import Category from "@/models/Category";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    status = "",
-    category = "",
-    stockStatus = "",
-    productFor = "", // <-- add productFor
-  } = req.query;
+  try {
+    const categories = await Category.find({})
+      .select("_id name")
+      .sort({ name: 1 });
 
-  const filter = {};
-
-  if (search) filter.name = { $regex: search, $options: "i" };
-  if (status) filter.status = status;
-  if (category) filter.category = category;
-  if (stockStatus) filter.stockStatus = stockStatus;
-  if (productFor) filter.productFor = productFor; // <-- add this line
-
-  const products = await Product.find(filter)
-    .populate("category", "name")
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
-
-  const total = await Product.countDocuments(filter);
-
-  res.status(200).json({
-    success: true,
-    data: products,
-    pagination: {
-      total,
-      page: Number(page),
-      pages: Math.ceil(total / limit),
-    },
-  });
+    return res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (err) {
+    console.error("Category list error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch categories",
+    });
+  }
 }

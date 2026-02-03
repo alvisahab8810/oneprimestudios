@@ -1,4 +1,8 @@
 
+
+
+
+
 // "use client";
 // export const dynamic = "force-dynamic";
 
@@ -28,6 +32,13 @@
 //   const [newStatus, setNewStatus] = useState("");
 //   const [remarks, setRemarks] = useState("");
 //   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+//   // Delivery Challa Remarks
+
+//   const [deliveryRemarks, setDeliveryRemarks] = useState("");
+//   const [challanFile, setChallanFile] = useState(null);
+//   const [uploading, setUploading] = useState(false);
+
 
 //   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -61,6 +72,42 @@
 //       toast.error(err.response?.data?.message || "Failed to update status");
 //     }
 //   };
+
+
+
+//   // For Delivery Challan 
+//   const handleDeliveryUpload = async () => {
+//   if (!challanFile) {
+//     toast.error("Please upload delivery challan");
+//     return;
+//   }
+
+//   try {
+//     setUploading(true);
+
+//     const formData = new FormData();
+//     formData.append("challan", challanFile);
+//     formData.append("remarks", deliveryRemarks);
+
+//     const res = await axios.post(
+//       `/api/admin/orders/${id}/delivery`,
+//       formData,
+//       { withCredentials: true }
+//     );
+
+//     toast.success("Delivery details saved");
+
+//     setOrder(res.data.order);
+//     setDeliveryRemarks("");
+//     setChallanFile(null);
+//   } catch (err) {
+//     toast.error("Failed to upload delivery details");
+//   } finally {
+//     setUploading(false);
+//   }
+// };
+
+
 
 //   if (loading) return <div className="p-5 text-center">Loading...</div>;
 //   if (!order) return <div className="p-5 text-center">Order not found</div>;
@@ -291,6 +338,70 @@
 //               </div>
 //             )}
 
+
+//             {/* Delivery Challan Area  */}
+
+//             {(order.status === "Order Dispatched" ||
+//   order.status === "Order Delivered") && (
+//   <div className="card mt-4 border shadow-sm">
+//     <div className="card-body">
+//       <h6 className="fw-semibold mb-3">
+//         <FaTruck className="me-2 text-success" />
+//         Delivery Challan & Remarks
+//       </h6>
+
+//       {/* If already uploaded */}
+//       {order.deliveryChallan?.fileUrl && (
+//         <div className="alert alert-success py-2">
+//           <strong>Challan Uploaded:</strong>{" "}
+//           <a
+//             href={order.deliveryChallan.fileUrl}
+//             target="_blank"
+//             rel="noreferrer"
+//           >
+//             Download Delivery Challan
+//           </a>
+//         </div>
+//       )}
+
+//             {/* Upload */}
+//             <div className="mb-3">
+//               <label className="form-label">Upload Delivery Challan</label>
+//               <input
+//                 type="file"
+//                 accept=".pdf,.jpg,.png"
+//                 className="form-control"
+//                 onChange={(e) => setChallanFile(e.target.files[0])}
+//               />
+//               <small className="text-muted">
+//                 Allowed formats: PDF, JPG, PNG
+//               </small>
+//             </div>
+
+//             {/* Remarks */}
+//             <div className="mb-3">
+//               <label className="form-label">Delivery Remarks (Visible to B2B)</label>
+//               <textarea
+//                 className="form-control"
+//                 rows={3}
+//                 value={deliveryRemarks}
+//                 onChange={(e) => setDeliveryRemarks(e.target.value)}
+//                 placeholder="Example: Delivered at warehouse gate, signed by Mr. Khan"
+//               />
+//             </div>
+
+//             <button
+//               className="btn btn-success"
+//               disabled={uploading}
+//               onClick={handleDeliveryUpload}
+//             >
+//               {uploading ? "Uploading..." : "Save & Notify B2B User"}
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+
 //             {/* Status update */}
 //             <div className="mt-4 pt-3 border-top">
 //               <h6 className="fw-semibold mb-2">Update Order Status</h6>
@@ -342,6 +453,18 @@
 //     </div>
 //   );
 // }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -581,15 +704,30 @@ export default function AdminOrderDetail() {
               </div>
             </div>
 
-            <DesignUploads
+            {/* <DesignUploads
               productId={
                 order.items?.[0]?.product?._id || order.items?.[0]?.product
               }
-            />
-            {/* <DesignUploads
-                productId={order?.product?._id || order?.productId}
-                userId={order?.user?._id || order?.userId}
-              /> */}
+            /> */}
+
+
+ 
+         <h6 className="fw-semibold mb-3">Uploaded Designs</h6>
+
+        {order.items.map((item, idx) => (
+  <div key={idx} className="border rounded p-3 mb-3 bg-white">
+    <strong>{item.product?.name}</strong>
+
+    <DesignUploads
+      productId={item.product?._id}
+      orderId={order._id}
+    />
+
+  </div>
+))}
+
+
+          
 
             {order.reuploadedFiles?.length > 0 && (
               <div className="alert alert-info mt-3">
@@ -759,22 +897,14 @@ export default function AdminOrderDetail() {
                   <option value="Design Approved">Design Approved</option>
                   <option value="Design Rejected">Design Rejected</option>
                   <option value="In Progress">In Progress</option>
-                  <option value="In Packaging">In Packaging</option>
+                  
                   {/* NEW */}
                   <option value="Order Ready">Order Ready</option>
+                  <option value="In Packaging">In Packaging</option>
                   <option value="Order Dispatched">Order Dispatched</option>
                   <option value="Order Delivered">Order Delivered</option>
                 </select>
-                {/* 
-                {newStatus === "Design Rejected" && (
-                  <inputx
-                    type="text"
-                    placeholder="Enter rejection remarks"
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    className="form-control w-100 w-md-auto"
-                  />
-                )} */}
+           
 
                 {newStatus === "Design Rejected" && (
                   <input
