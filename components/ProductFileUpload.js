@@ -608,7 +608,23 @@ if (dims.length > 0 && file.type.startsWith("image/")) {
 // 📄 PDF VALIDATION
 if (dims.length > 0 && file.type === "application/pdf") {
   getPdfPageSizePx(file).then(({ w, h }) => {
-    const match = dims.some((d) => d.w === w && d.h === h);
+
+
+    // this one ihave change one 11-2-26
+
+
+
+    // const match = dims.some((d) => d.w === w && d.h === h);
+
+
+    const TOLERANCE = 3; // allow 3px difference
+
+    const match = dims.some(
+      (d) =>
+        Math.abs(d.w - w) <= TOLERANCE &&
+        Math.abs(d.h - h) <= TOLERANCE
+    );
+
 
     if (!match) {
       toast.error(
