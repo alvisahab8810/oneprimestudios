@@ -104,10 +104,11 @@ const WalletTransactionSchema = new mongoose.Schema(
     //   type: String, // Razorpay payment id / order id
     // },
 
-    referenceId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Order",
+ referenceId: {
+  type: String,
+  default: null,
 },
+
 
     paymentId: { type: String },
 
