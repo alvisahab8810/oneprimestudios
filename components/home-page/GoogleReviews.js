@@ -58,14 +58,14 @@ const reviews = [
     text: "Bahut bahut acha hai yeh or time se affordable price mai kaam ho jata hai ❤️",
   },
 
-        {
-    id: 1,
-    name: "Agrima Singh",
-    date: "4 months ago",
-    avatar: "/assets/images/reviews/a.png",
-    rating: 4,
-    text: "Owner is extremely rude. Both service and quality of work are really bad and the requested order is never on time",
-  },
+  //       {
+  //   id: 1,
+  //   name: "Agrima Singh",
+  //   date: "4 months ago",
+  //   avatar: "/assets/images/reviews/a.png",
+  //   rating: 4,
+  //   text: "Owner is extremely rude. Both service and quality of work are really bad and the requested order is never on time",
+  // },
 
 
 
