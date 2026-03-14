@@ -94,7 +94,8 @@ export default function ProductFileUpload({
       .filter(Boolean);
   };
 
-  // Convert parsed dims to px based on unit
+  // Parse allowed dimensions — for IMAGE validation only (px comparison)
+  // For PDF we handle conversion separately in the PDF validation block
   const getDimsInPx = () => {
     let dims = parseAllowedDims(normalizedImageDimensions);
     if (!dims.length) return [];
@@ -105,7 +106,7 @@ export default function ProductFileUpload({
       } else if (imageDimensions.unit === "mm") {
         dims = dims.map((d) => ({ w: mmToPx(d.w), h: mmToPx(d.h) }));
       }
-      // px — no conversion needed
+      // px — dims are already the right numbers, no conversion
     }
     return dims;
   };
@@ -117,8 +118,13 @@ export default function ProductFileUpload({
     setFiles && setFiles(arr);
   };
 
-  // ── PDF page size in px ──────────────────────────────────────────────────
-  const getPdfPageSizePx = async (file) => {
+  // ── PDF page size — returns points (PDF native unit from PDF.js) ────────────
+  // PDF.js viewport at scale:1 gives dimensions in "points" (1pt = 1/72 inch).
+  // Caller converts to the right unit depending on what admin configured:
+  //   px   → points are used directly (screen PDF: 1pt ≈ 1px at 72dpi)
+  //   inch → points / 72 = inches
+  //   mm   → points / 72 * 25.4 = mm
+  const getPdfPageSizePts = async (file) => {
     const pdfjsLib = await loadPdfJs();
     if (!pdfjsLib) return null;
     const arrayBuffer = await file.arrayBuffer();
@@ -126,8 +132,8 @@ export default function ProductFileUpload({
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({ scale: 1 });
     return {
-      w: Math.round((viewport.width / 72) * DPI),
-      h: Math.round((viewport.height / 72) * DPI),
+      w: viewport.width,   // points
+      h: viewport.height,  // points
     };
   };
 
@@ -176,11 +182,36 @@ export default function ProductFileUpload({
 
     // 3b) PDF dimension validation
     if (dims.length > 0 && file.type === "application/pdf") {
-      getPdfPageSizePx(file).then(({ w, h }) => {
-        const TOLERANCE = 3;
+      getPdfPageSizePts(file).then(({ w: ptsW, h: ptsH }) => {
+        // Convert PDF points to the same unit admin used when setting dimensions
+        // so comparison is apples-to-apples
+        const unit = (imageDimensions && typeof imageDimensions === "object")
+          ? imageDimensions.unit || "px"
+          : "px";
+
+        let fileW, fileH;
+        if (unit === "px") {
+          // Screen PDF: PDF.js points ≈ pixels at 72dpi (1pt = 1px for screen PDFs)
+          // Use points directly — this matches what admin typed as px
+          fileW = Math.round(ptsW);
+          fileH = Math.round(ptsH);
+        } else if (unit === "inch") {
+          // Convert points → inches (1 inch = 72 points)
+          fileW = ptsW / 72;
+          fileH = ptsH / 72;
+        } else if (unit === "mm") {
+          // Convert points → mm (1 inch = 25.4mm, 1 inch = 72 points)
+          fileW = (ptsW / 72) * 25.4;
+          fileH = (ptsH / 72) * 25.4;
+        }
+
+        // Tolerance: 2px for px, 0.5 for inch, 1 for mm
+        const TOLERANCE = unit === "px" ? 2 : unit === "inch" ? 0.5 : 1;
+
         const match = dims.some(
-          (d) => Math.abs(d.w - w) <= TOLERANCE && Math.abs(d.h - h) <= TOLERANCE
+          (d) => Math.abs(d.w - fileW) <= TOLERANCE && Math.abs(d.h - fileH) <= TOLERANCE
         );
+
         if (!match) {
           toast.error(`Invalid PDF size. Allowed: ${displayDimensions}`);
           return;
@@ -402,8 +433,6 @@ export default function ProductFileUpload({
     </div>
   );
 }
-
-
 
 
 // // components/ProductFileUpload.jsx
