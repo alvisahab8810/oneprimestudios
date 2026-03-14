@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import { FaBell } from "react-icons/fa";
+import CategorySelect from "@/components/admin-panel/CategorySelect";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -854,14 +855,19 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
               <div className="form-right">
                 <div className="category-section mb-3">
                   <h5>Category</h5>
-                  <select name="categoryId" value={form.categoryId} onChange={handleChange} className="form-select">
+                  {/* <select name="categoryId" value={form.categoryId} onChange={handleChange} className="form-select">
                     <option value="">Select Category</option>
                     {categories.map((c) => (
                       <option key={c._id} value={c._id}>
                         {c.name}
                       </option>
                     ))}
-                  </select>
+                  </select> */}
+
+                  <CategorySelect
+  value={form.categoryId}
+  onChange={(id) => setForm(f => ({ ...f, categoryId: id }))}
+/>
                 </div>
 
                 <div className="image-upload-section">

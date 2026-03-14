@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import { FaUser, FaChartPie, FaUsers, FaCogs, FaBell } from "react-icons/fa";
 import Sidebar from "@/components/admin-panel/Sidebar";
+import CategorySelect from "@/components/admin-panel/CategorySelect";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -355,7 +356,7 @@ export default function AddProduct() {
             <section className="category-section">
               <h3>Categories</h3>
               <div className="category-inputs">
-                <select
+                {/* <select
                   name="categoryId"
                   value={form.categoryId}
                   onChange={handleChange}
@@ -367,7 +368,13 @@ export default function AddProduct() {
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </select> */}
+
+
+                <CategorySelect
+  value={form.categoryId}
+  onChange={(id) => setForm(f => ({ ...f, categoryId: id }))}
+/>
                 <input
                   className="category-new-input"
                   placeholder="New category name"
