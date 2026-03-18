@@ -1,14 +1,4 @@
 // pages/api/upload/save-design.js
-// CHANGES:
-//   1. Files now upload to Cloudinary instead of VPS disk
-//      (admin product images stay on disk — only customer design files move to Cloudinary)
-//   2. DesignUpload DB record now saves the Cloudinary URL (secure_url)
-//   3. All other logic (JWT auth, attrMap, GET endpoint) unchanged
-//
-// SETUP: Add to .env.local:
-//   CLOUDINARY_CLOUD_NAME=xxx
-//   CLOUDINARY_API_KEY=xxx
-//   CLOUDINARY_API_SECRET=xxx
 
 import dbConnect from "@/lib/dbConnect";
 import DesignUpload from "@/models/DesignUpload";
@@ -16,61 +6,74 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
-import { Readable } from "stream";
 
 export const config = {
   api: { bodyParser: false },
 };
 
-// ── Cloudinary config ─────────────────────────────────────────────────────────
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key:    process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ── Upload buffer to Cloudinary ───────────────────────────────────────────────
-const uploadToCloudinary = (buffer, originalName) => {
-  return new Promise((resolve, reject) => {
-    const ext = (originalName.split(".").pop() || "").toLowerCase();
-
-    // resource_type:
-    //   "image" → png, jpg, gif, webp
-    //   "raw"   → pdf, cdr, and any non-image/video file
-    const resourceType = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
-      ? "image"
-      : "raw";
-
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "designs",          // stored under /designs in your Cloudinary account
-        resource_type: resourceType,
-        use_filename: true,
-        unique_filename: true,
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-
-    // Convert buffer to readable stream and pipe to Cloudinary
-    const readable = new Readable();
-    readable.push(buffer);
-    readable.push(null);
-    readable.pipe(uploadStream);
-  });
+const getResourceType = (originalName) => {
+  const ext = (originalName.split(".").pop() || "").toLowerCase();
+  return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext) ? "image" : "raw";
 };
 
-// ── Multer: memory storage (no disk write) ────────────────────────────────────
+const sanitizePublicId = (originalName) => {
+  const lastDot = originalName.lastIndexOf(".");
+  const nameWithoutExt = lastDot !== -1 ? originalName.slice(0, lastDot) : originalName;
+  const ext = lastDot !== -1 ? originalName.slice(lastDot) : "";
+  const cleanName = nameWithoutExt
+    .replace(/[^a-zA-Z0-9.\-_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  return `${cleanName}_${Date.now()}${ext}`;
+};
+
+const uploadToCloudinary = async (buffer, originalName) => {
+  const resourceType = getResourceType(originalName);
+  const sanitized    = sanitizePublicId(originalName);
+
+  const publicId = resourceType === "image"
+    ? `designs/${sanitized.replace(/\.[^.]+$/, "")}`
+    : `designs/${sanitized}`;
+
+  const ext = (originalName.split(".").pop() || "").toLowerCase();
+  const mimeMap = {
+    pdf: "application/pdf",
+    png: "image/png",
+    jpg: "image/jpeg", jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    cdr: "application/octet-stream",
+  };
+  const mime       = mimeMap[ext] || "application/octet-stream";
+  const base64Data = `data:${mime};base64,${buffer.toString("base64")}`;
+
+  const result = await cloudinary.uploader.upload(base64Data, {
+    public_id:       publicId,
+    resource_type:   resourceType,
+    type:            "upload",   // public
+    access_mode:     "public",
+    use_filename:    false,
+    unique_filename: false,
+    overwrite:       false,
+    invalidate:      true,
+  });
+
+  return result;
+};
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max — protects server
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
 export default async function handler(req, res) {
   await dbConnect();
-
   switch (req.method) {
     case "POST": return handleFileUpload(req, res);
     case "GET":  return handleGet(req, res);
@@ -78,7 +81,6 @@ export default async function handler(req, res) {
   }
 }
 
-// ── POST — upload files to Cloudinary + save URL to DB ───────────────────────
 async function handleFileUpload(req, res) {
   try {
     upload.any()(req, res, async (err) => {
@@ -88,43 +90,36 @@ async function handleFileUpload(req, res) {
       }
 
       try {
-        // Auth
         const authHeader = req.headers.authorization;
         if (!authHeader) return res.status(401).json({ message: "No token provided" });
-        const token = authHeader.split(" ")[1];
+        const token   = authHeader.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id;
+        const userId  = decoded.id;
 
         const { productId } = req.body;
-
         const attrMap = (() => {
           try { return req.body?.attrMap ? JSON.parse(req.body.attrMap) : {}; }
           catch { return {}; }
         })();
 
         if (req.files && req.files.length > 0) {
-          // Upload each file to Cloudinary, then save URL to DB
           const saved = await Promise.all(
             req.files.map(async (file) => {
-              // Upload buffer → Cloudinary
-              const cloudResult = await uploadToCloudinary(
-                file.buffer,
-                file.originalname
-              );
+              const cloudResult = await uploadToCloudinary(file.buffer, file.originalname);
 
-              const fileUrl  = cloudResult.secure_url;  // Cloudinary CDN URL
-              const fileName = file.originalname;
-              const attributeKey  = file.fieldname;
-              const attributeName = attrMap[attributeKey] || attributeKey;
+              // Use secure_url directly — NO fl_attachment (causes ERR_INVALID_RESPONSE)
+              // File is public (type:upload, access_mode:public) so URL works directly
+              const fileUrl = cloudResult.secure_url;
 
-              // Save to DB — stores Cloudinary URL, not local path
+              console.log("✅ Uploaded:", { fileUrl, type: cloudResult.type, access_mode: cloudResult.access_mode });
+
               const savedDoc = await DesignUpload.create({
                 user:          userId,
                 product:       productId,
-                fileName,
-                fileUrl,        // ← Cloudinary URL
-                attribute:      attributeKey,
-                attributeName,
+                fileName:      file.originalname,
+                fileUrl,
+                attribute:     file.fieldname,
+                attributeName: attrMap[file.fieldname] || file.fieldname,
               });
 
               return savedDoc;
@@ -134,23 +129,22 @@ async function handleFileUpload(req, res) {
           return res.status(200).json({ success: true, data: saved, message: "Files uploaded" });
         }
 
-        // JSON metadata fallback (unchanged)
+        // JSON metadata fallback
         let { files } = req.body;
         if (files) {
           try { files = JSON.parse(files); } catch { /* already parsed */ }
-
           const savedFiles = await Promise.all(
             files.map(async (file) => {
-              const fileUrl  = file.url && file.url !== "undefined"
+              const fileUrl   = file.url && file.url !== "undefined"
                 ? file.url
                 : `/uploads/orders/${file.name || "unknown-file"}`;
-              const fileName = file.name || fileUrl.split("/").pop() || "Unnamed file";
+              const fileName  = file.name || fileUrl.split("/").pop() || "Unnamed file";
               const attribute = file.attribute || file.fieldname || null;
-
-              return await DesignUpload.create({ user: userId, product: productId, fileUrl, fileName, attribute });
+              return await DesignUpload.create({
+                user: userId, product: productId, fileUrl, fileName, attribute,
+              });
             })
           );
-
           return res.status(200).json({ success: true, data: savedFiles, message: "Files saved" });
         }
 
@@ -167,15 +161,13 @@ async function handleFileUpload(req, res) {
   }
 }
 
-// ── GET — fetch uploaded designs (unchanged) ──────────────────────────────────
 async function handleGet(req, res) {
   try {
     const { productId, userId, orderId } = req.query;
-
     if (!productId) return res.status(400).json({ message: "Missing productId in query" });
 
     const query = { product: new mongoose.Types.ObjectId(productId) };
-    if (userId) query.user  = new mongoose.Types.ObjectId(userId);
+    if (userId)  query.user  = new mongoose.Types.ObjectId(userId);
     if (orderId) query.order = new mongoose.Types.ObjectId(orderId);
 
     const designs = await DesignUpload.find(query)
@@ -188,6 +180,199 @@ async function handleGet(req, res) {
     return res.status(500).json({ message: err.message || "Internal server error" });
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import dbConnect from "@/lib/dbConnect";
+// import DesignUpload from "@/models/DesignUpload";
+// import jwt from "jsonwebtoken";
+// import mongoose from "mongoose";
+// import multer from "multer";
+// import { v2 as cloudinary } from "cloudinary";
+// import { Readable } from "stream";
+
+// export const config = {
+//   api: { bodyParser: false },
+// };
+
+// // ── Cloudinary config ─────────────────────────────────────────────────────────
+// cloudinary.config({
+//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//   api_key:    process.env.CLOUDINARY_API_KEY,
+//   api_secret: process.env.CLOUDINARY_API_SECRET,
+// });
+
+// // ── Upload buffer to Cloudinary ───────────────────────────────────────────────
+// const uploadToCloudinary = (buffer, originalName) => {
+//   return new Promise((resolve, reject) => {
+//     const ext = (originalName.split(".").pop() || "").toLowerCase();
+
+//     // resource_type:
+//     //   "image" → png, jpg, gif, webp
+//     //   "raw"   → pdf, cdr, and any non-image/video file
+//     const resourceType = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
+//       ? "image"
+//       : "raw";
+
+//     const uploadStream = cloudinary.uploader.upload_stream(
+//       {
+//         folder: "designs",          // stored under /designs in your Cloudinary account
+//         resource_type: resourceType,
+//         use_filename: true,
+//         unique_filename: true,
+//       },
+//       (error, result) => {
+//         if (error) reject(error);
+//         else resolve(result);
+//       }
+//     );
+
+//     // Convert buffer to readable stream and pipe to Cloudinary
+//     const readable = new Readable();
+//     readable.push(buffer);
+//     readable.push(null);
+//     readable.pipe(uploadStream);
+//   });
+// };
+
+// // ── Multer: memory storage (no disk write) ────────────────────────────────────
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max — protects server
+// });
+
+// export default async function handler(req, res) {
+//   await dbConnect();
+
+//   switch (req.method) {
+//     case "POST": return handleFileUpload(req, res);
+//     case "GET":  return handleGet(req, res);
+//     default:     return res.status(405).json({ message: "Method not allowed" });
+//   }
+// }
+
+// // ── POST — upload files to Cloudinary + save URL to DB ───────────────────────
+// async function handleFileUpload(req, res) {
+//   try {
+//     upload.any()(req, res, async (err) => {
+//       if (err) {
+//         console.error("Multer error:", err);
+//         return res.status(500).json({ message: "File upload failed" });
+//       }
+
+//       try {
+//         // Auth
+//         const authHeader = req.headers.authorization;
+//         if (!authHeader) return res.status(401).json({ message: "No token provided" });
+//         const token = authHeader.split(" ")[1];
+//         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//         const userId = decoded.id;
+
+//         const { productId } = req.body;
+
+//         const attrMap = (() => {
+//           try { return req.body?.attrMap ? JSON.parse(req.body.attrMap) : {}; }
+//           catch { return {}; }
+//         })();
+
+//         if (req.files && req.files.length > 0) {
+//           // Upload each file to Cloudinary, then save URL to DB
+//           const saved = await Promise.all(
+//             req.files.map(async (file) => {
+//               // Upload buffer → Cloudinary
+//               const cloudResult = await uploadToCloudinary(
+//                 file.buffer,
+//                 file.originalname
+//               );
+
+//               const fileUrl  = cloudResult.secure_url;  // Cloudinary CDN URL
+//               const fileName = file.originalname;
+//               const attributeKey  = file.fieldname;
+//               const attributeName = attrMap[attributeKey] || attributeKey;
+
+//               // Save to DB — stores Cloudinary URL, not local path
+//               const savedDoc = await DesignUpload.create({
+//                 user:          userId,
+//                 product:       productId,
+//                 fileName,
+//                 fileUrl,        // ← Cloudinary URL
+//                 attribute:      attributeKey,
+//                 attributeName,
+//               });
+
+//               return savedDoc;
+//             })
+//           );
+
+//           return res.status(200).json({ success: true, data: saved, message: "Files uploaded" });
+//         }
+
+//         // JSON metadata fallback (unchanged)
+//         let { files } = req.body;
+//         if (files) {
+//           try { files = JSON.parse(files); } catch { /* already parsed */ }
+
+//           const savedFiles = await Promise.all(
+//             files.map(async (file) => {
+//               const fileUrl  = file.url && file.url !== "undefined"
+//                 ? file.url
+//                 : `/uploads/orders/${file.name || "unknown-file"}`;
+//               const fileName = file.name || fileUrl.split("/").pop() || "Unnamed file";
+//               const attribute = file.attribute || file.fieldname || null;
+
+//               return await DesignUpload.create({ user: userId, product: productId, fileUrl, fileName, attribute });
+//             })
+//           );
+
+//           return res.status(200).json({ success: true, data: savedFiles, message: "Files saved" });
+//         }
+
+//         return res.status(400).json({ message: "No file or files provided" });
+
+//       } catch (err) {
+//         console.error("Save design error:", err);
+//         return res.status(500).json({ message: err.message || "Internal server error" });
+//       }
+//     });
+//   } catch (err) {
+//     console.error("Upload outer error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// }
+
+// // ── GET — fetch uploaded designs (unchanged) ──────────────────────────────────
+// async function handleGet(req, res) {
+//   try {
+//     const { productId, userId, orderId } = req.query;
+
+//     if (!productId) return res.status(400).json({ message: "Missing productId in query" });
+
+//     const query = { product: new mongoose.Types.ObjectId(productId) };
+//     if (userId) query.user  = new mongoose.Types.ObjectId(userId);
+//     if (orderId) query.order = new mongoose.Types.ObjectId(orderId);
+
+//     const designs = await DesignUpload.find(query)
+//       .populate("user", "name email")
+//       .sort({ createdAt: -1 });
+
+//     return res.status(200).json({ success: true, data: designs });
+//   } catch (err) {
+//     console.error("Get design error:", err);
+//     return res.status(500).json({ message: err.message || "Internal server error" });
+//   }
+// }
 
 
 
