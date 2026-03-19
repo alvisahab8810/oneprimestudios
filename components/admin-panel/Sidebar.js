@@ -364,6 +364,17 @@ export default function Sidebar({ sidebarOpen }) {
           </Link>
         )}
 
+              {canAccess(user, "OPS Users") && (
+          <Link
+            href="/dashboard/admin/complaints"
+            className={`ops-item ${
+              isActive("/dashboard/admin/complaints") ? "active" : ""
+            }`}
+          >
+            <img src="/assets/images/admin/partner.svg" /> complaint Requests
+          </Link>
+        )}
+
       </div>
     </aside>
   );

@@ -499,7 +499,7 @@ export default function Topbar() {
 
                           <li>
                               <Link href="/profile" className="gap-2">
-                                 <i className="ri-user-line"></i>  My Profile
+                                 <i className="ri-support-support"></i>  My Profile
                               </Link>
                             </li>
 
@@ -518,14 +518,23 @@ export default function Topbar() {
 
                            )} */}
 
+                            {user.userType === "partner" && user.memberId && (
+                                <li>
+                                  <Link href="/complaints/" target="_blank" className="gap-2">  
+                                     <i className="ri-customer-service-line"></i>  
+                                  Register  Complaint
+                                  </Link>
+                                </li>
+                              )}
+
                            {user.userType === "partner" && user.memberId && (
-  <li>
-    <Link href="/partner/wallet" target="_blank">  
-      <img src="/assets/images/icons/wallet.png" />
-      Wallet
-    </Link>
-  </li>
-)}
+                                <li>
+                                  <Link href="/partner/wallet" target="_blank">  
+                                    <img src="/assets/images/icons/wallet.png" />
+                                    Wallet
+                                  </Link>
+                                </li>
+                              )}
                           <li className="logout" onClick={handleLogout}>
                             <img src="/assets/images/icons/logout.png"></img>{" "}
                             Logout

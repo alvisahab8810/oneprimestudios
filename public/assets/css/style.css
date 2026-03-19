@@ -2648,7 +2648,7 @@ ease;
 /* Unique Parent Wrapper */
 .ops-admin-sidebar {
   width: 17%;
-  height: 100vh;
+  /* height: 100vh; */
   background: #ffffff;
   border-right: 1px solid #e6e6e6;
   padding: 20px 12px;
