@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import User from "@/models/User";
 import Admin from "@/models/Admin";
+import mongoose from "mongoose";
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission } from "@/lib/hasPermission";
 
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     /* ── Query params ─────────────────────────────────────────────────────── */
-    const { status, userType, search, page = 1, limit = 10 } = req.query;
+    const { status, userType, search, page = 1, limit = 10, category, product } = req.query;
 
     const pageNum  = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
@@ -96,6 +97,17 @@ export default async function handler(req, res) {
       } else {
         filters.$or = orConditions;
       }
+    }
+
+    /* ── Category / Product filter ───────────────────────────────────────── */
+    if (product && mongoose.Types.ObjectId.isValid(product)) {
+      // Exact product match — most specific, takes precedence
+      filters["items.product"] = new mongoose.Types.ObjectId(product);
+    } else if (category && mongoose.Types.ObjectId.isValid(category)) {
+      // Find all products in this category then match orders
+      const productsInCat = await Product.find({ category }).select("_id").lean();
+      const productIds = productsInCat.map((p) => p._id);
+      filters["items.product"] = { $in: productIds };
     }
 
     /* ── Fetch ────────────────────────────────────────────────────────────── */

@@ -98,6 +98,8 @@
   position: relative;
 }
 
+/* ── UPDATED: primaryBtn now supports inline-flex for spinner alignment ─── */
+/* OLD:
 .primaryBtn {
     background: #6C5DD4;
   color: #fff;
@@ -107,10 +109,46 @@
   margin-left: 0px;
   width:100%;
   font-size: 14px;
-
   cursor: pointer;
   width: fit-content;
 }
+*/
+/* NEW: */
+.primaryBtn {
+    background: #6C5DD4;
+  color: #fff;
+   padding: 10px 16px;
+  border: none;
+    border-radius: 50px;
+  margin-left: 0px;
+  width:100%;
+  font-size: 14px;
+  cursor: pointer;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .secondaryBtn {
        color: #fff;
     cursor: pointer;

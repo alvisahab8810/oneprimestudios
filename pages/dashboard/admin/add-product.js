@@ -35,6 +35,7 @@ export default function AddProduct() {
     stockStatus: "in_stock",
     minOrderQty: 1,
     isFeatured: false,
+    gstPercent: 0,
     productFor: "b2b",
     attributes: [],
     pricingTiers: [],
@@ -149,6 +150,7 @@ export default function AddProduct() {
       fd.append("stockStatus", form.stockStatus || "in_stock");
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("isFeatured", String(form.isFeatured));
+      fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("productFor", form.productFor || "both");
       fd.append("attributes", JSON.stringify(transformedAttributes));
       fd.append("pricingTiers", JSON.stringify(transformedTiers));
@@ -177,7 +179,7 @@ export default function AddProduct() {
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
         stock: 0, stockStatus: "in_stock", minOrderQty: 1, isFeatured: false,
-        productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [],
+        gstPercent: 0, productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [],
         b2b_enabled: false, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
         b2c_enabled: true, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
       });
@@ -360,6 +362,19 @@ export default function AddProduct() {
                   <ReactQuill value={form.importantNotes} onChange={(v) => setForm((p) => ({ ...p, importantNotes: v }))} theme="snow" />
 
                   {/* Pricing — unchanged */}
+                  <div className="pricing-row mt-3">
+                    <div>
+                      <label>GST %</label>
+                      <select name="gstPercent" value={form.gstPercent} onChange={handleChange} className="select-primary">
+                        <option value={0}>0% (None)</option>
+                        <option value={5}>5%</option>
+                        <option value={12}>12%</option>
+                        <option value={18}>18%</option>
+                        <option value={28}>28%</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="pricing-row mt-3">
                     <div>
                       <label>Base Price</label>

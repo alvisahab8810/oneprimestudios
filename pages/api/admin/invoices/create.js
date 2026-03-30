@@ -11,11 +11,12 @@ export default async function handler(req, res) {
     await dbConnect();
 
     let {
-      orderId,
+      orderId,          // may be ObjectId string OR order number string
+      orderNumbers = [], // all order numbers for multi-order invoice
       items,
-      gstPercent = 18,
-      gstType = "INTRA",   // "INTRA" | "INTER" | "NONE"
-      partnerType = "B2B", // "B2B" | "B2C" | "UNREGISTERED"
+      gstPercent = 0,
+      gstType = "INTRA",
+      partnerType = "B2B",
       sellerGst = "",
       sellerAddress = "",
       remarks = "",
@@ -25,8 +26,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    orderId = String(orderId).trim().replace(/^#/, "");
-    const order = await Order.findOne({ orderNumber: orderId }).populate("user");
+    // orderId may be a MongoDB ObjectId or an order number — try both
+    let order = null;
+    if (/^[a-f\d]{24}$/i.test(String(orderId))) {
+      order = await Order.findById(orderId).populate("user");
+    }
+    if (!order) {
+      const normalized = String(orderId).trim().replace(/^#/, "");
+      order = await Order.findOne({ orderNumber: normalized }).populate("user");
+    }
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     // ── Tax calculations ──────────────────────────────────────────────────────
@@ -66,6 +74,7 @@ export default async function handler(req, res) {
       invoiceNumber: generateInvoiceNumber(),
       orderId:       order._id,
       orderNumber:   order.orderNumber,
+      orderNumbers:  orderNumbers.length > 0 ? orderNumbers : [order.orderNumber],
       partnerId:     order.user?._id,
       partnerName:   order.user?.name || "—",
       partnerType:   resolvedPartnerType,

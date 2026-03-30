@@ -37,6 +37,7 @@ handler.get(async (req, res) => {
   try {
     const { userType, search } = req.query;
 
+    const { popular } = req.query;
     let filter = { status: "published" };
 
   // 🔒 STRICT B2B / B2C VISIBILITY RULES
@@ -50,6 +51,10 @@ if (userType === "partner" || userType === "b2b") {
   filter.productFor = "b2b";
 }
 
+    // Filter popular products only (for homepage slider)
+    if (popular === "true") {
+      filter.isPopular = true;
+    }
 
     // 🔥 SEARCH FILTER
     if (search && search.trim() !== "") {
@@ -87,6 +92,7 @@ handler.post(
         stockStatus,
         minOrderQty,
         isFeatured,
+        gstPercent,
          productFor,     // ⭐ ADD THIS
         b2bOptions,
         b2cOptions,
@@ -172,6 +178,7 @@ parsedAttributes.forEach(attr => {
         stockStatus: stockStatus || "in_stock",
         minOrderQty: minOrderQty ? Number(minOrderQty) : 1,
         isFeatured: isFeatured === "true" || isFeatured === true,
+        gstPercent: gstPercent ? Number(gstPercent) : 0,
           productFor: productFor || "both", // ⭐ FINAL FIX ⭐
 
         attributes: parsedAttributes,

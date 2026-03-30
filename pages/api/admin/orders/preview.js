@@ -55,8 +55,11 @@ export default async function handler(req, res) {
       },
 
       orderAmount: order.total,
+      orderSubtotal: order.subtotal,
+      orderGstAmount: order.gstAmount || 0,
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
+      productGstPercent: order.items[0]?.product?.gstPercent ?? 0,
 
       items: invoiceItems
     });

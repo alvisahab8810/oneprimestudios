@@ -10,6 +10,8 @@ import Order from "@/models/Order";
 import User from "@/models/User";
 import Product from "@/models/Product";
 import Admin from "@/models/Admin";
+import Wallet from "@/models/Wallet";
+import WalletTransaction from "@/models/WalletTransaction";
 
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission } from "@/lib/hasPermission";
@@ -113,6 +115,31 @@ export default async function handler(req, res) {
 
       if (status === "Order Dispatched") {
         order.dispatchRequest = "approved";
+      }
+
+      /* ===== CANCEL + WALLET REFUND ===== */
+      if (status === "Cancelled") {
+        order.cancelledBy = "admin";
+
+        if (order.paymentMethod === "Wallet" && order.paymentStatus === "PAID") {
+          let wallet = await Wallet.findOne({ user: order.user });
+          if (!wallet) wallet = await Wallet.create({ user: order.user, balance: 0 });
+          wallet.balance += order.total;
+          await wallet.save();
+
+          await WalletTransaction.create({
+            user: order.user,
+            type: "credit",
+            amount: order.total,
+            description: `Refund - Admin cancelled Order #${order.orderNumber}`,
+            referenceType: "refund",
+            referenceId: order._id,
+            status: "success",
+          });
+
+          order.paymentStatus = "REFUNDED";
+          order.refundedAt = new Date();
+        }
       }
 
       await order.save();

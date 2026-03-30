@@ -883,10 +883,13 @@ export default function CartPage() {
     return acc + unitPrice * q;
   }, 0);
 
-  // ✅ ADD THIS
-  const finalAmount = appliedCoupon
-    ? Math.max(total - appliedCoupon.discount, 0)
-    : total;
+  const gstAmount = cartItems.reduce((acc, it) => {
+    const gstPct = Number(it.product?.gstPercent || 0);
+    return acc + (Number(it.price || 0) * Number(it.quantity || 0) * gstPct / 100);
+  }, 0);
+
+  const discountedSubtotal = appliedCoupon ? Math.max(total - appliedCoupon.discount, 0) : total;
+  const finalAmount = discountedSubtotal + gstAmount;
 
   const getImageUrl = (imgPath) => {
     if (!imgPath) return "/no-image.png";
@@ -1290,6 +1293,13 @@ export default function CartPage() {
               <span>Total Amount</span>
               <strong>₹{total.toFixed(2)}</strong>
             </div> */}
+
+            {gstAmount > 0 && (
+              <div className="d-flex justify-content-between mb-1" style={{ fontSize: 13, color: "#6b7280" }}>
+                <span>GST</span>
+                <span>₹{gstAmount.toFixed(2)}</span>
+              </div>
+            )}
 
             <div className="summary-total">
               <span>Total Amount</span>

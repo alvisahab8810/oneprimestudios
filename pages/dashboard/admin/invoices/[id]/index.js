@@ -80,16 +80,28 @@ export default function InvoiceViewAdmin() {
               style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e5e5e5", color: "#374151", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
               <FiArrowLeft size={12} /> Back
             </Link>
-            {(inv.status === "DRAFT" || inv.status === "UPDATED") && (
+            {(inv.status === "DRAFT" || inv.status === "UPDATED" || inv.status === "SENT") && (
               <Link href={`/dashboard/admin/invoices/${id}/edit`}
                 style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e5e5e5", color: "#374151", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
                 <FiEdit2 size={12} /> Edit
               </Link>
             )}
+            <button
+              onClick={async () => {
+                try {
+                  const r = await axios.post("/api/admin/invoices/generate-pdf", { invoiceId: id }, { withCredentials: true });
+                  const url = r.data?.pdfUrl;
+                  if (url) window.open(url, "_blank");
+                  else { toast.success("PDF generated"); router.reload(); }
+                } catch { toast.error("Failed to generate PDF"); }
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e5e5e5", color: "#374151", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <FiDownload size={12} /> Generate PDF
+            </button>
             {inv.pdfUrl && (
               <a href={inv.pdfUrl} target="_blank" rel="noreferrer"
                 style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e5e5e5", color: "#374151", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
-                <FiDownload size={12} /> PDF
+                <FiDownload size={12} /> Download PDF
               </a>
             )}
             {(inv.status === "DRAFT" || inv.status === "UPDATED") && (

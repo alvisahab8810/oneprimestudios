@@ -200,8 +200,12 @@ export default async function handler(req, res) {
       }
 
 
-    // ✅ ALWAYS CREATE NEW CART ITEM (NO MERGE)
-cart.items.push({
+    // ✅ SINGLE-PRODUCT RESTRICTION: clear cart if a different product is being added
+    if (cart.items.length > 0 && String(cart.items[0].product) !== String(productId)) {
+      cart.items = [];
+    }
+
+    cart.items.push({
   product: productId,
   quantity: Number(quantity),
   selectedAttrs,

@@ -6,8 +6,9 @@ const invoiceSchema = new mongoose.Schema(
     invoiceNumber: { type: String, unique: true, required: true },
 
     // ── Order reference ───────────────────────────────────────────────────────
-    orderId:     { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
-    orderNumber: { type: String, required: true },
+    orderId:      { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
+    orderNumber:  { type: String, required: true },
+    orderNumbers: { type: [String], default: [] }, // all order numbers when invoice covers multiple orders
 
     // ── Partner snapshot ──────────────────────────────────────────────────────
     partnerId:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

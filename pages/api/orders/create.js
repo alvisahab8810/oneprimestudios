@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const { items, subtotal, paymentMethod, couponCode } = req.body;
+    const { items, subtotal, gstAmount = 0, paymentMethod, couponCode } = req.body;
 
     const normalizedPaymentMethod =
       typeof paymentMethod === "string" ? paymentMethod.toLowerCase() : null;
@@ -93,7 +93,9 @@ export default async function handler(req, res) {
         discountValue: coupon.discountValue,
         discountAmount,
       };
-      finalTotal = subtotal - discountAmount;
+      finalTotal = subtotal - discountAmount + Number(gstAmount || 0);
+    } else {
+      finalTotal = subtotal + Number(gstAmount || 0);
     }
 
     // CREATE ORDER + WALLET — atomic
@@ -147,6 +149,7 @@ export default async function handler(req, res) {
             })),
 
             subtotal,
+            gstAmount: Number(gstAmount || 0),
             total: finalTotal,
             coupon: couponData,
             customerRemarks,

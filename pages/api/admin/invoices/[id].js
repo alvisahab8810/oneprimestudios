@@ -25,9 +25,7 @@ export default async function handler(req, res) {
     try {
       const invoice = await Invoice.findById(id);
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
-      if (invoice.status === "SENT") {
-        return res.status(400).json({ message: "Cannot edit a SENT invoice" });
-      }
+
 
       const {
         items, gstPercent, gstType, partnerType,

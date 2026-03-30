@@ -136,6 +136,17 @@ export default function AdminOrderDetail() {
                     <strong>Reason for Rejection:</strong> {order.remarks}
                   </div>
                 )}
+                {order.status === "Cancelled" && order.paymentStatus === "REFUNDED" && (
+                  <div className="alert alert-success mt-2 py-1 px-3" style={{ fontSize: 13 }}>
+                    ✅ Wallet refund of <strong>₹{order.total}</strong> issued
+                    {order.refundedAt && <> on {new Date(order.refundedAt).toLocaleString("en-IN")}</>}
+                  </div>
+                )}
+                {order.status === "Cancelled" && order.paymentMethod === "Razorpay" && (
+                  <div className="alert alert-warning mt-2 py-1 px-3" style={{ fontSize: 13 }}>
+                    ℹ Razorpay payment — manual refund required via Razorpay dashboard.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -194,19 +205,28 @@ export default function AdminOrderDetail() {
               </div>
             ))}
 
-            {/* Re-uploaded files (unchanged) */}
-            {order.reuploadedFiles?.length > 0 && (
-              <div className="alert alert-info mt-3">
-                <strong>Re-uploaded Designs:</strong>
-                <ul className="mt-2">
-                  {order.reuploadedFiles.map((f, i) => (
-                    <li key={i}>
-                      <a href={f.fileUrl} target="_blank" rel="noreferrer">Download Re-uploaded File {i + 1}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* Re-uploaded files — show only the latest */}
+            {order.reuploadedFiles?.length > 0 && (() => {
+              const latest = order.reuploadedFiles[order.reuploadedFiles.length - 1];
+              return (
+                <div className="alert alert-info mt-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div>
+                    <strong>Latest Re-uploaded Design</strong>
+                    {latest.uploadedAt && (
+                      <span className="text-muted ms-2" style={{ fontSize: 12 }}>
+                        — {new Date(latest.uploadedAt).toLocaleString("en-IN")}
+                      </span>
+                    )}
+                    {order.reuploadedFiles.length > 1 && (
+                      <span className="badge bg-secondary ms-2">{order.reuploadedFiles.length} uploads total</span>
+                    )}
+                  </div>
+                  <a href={latest.fileUrl} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary">
+                    Download File
+                  </a>
+                </div>
+              );
+            })()}
 
             {/* Items Table — unchanged */}
             <h6 className="fw-semibold mb-3 mt-4">
@@ -242,7 +262,12 @@ export default function AdminOrderDetail() {
             <div className="d-flex justify-content-end mt-4">
               <div className="text-end">
                 <div>Subtotal: ₹{order.subtotal?.toFixed(2) || (order.total * 0.9).toFixed(2)}</div>
-                <div>Shipping: ₹{order.shippingCost || 0}</div>
+                {order.coupon?.discountAmount > 0 && (
+                  <div className="text-success">Discount ({order.coupon.code}): − ₹{order.coupon.discountAmount.toFixed(2)}</div>
+                )}
+                {(order.gstAmount || 0) > 0 && (
+                  <div className="text-muted">GST: ₹{order.gstAmount.toFixed(2)}</div>
+                )}
                 <h5 className="fw-bold mt-2">Total: ₹{order.total.toFixed(2)}</h5>
               </div>
             </div>
@@ -297,7 +322,13 @@ export default function AdminOrderDetail() {
                   <option value="In Packaging">In Packaging</option>
                   <option value="Order Dispatched">Order Dispatched</option>
                   <option value="Order Delivered">Order Delivered</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
+                {newStatus === "Cancelled" && (
+                  <div className="alert alert-warning py-1 px-2 mb-0" style={{ fontSize: 12 }}>
+                    ⚠ If paid via Wallet, the amount will be instantly refunded to the customer.
+                  </div>
+                )}
                 {newStatus === "Design Rejected" && (
                   <input type="text" placeholder="Enter rejection remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="form-control w-100 w-md-auto" />
                 )}

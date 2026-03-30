@@ -36,6 +36,7 @@ export default function EditProductPage() {
     stockStatus: "in_stock",
     minOrderQty: 1,
     isFeatured: false,
+    gstPercent: 0,
     productFor: "both",
     status: "draft",
     attributes: [],
@@ -145,6 +146,7 @@ export default function EditProductPage() {
         stockStatus: p.stockStatus || "in_stock",
         minOrderQty: p.minOrderQty || 1,
         isFeatured: !!p.isFeatured,
+        gstPercent: p.gstPercent || 0,
         productFor: p.productFor || "both",
         status: p.status || "draft",
         // attributes: p.attributes || [],
@@ -282,6 +284,7 @@ export default function EditProductPage() {
       fd.append("stockStatus", form.stockStatus || "in_stock");
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("isFeatured", String(form.isFeatured));
+      fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("productFor", form.productFor || "both");
       fd.append("status", form.status || "draft");
 
@@ -438,6 +441,19 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                   <div>
                     <label>Sale Price</label>
                     <input name="salePrice" value={form.salePrice} onChange={handleChange} type="number" className="input-primary" />
+                  </div>
+                </div>
+
+                <div className="pricing-row mt-3 d-flex gap-3">
+                  <div>
+                    <label>GST %</label>
+                    <select name="gstPercent" value={form.gstPercent} onChange={handleChange} className="select-primary">
+                      <option value={0}>0% (None)</option>
+                      <option value={5}>5%</option>
+                      <option value={12}>12%</option>
+                      <option value={18}>18%</option>
+                      <option value={28}>28%</option>
+                    </select>
                   </div>
                 </div>
 

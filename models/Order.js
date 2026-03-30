@@ -203,6 +203,7 @@ const OrderSchema = new mongoose.Schema(
     },
 
     total: { type: Number, required: true },
+    gstAmount: { type: Number, default: 0 }, // GST included in total
 
     status: {
       type: String,

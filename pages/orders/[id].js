@@ -34,6 +34,143 @@ const TIMELINE = [
   "In Packaging", "Order Dispatched", "Order Delivered",
 ];
 
+// ── Dimension validation helpers (mirrors ProductFileUpload.js logic) ─────────
+const PRINT_DPI = 300;
+
+const getRawDimValues = (dim) => {
+  if (!dim) return "";
+  if (typeof dim === "string") return dim;
+  if (typeof dim === "object") return dim.values || "";
+  return "";
+};
+
+const formatDimForDisplay = (dim) => {
+  if (!dim) return "";
+  if (typeof dim === "string") return dim;
+  if (typeof dim === "object") {
+    const v = (dim.values || "").trim();
+    const u = dim.unit || "px";
+    if (!v) return "";
+    return `${v} ${u === "inch" ? "inch" : u === "mm" ? "mm" : "px"}`;
+  }
+  return "";
+};
+
+const parseAllowedDims = (dimStr) => {
+  if (!dimStr) return [];
+  const norm = String(dimStr).replace(/\u00D7/gi, "x").replace(/\s+/g, "").toLowerCase();
+  return norm.split(",").map(p => {
+    const parts = p.trim().split("x");
+    if (parts.length < 2) return null;
+    const w = parseFloat(parts[0]);
+    const h = parseFloat(parts[1]);
+    return (isNaN(w) || isNaN(h)) ? null : { w, h };
+  }).filter(Boolean);
+};
+
+const getToleranceForUnit = (unit) => unit === "mm" ? 2 : unit === "inch" ? 0.1 : 2;
+
+const loadPdfJsForReupload = async () => {
+  if (typeof window === "undefined") return null;
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  return pdfjsLib;
+};
+
+// Returns true if valid, false if invalid (shows its own toast on failure)
+const validateReuploadDimensions = async (file, allImageDimensions) => {
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  if (ext === "cdr") return true; // CDR: browser can't read dims — skip
+
+  const isPdf = file.type === "application/pdf" || ext === "pdf";
+  const isImage = file.type.startsWith("image/");
+  if (!isPdf && !isImage) return true; // other types: no dim check
+
+  const activeDims = allImageDimensions.filter(d => getRawDimValues(d).trim().length > 0);
+  if (!activeDims.length) return true; // no dimension rules set — accept all
+
+  // ── Read file dimensions once ──────────────────────────────────────────────
+  let fileDims = null;
+
+  if (isImage) {
+    fileDims = await new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ wPx: img.width, hPx: img.height }); };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+    if (!fileDims) {
+      toast.error("Could not read image dimensions. Please try another file.");
+      return false;
+    }
+  }
+
+  if (isPdf) {
+    toast.loading("Reading PDF dimensions...", { id: "pdf-dim-check" });
+    try {
+      const pdfjsLib = await loadPdfJsForReupload();
+      if (pdfjsLib) {
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const page = await pdf.getPage(1);
+        const vp = page.getViewport({ scale: 1 });
+        fileDims = { wPts: vp.width, hPts: vp.height };
+      }
+    } catch (e) { /* unreadable */ }
+    toast.dismiss("pdf-dim-check");
+    if (!fileDims) return true; // PDF.js couldn't read it — accept rather than block
+  }
+
+  // ── Check file against each configured dimension (accept if ANY matches) ──
+  const errors = [];
+
+  for (const imageDimensions of activeDims) {
+    const rawVals = getRawDimValues(imageDimensions);
+    const dimUnit = (imageDimensions && typeof imageDimensions === "object")
+      ? (imageDimensions.unit || "px") : "px";
+    const display = formatDimForDisplay(imageDimensions);
+    const allowedNative = parseAllowedDims(rawVals);
+    if (!allowedNative.length) continue;
+
+    if (isImage) {
+      let dimsInPx = allowedNative;
+      if (dimUnit === "inch")
+        dimsInPx = allowedNative.map(d => ({ w: Math.round(d.w * PRINT_DPI), h: Math.round(d.h * PRINT_DPI) }));
+      else if (dimUnit === "mm")
+        dimsInPx = allowedNative.map(d => ({ w: Math.round((d.w / 25.4) * PRINT_DPI), h: Math.round((d.h / 25.4) * PRINT_DPI) }));
+
+      const tol = getToleranceForUnit("px");
+      if (dimsInPx.some(d => Math.abs(d.w - fileDims.wPx) <= tol && Math.abs(d.h - fileDims.hPx) <= tol))
+        return true; // ✅ matches this config
+      errors.push(display);
+    }
+
+    if (isPdf) {
+      const toUnit = (pts, u) =>
+        u === "inch" ? Math.round((pts / 72) * 100) / 100
+        : u === "mm"  ? Math.round((pts / 72) * 25.4 * 100) / 100
+        : Math.round(pts);
+      const fileW = toUnit(fileDims.wPts, dimUnit);
+      const fileH = toUnit(fileDims.hPts, dimUnit);
+      const tol = getToleranceForUnit(dimUnit);
+      if (allowedNative.some(d => Math.abs(d.w - fileW) <= tol && Math.abs(d.h - fileH) <= tol))
+        return true; // ✅ matches
+      errors.push(`${display} (your file: ${fileW}x${fileH} ${dimUnit})`);
+    }
+  }
+
+  // All configs failed
+  if (errors.length) {
+    if (isImage)
+      toast.error(`Invalid image size. Your file: ${fileDims.wPx}x${fileDims.hPx} px. Allowed: ${errors.join(" or ")}`);
+    else
+      toast.error(`Invalid PDF size. Allowed: ${errors.join(" or ")}`);
+    return false;
+  }
+  return true;
+};
+
 export default function OrderDetailPage() {
   const [reuploading, setReuploading] = useState(false);
   const router = useRouter();
@@ -86,8 +223,48 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Collect upload rules from all upload-type attributes across all order items
+  const getUploadRules = () => {
+    const rules = (order?.items || []).flatMap(item =>
+      (item.product?.attributes || [])
+        .filter(attr => attr.type === "upload")
+        .map(attr => attr.uploadRules)
+    ).filter(Boolean);
+    const acceptTypes = [...new Set(rules.flatMap(r => r.acceptTypes || []))];
+    const maxSizeMB = rules.length > 0
+      ? Math.min(...rules.map(r => r.maxSizeMB || 10))
+      : 10;
+    const allImageDimensions = rules.map(r => r.imageDimensions).filter(Boolean);
+    return { acceptTypes, maxSizeMB, allImageDimensions };
+  };
+
   const reuploadDesign = async (file) => {
     if (!file) return;
+
+    const { acceptTypes, maxSizeMB, allImageDimensions } = getUploadRules();
+
+    // 1. Validate format
+    if (acceptTypes.length > 0) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (!acceptTypes.map(t => t.toLowerCase()).includes(ext)) {
+        toast.error(`Only ${acceptTypes.map(t => t.toUpperCase()).join(", ")} files are allowed`);
+        return;
+      }
+    }
+
+    // 2. Validate size
+    const maxBytes = maxSizeMB * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error(`File size must be under ${maxSizeMB}MB`);
+      return;
+    }
+
+    // 3. Validate dimensions (image px / PDF pts / CDR skipped)
+    if (allImageDimensions.length > 0) {
+      const dimOk = await validateReuploadDimensions(file, allImageDimensions);
+      if (!dimOk) return;
+    }
+
     const fd = new FormData();
     fd.append("file", file);
     try {
@@ -97,8 +274,8 @@ export default function OrderDetailPage() {
         { headers: { Authorization: `Bearer ${token}` } });
       toast.success("Design re-uploaded successfully");
       window.location.reload();
-    } catch {
-      toast.error("Failed to re-upload design");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to re-upload design");
     } finally {
       setReuploading(false);
     }
@@ -108,6 +285,7 @@ export default function OrderDetailPage() {
     ? order.subtotal
     : order?.items?.reduce((s, i) => s + i.price * i.quantity, 0) || order?.total || 0;
   const calculatedDiscount = order?.coupon?.discountAmount || 0;
+  const calculatedGst = order?.gstAmount || 0;
 
   const currentStep = TIMELINE.indexOf(order?.status);
 
@@ -247,21 +425,35 @@ export default function OrderDetailPage() {
           )}
 
           {/* ── Re-upload section ── */}
-          {order.status === "Design Rejected" && (
-            <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "20px 24px", marginBottom: 16 }}>
-              <p style={{ margin: "0 0 12px", fontWeight: 700, fontSize: 14, color: "#111", display: "flex", alignItems: "center", gap: 7 }}>
-                <FiUpload size={14} /> Re-upload Your Design
-              </p>
-              <label style={{ display: "flex", alignItems: "center", gap: 10, border: "2px dashed #e5e5e5", borderRadius: 10, padding: "14px 18px", cursor: "pointer", background: reuploading ? "#f9fafb" : "#fff" }}>
-                <FiUpload size={16} color="#9ca3af" />
-                <span style={{ fontSize: 13, color: "#6b7280" }}>
-                  {reuploading ? "Uploading..." : "Click to choose file"}
-                </span>
-                <input type="file" style={{ display: "none" }} disabled={reuploading}
-                  onChange={e => reuploadDesign(e.target.files[0])} />
-              </label>
-            </div>
-          )}
+          {order.status === "Design Rejected" && (() => {
+            const { acceptTypes, maxSizeMB, allImageDimensions } = getUploadRules();
+            const acceptStr = acceptTypes.length > 0 ? acceptTypes.map(t => `.${t}`).join(",") : undefined;
+            const dimHints = allImageDimensions
+              .map(d => formatDimForDisplay(d))
+              .filter(Boolean);
+            const hintParts = [];
+            if (acceptTypes.length > 0) hintParts.push(`Formats: ${acceptTypes.map(t => t.toUpperCase()).join(", ")}`);
+            if (dimHints.length > 0) hintParts.push(`Size: ${dimHints.join(" or ")}`);
+            hintParts.push(`Max: ${maxSizeMB}MB`);
+            const hintText = hintParts.join(" · ");
+            return (
+              <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "20px 24px", marginBottom: 16 }}>
+                <p style={{ margin: "0 0 12px", fontWeight: 700, fontSize: 14, color: "#111", display: "flex", alignItems: "center", gap: 7 }}>
+                  <FiUpload size={14} /> Re-upload Your Design
+                </p>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, border: "2px dashed #e5e5e5", borderRadius: 10, padding: "14px 18px", cursor: "pointer", background: reuploading ? "#f9fafb" : "#fff" }}>
+                  <FiUpload size={16} color="#9ca3af" />
+                  <span style={{ fontSize: 13, color: "#6b7280" }}>
+                    {reuploading ? "Uploading..." : "Click to choose file"}
+                  </span>
+                  <input type="file" style={{ display: "none" }} disabled={reuploading}
+                    accept={acceptStr}
+                    onChange={e => reuploadDesign(e.target.files[0])} />
+                </label>
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#9ca3af" }}>{hintText}</p>
+              </div>
+            );
+          })()}
 
           {/* ── Delivery challan ── */}
           {order.status === "Order Delivered" && order.deliveryChallan?.fileUrl && (
@@ -361,6 +553,13 @@ export default function OrderDetailPage() {
                     Discount {order.coupon?.code && `(${order.coupon.code})`}
                   </span>
                   <span style={{ fontSize: 14, fontWeight: 600, color: "#15803d" }}>− ₹{calculatedDiscount.toFixed(2)}</span>
+                </div>
+              )}
+
+              {calculatedGst > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 14, color: "#6b7280" }}>GST</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#6b7280" }}>₹{calculatedGst.toFixed(2)}</span>
                 </div>
               )}
 

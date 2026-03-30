@@ -1023,7 +1023,13 @@ useEffect(() => {
     0,
   );
 
-  const finalAmount = Math.max(total - discountAmount, 0);
+  const gstAmount = cartItems.reduce((acc, item) => {
+    const gstPct = Number(item.product?.gstPercent || 0);
+    return acc + (Number(item.price || 0) * Number(item.quantity || 1) * gstPct / 100);
+  }, 0);
+
+  const discountedSubtotal = Math.max(total - discountAmount, 0);
+  const finalAmount = discountedSubtotal + gstAmount;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1141,6 +1147,7 @@ const placeOrder = async (method) => {
         (sum, item) => sum + item.price * item.quantity,
         0
       ),
+      gstAmount,
       total: finalAmount,
       couponCode: appliedCoupon?.code || null,
       paymentMethod: method,
@@ -1595,6 +1602,13 @@ const placeOrder = async (method) => {
                   <div className="d-flex justify-content-between text-success">
                     <span>Coupon ({appliedCoupon.code})</span>
                     <span>- ₹{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {gstAmount > 0 && (
+                  <div className="d-flex justify-content-between" style={{ fontSize: 13, color: "#6b7280" }}>
+                    <span>GST</span>
+                    <span>₹{gstAmount.toFixed(2)}</span>
                   </div>
                 )}
 

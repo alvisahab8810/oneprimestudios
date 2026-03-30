@@ -15,6 +15,10 @@ export default function AdminOrdersPage() {
   const [loading, setLoading]             = useState(true);
   const [statusFilter, setStatusFilter]   = useState("");
   const [userTypeFilter, setUserTypeFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [productFilter, setProductFilter]   = useState("");
+  const [categories, setCategories]         = useState([]);
+  const [products, setProducts]             = useState([]);
   const [page, setPage]                   = useState(1);
   const [totalPages, setTotalPages]       = useState(1);
   const [totalCount, setTotalCount]       = useState(0);
@@ -26,14 +30,33 @@ export default function AdminOrdersPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // ── Load categories once ──────────────────────────────────────────────────
+  useEffect(() => {
+    axios.get("/api/categories/list", { withCredentials: true })
+      .then(res => setCategories(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  // ── Load products when category changes ───────────────────────────────────
+  useEffect(() => {
+    setProductFilter("");
+    setProducts([]);
+    if (!categoryFilter) return;
+    axios.get(`/api/products/admin/list?category=${categoryFilter}&limit=200`, { withCredentials: true })
+      .then(res => setProducts(res.data.products || []))
+      .catch(() => {});
+  }, [categoryFilter]);
+
   // ── Fetch orders ──────────────────────────────────────────────────────────
   const loadOrders = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page });
-      if (statusFilter)   params.append("status",   statusFilter);
-      if (userTypeFilter) params.append("userType",  userTypeFilter);
-      if (searchQuery)    params.append("search",    searchQuery);
+      if (statusFilter)   params.append("status",    statusFilter);
+      if (userTypeFilter) params.append("userType",   userTypeFilter);
+      if (searchQuery)    params.append("search",     searchQuery);
+      if (categoryFilter) params.append("category",   categoryFilter);
+      if (productFilter)  params.append("product",    productFilter);
 
       const res = await axios.get(`/api/admin/orders?${params}`, { withCredentials: true });
       setOrders(res.data.orders || []);
@@ -46,13 +69,15 @@ export default function AdminOrdersPage() {
     }
   };
 
-  useEffect(() => { loadOrders(); }, [statusFilter, userTypeFilter, page, searchQuery]);
+  useEffect(() => { loadOrders(); }, [statusFilter, userTypeFilter, categoryFilter, productFilter, page, searchQuery]);
 
-  const hasFilters = searchQuery || statusFilter || userTypeFilter;
+  const hasFilters = searchQuery || statusFilter || userTypeFilter || categoryFilter || productFilter;
 
   const clearFilters = () => {
     setSearchInput(""); setSearchQuery("");
-    setStatusFilter(""); setUserTypeFilter(""); setPage(1);
+    setStatusFilter(""); setUserTypeFilter("");
+    setCategoryFilter(""); setProductFilter("");
+    setPage(1);
   };
 
   // ── Export ────────────────────────────────────────────────────────────────
@@ -188,6 +213,31 @@ export default function AdminOrdersPage() {
               <option value="customer">B2C</option>
             </select>
 
+            {/* Category filter */}
+            <select
+              value={categoryFilter}
+              onChange={e => { setPage(1); setCategoryFilter(e.target.value); }}
+              style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: "#fff", minWidth: 150 }}
+            >
+              <option value="">All Categories</option>
+              {categories.map(c => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+
+            {/* Product filter (depends on category) */}
+            <select
+              value={productFilter}
+              onChange={e => { setPage(1); setProductFilter(e.target.value); }}
+              disabled={!categoryFilter}
+              style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: categoryFilter ? "#fff" : "#f9fafb", minWidth: 160, cursor: categoryFilter ? "pointer" : "not-allowed" }}
+            >
+              <option value="">{categoryFilter ? "All Products" : "Select category first"}</option>
+              {products.map(p => (
+                <option key={p._id} value={p._id}>{p.name}</option>
+              ))}
+            </select>
+
             {/* Clear filters */}
             {hasFilters && (
               <button
@@ -251,6 +301,18 @@ export default function AdminOrdersPage() {
                 <span style={{ background: "#dcfce7", color: "#16a34a", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
                   {userTypeFilter === "partner" ? "B2B" : "B2C"}
                   <FaTimes style={{ cursor: "pointer" }} onClick={() => { setUserTypeFilter(""); setPage(1); }} />
+                </span>
+              )}
+              {categoryFilter && (
+                <span style={{ background: "#fef3c7", color: "#b45309", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  {categories.find(c => c._id === categoryFilter)?.name || "Category"}
+                  <FaTimes style={{ cursor: "pointer" }} onClick={() => { setCategoryFilter(""); setProductFilter(""); setPage(1); }} />
+                </span>
+              )}
+              {productFilter && (
+                <span style={{ background: "#fdf2f8", color: "#9d174d", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  {products.find(p => p._id === productFilter)?.name || "Product"}
+                  <FaTimes style={{ cursor: "pointer" }} onClick={() => { setProductFilter(""); setPage(1); }} />
                 </span>
               )}
             </div>

@@ -29,11 +29,6 @@ export default function InvoiceEditPage() {
     axios.get(`/api/admin/invoices/${id}`, { withCredentials: true })
       .then(r => {
         const inv = r.data;
-        if (inv.status === "SENT") {
-          toast.error("Cannot edit a SENT invoice");
-          router.push(`/dashboard/admin/invoices/${id}`);
-          return;
-        }
         setInvoice(inv);
         setItems(inv.items || []);
         setGstPercent(inv.gstPercent || 18);

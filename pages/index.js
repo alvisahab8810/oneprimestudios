@@ -8,6 +8,7 @@ import Features from "@/components/home-page/Features";
 import GoogleReviews from "@/components/home-page/GoogleReviews";
 import HeroSection from "@/components/home-page/HeroSection";
 import ProductSlider from "@/components/home-page/ProductSlider";
+import PopularSlider from "@/components/home-page/PopularSlider";
 import axios from "axios";
 import { useState, useEffect } from "react";
 
@@ -46,6 +47,7 @@ export default function Home() {
         <Categories />
         <GoogleReviews />
         <ProductSlider />
+        <PopularSlider />
         <Client />
         {/* <ProductSlider /> */}
         <div className="container">

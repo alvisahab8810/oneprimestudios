@@ -214,6 +214,9 @@ const ProductSchema = new mongoose.Schema(
     },
     minOrderQty: { type: Number, default: 1 },
     isFeatured: { type: Boolean, default: false },
+    isPopular: { type: Boolean, default: false },
+
+    gstPercent: { type: Number, default: 0 }, // GST % applicable on this product (0, 5, 12, 18, 28)
 
     productFor: {
       type: String,
