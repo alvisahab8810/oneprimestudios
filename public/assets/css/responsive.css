@@ -12,6 +12,10 @@
 
 @media(max-width:760px){
 
+        .contact-form {
+        width: 100%;
+    }
+
     .tracking-margin{
         margin-bottom: 0!important;
     }

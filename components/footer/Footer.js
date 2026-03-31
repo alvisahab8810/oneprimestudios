@@ -116,7 +116,9 @@ const Footer = () => {
             <img src="/assets/images/icons/call2.svg" className="footer-icon" />
             <div>
               <h4>Call us</h4>
-              <p>+91 87370 38342</p>
+              <p><a href="tel:+915224957479">+91 5224957479</a></p>
+              <p><a href="tel:+918737038342">+91 8737038342</a></p>
+              <p><a href="tel:+919454708850">+91 9454708850</a></p>
             </div>
           </div>
 
@@ -128,7 +130,7 @@ const Footer = () => {
             />
             <div>
               <h4>Need live help</h4>
-              <p>Contact@oneprimestudios.in</p>
+              <p><a href="mailto:Sales1@oneprimestudios.com">Sales1@oneprimestudios.com</a></p>
             </div>
           </div>
 
