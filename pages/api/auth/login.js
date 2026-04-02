@@ -114,10 +114,11 @@ export default async function handler(req, res) {
     // });
 
 
+    // OLD: const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    // NEW: no expiry
     const token = jwt.sign(
   { id: user._id, userType: user.userType },
-  process.env.JWT_SECRET,
-  { expiresIn: "7d" }
+  process.env.JWT_SECRET
 );
 
 // ✅ SET COOKIES FOR SSR + CSR

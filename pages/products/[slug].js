@@ -188,11 +188,30 @@ export default function ProductDetails() {
     window.open(`https://wa.me/${product.b2cOptions?.whatsappNumber || "8081815141"}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
+  // ── UPDATED: fix attrKey index mismatch ─────────────────────────────────
+  // OLD BUG: used filtered-array index (i within upload-only attrs) → attrKey was e.g. FileUpload__0
+  //          but render used full-array index → attrKey was e.g. FileUpload__2 → never matched
+  // OLD:
+  // const validateUploadAttrs = () => {
+  //   const uploadAttrs = product?.attributes?.filter((a) => a.type === "upload") || [];
+  //   if (uploadAttrs.length === 0) return true;
+  //   for (let i = 0; i < uploadAttrs.length; i++) {
+  //     const a = uploadAttrs[i];
+  //     const safeName = (a.name || "attr").trim();
+  //     const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
+  //     if (a.uploadRules?.required && !uploadedAttrFiles[attrKey]) {
+  //       toast.error(`Please upload file for "${a.name}"`);
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // };
+  // NEW: iterate ALL attributes so index matches the render loop
   const validateUploadAttrs = () => {
-    const uploadAttrs = product?.attributes?.filter((a) => a.type === "upload") || [];
-    if (uploadAttrs.length === 0) return true;
-    for (let i = 0; i < uploadAttrs.length; i++) {
-      const a = uploadAttrs[i];
+    const allAttrs = product?.attributes || [];
+    for (let i = 0; i < allAttrs.length; i++) {
+      const a = allAttrs[i];
+      if (a.type !== "upload") continue;
       const safeName = (a.name || "attr").trim();
       const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
       if (a.uploadRules?.required && !uploadedAttrFiles[attrKey]) {
@@ -203,12 +222,36 @@ export default function ProductDetails() {
     return true;
   };
 
+  // ── UPDATED: loader state + 401 redirect on expired token ───────────────
+  // OLD:
+  // const addToCart = async () => {
+  //   if (!product) return toast.error("Product not loaded");
+  //   if (!validateUploadAttrs()) return;
+  //   const token = localStorage.getItem("token");
+  //   if (!token) return toast.error("Please login first");
+  //   try {
+  //     let uploadedAttrUrls = [];
+  //     if (Object.keys(uploadedAttrFiles).length > 0) {
+  //       const fd = new FormData(); const attrMap = {};
+  //       Object.keys(uploadedAttrFiles).forEach((attrKey) => { ... });
+  //       fd.append("productId", product._id); fd.append("attrMap", JSON.stringify(attrMap));
+  //       const uploadRes = await axios.post("/api/upload/save-design", fd, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } });
+  //       uploadedAttrUrls = uploadRes.data.data.map((f) => ({ ... }));
+  //     }
+  //     await axios.post("/api/cart", { ... }, { headers: { Authorization: `Bearer ${token}` } });
+  //     toast.success("Added to cart"); router.push("/cart");
+  //   } catch (err) {
+  //     toast.error(err.response?.data?.message || "Failed to add to cart");
+  //   }
+  // };
+  // NEW:
   const addToCart = async () => {
     if (!product) return toast.error("Product not loaded");
     if (!validateUploadAttrs()) return;
     const token = localStorage.getItem("token");
     if (!token) return toast.error("Please login first");
 
+    setIsUploading(true);
     try {
       let uploadedAttrUrls = [];
       if (Object.keys(uploadedAttrFiles).length > 0) {
@@ -251,7 +294,14 @@ export default function ProductDetails() {
       toast.success("Added to cart");
       router.push("/cart");
     } catch (err) {
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        router.push("/login");
+        return;
+      }
       toast.error(err.response?.data?.message || "Failed to add to cart");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -344,7 +394,8 @@ export default function ProductDetails() {
                                   <option value="">Select {attr.name}</option>
                                   {(attr.values || []).map((val, idx) => (
                                     <option key={idx} value={val.label}>
-                                      {val.label}{val.priceModifier ? ` (+₹${val.priceModifier})` : ""}
+                                      {/* OLD: {val.label}{val.priceModifier ? ` (+₹${val.priceModifier})` : ""} */}
+                                      {val.label}
                                     </option>
                                   ))}
                                 </select>
@@ -363,7 +414,8 @@ export default function ProductDetails() {
                                         }}
                                         className={styles.checkboxInput}
                                       />
-                                      {val.label}{val.priceModifier ? ` (+₹${val.priceModifier})` : ""}
+                                      {/* OLD: {val.label}{val.priceModifier ? ` (+₹${val.priceModifier})` : ""} */}
+                                      {val.label}
                                     </label>
                                   ))}
                                 </div>
@@ -411,12 +463,18 @@ export default function ProductDetails() {
                 <div className="mobile-none b2b-add-to-cart">
                   <div className={styles.b2bOrderActions}>
                     {canAddToCart ? (
-                      <button className={styles.primaryBtn} onClick={addToCart}>Add to Cart</button>
+                      // OLD: <button className={styles.primaryBtn} onClick={addToCart}>Add to Cart</button>
+                      // NEW: disabled + spinner during upload
+                      <button className={styles.primaryBtn} onClick={addToCart} disabled={isUploading}>
+                        {isUploading ? <><span className={styles.spinner} /> Uploading...</> : "Add to Cart"}
+                      </button>
                     ) : (
                       <p className="text-muted mt-2">Please upload your design before adding to cart.</p>
                     )}
                   </div>
                 </div>
+
+                {/* Description moved to below sidebar — visible on all screen sizes */}
               </div>
             ) : (
               // ── B2C Section ──
@@ -466,21 +524,33 @@ export default function ProductDetails() {
                   </div>
 
                   {canAddToCart ? (
-                    <button className={styles.primaryBtn} onClick={addToCart}>
-                      <img src="/assets/images/icons/shopping-cart.svg" className="cart-png" alt="cart" />
-                      Add to Cart
+                    // OLD: <button className={styles.primaryBtn} onClick={addToCart}><img ... />Add to Cart</button>
+                    // NEW: disabled + spinner during upload
+                    <button className={styles.primaryBtn} onClick={addToCart} disabled={isUploading}>
+                      {isUploading ? (
+                        <><span className={styles.spinner} /> Uploading...</>
+                      ) : (
+                        <><img src="/assets/images/icons/shopping-cart.svg" className="cart-png" alt="cart" /> Add to Cart</>
+                      )}
                     </button>
                   ) : (
                     <p className="text-muted mt-2">Please upload required files before adding to cart.</p>
                   )}
 
-                  <h4 className="product-description">Product Description</h4>
-                  <div className={styles.description} dangerouslySetInnerHTML={{ __html: product.description || product.shortDescription }} />
+                  {/* Description moved to below sidebar — visible on all screen sizes */}
                 </div>
               </div>
             )}
           </aside>
         </div>
+
+        {/* ── Description — outside sidebar so visible on mobile too ── */}
+        {(product.description || product.shortDescription) && (
+          <div className="product-desc-section">
+            <h4 className="product-description">Product Description</h4>
+            <div dangerouslySetInnerHTML={{ __html: product.description || product.shortDescription }} />
+          </div>
+        )}
 
         {/* ── Accordion ── */}
         <div className="custom-accordion">
@@ -540,36 +610,128 @@ export default function ProductDetails() {
         </div>
       </div>
 
+      {/* ── Mobile Backdrop ── */}
+      {mobilePanelOpen && (
+        <div className="ops-mobile-backdrop desktop-none" onClick={() => setMobilePanelOpen(false)} />
+      )}
+
       {/* ── Mobile Sticky Bar ── */}
       <div className="ops-mobile-sticky desktop-none">
-        {!mobilePanelOpen && Object.keys(uploadedAttrFiles).length === 0 && (
-          <div className="desktop-none">
-            <div className="mobile-whtasapp d-flex align-items-center justify-between gap-2">
-              {product.b2cOptions?.whatsappSupport && (
-                <a href="https://wa.link/y6hc8l" className="hire-a-designer">Hire a Designer</a>
-              )}
-              {product.b2cOptions?.whatsappSupport && (
-                <button className={styles.whatsappBtn} onClick={handleWhatsapp}>
-                  <img src="/assets/images/icons/whatsapp.svg" alt="whatsapp" /> WhatsApp
-                </button>
-              )}
-              {product.attributes?.filter((a) => a.type === "upload").map((attr, i) => {
+
+        {/* Slide-up panel — all attributes */}
+        {mobilePanelOpen && (
+          <div className="ops-mobile-attr-panel">
+            <div className="ops-mobile-panel-header">
+              <span>Select Options &amp; Upload</span>
+              <button type="button" className="ops-mobile-panel-close" onClick={() => setMobilePanelOpen(false)}>✕</button>
+            </div>
+            <div className="ops-mobile-panel-body">
+              {product.attributes?.map((attr, i) => {
                 const safeName = (attr.name || "attr").trim();
                 const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
                 return (
-                  <ProductFileUpload key={i} attributeName={attr.name} attributeKey={attrKey}
-                    uploadedAttrFiles={uploadedAttrFiles} setUploadedAttrFiles={setUploadedAttrFiles}
-                    acceptTypes={attr.uploadRules?.acceptTypes} maxSizeMB={attr.uploadRules?.maxSizeMB}
-                    imageDimensions={attr.uploadRules?.imageDimensions} singleFile={true} />
+                  <div key={i} className="ops-mobile-attr-item">
+                    <label className="ops-mobile-attr-label">
+                      {attr.name}{attr.required && <span style={{ color: "red", marginLeft: 2 }}>*</span>}
+                    </label>
+                    {attr.type === "text" && (
+                      <input type="text" placeholder={`Enter ${attr.name}`} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                    )}
+                    {attr.type === "number" && (
+                      <input type="number" placeholder={`Enter ${attr.name}`} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                    )}
+                    {attr.type === "select" && (
+                      <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
+                        <option value="">Select {attr.name}</option>
+                        {(attr.values || []).map((val, idx) => (
+                          <option key={idx} value={val.label}>{val.label}</option>
+                        ))}
+                      </select>
+                    )}
+                    {attr.type === "checkbox" && (
+                      <div className={styles.checkboxGroup}>
+                        {(attr.values || []).map((val, idx) => (
+                          <label key={idx} className={styles.checkboxLabel}>
+                            <input type="checkbox" value={val.label} className={styles.checkboxInput}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setSelectedAttrs((prev) => {
+                                  const current = prev[attr.name] || [];
+                                  return { ...prev, [attr.name]: checked ? [...current, val.label] : current.filter((v) => v !== val.label) };
+                                });
+                              }}
+                            />
+                            {val.label}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {attr.type === "upload" && (
+                      <>
+                        <ProductFileUpload
+                          attributeName={attr.name}
+                          attributeKey={attrKey}
+                          uploadedAttrFiles={uploadedAttrFiles}
+                          setUploadedAttrFiles={setUploadedAttrFiles}
+                          acceptTypes={attr.uploadRules?.acceptTypes}
+                          maxSizeMB={attr.uploadRules?.maxSizeMB}
+                          imageDimensions={attr.uploadRules?.imageDimensions}
+                          singleFile={true}
+                        />
+                        {attr.uploadRules?.imageDimensions && (
+                          <p style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
+                            Allowed Size: {formatImageDimensions(attr.uploadRules.imageDimensions)}
+                          </p>
+                        )}
+                        <p style={{ fontSize: 12, color: "#777" }}>
+                          Accept: {attr.uploadRules?.acceptTypes?.join(", ") || "Any"}
+                          {attr.uploadRules?.maxSizeMB && ` • Max ${attr.uploadRules.maxSizeMB}MB`}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 );
               })}
             </div>
+            <div className="ops-mobile-panel-footer">
+              {canAddToCart ? (
+                <button className="ops-mobile-main-btn cart" disabled={isUploading}
+                  onClick={() => { setMobilePanelOpen(false); addToCart(); }}>
+                  {isUploading ? (
+                    <><span className={styles.spinner} /> Uploading...</>
+                  ) : (
+                    <><img src="/assets/images/icons/shopping-cart.svg" alt="cart" /> Add to Cart</>
+                  )}
+                </button>
+              ) : (
+                <button type="button" className="ops-mobile-main-btn" onClick={() => setMobilePanelOpen(false)}>Done</button>
+              )}
+            </div>
           </div>
         )}
-        {!mobilePanelOpen && canAddToCart && (
-          <button className="ops-mobile-main-btn cart" onClick={addToCart}>
-            <img src="/assets/images/icons/shopping-cart.svg" alt="cart" /> Add to Cart
-          </button>
+
+        {/* Bottom action row */}
+        {!mobilePanelOpen && (
+          <div className="ops-mobile-bottom-row">
+            {product.b2cOptions?.whatsappSupport && (
+              <button className={styles.whatsappBtn} onClick={handleWhatsapp}>
+                <img src="/assets/images/icons/whatsapp.svg" alt="whatsapp" /> WhatsApp
+              </button>
+            )}
+            {canAddToCart ? (
+              <button className="ops-mobile-main-btn cart" onClick={addToCart} disabled={isUploading}>
+                {isUploading ? (
+                  <><span className={styles.spinner} /> Uploading...</>
+                ) : (
+                  <><img src="/assets/images/icons/shopping-cart.svg" alt="cart" /> Add to Cart</>
+                )}
+              </button>
+            ) : (
+              <button type="button" className="ops-mobile-main-btn" onClick={() => setMobilePanelOpen(true)}>
+                Upload &amp; Customize
+              </button>
+            )}
+          </div>
         )}
       </div>
 

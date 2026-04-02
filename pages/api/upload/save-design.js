@@ -81,83 +81,98 @@ export default async function handler(req, res) {
   }
 }
 
+// ── UPDATED: fix "API resolved without sending a response" + JWT expired → 401 ──
+// OLD BUG 1: multer callback is async — Next.js saw handler return before response sent
+// OLD BUG 2: TokenExpiredError was caught as 500 instead of 401
+// OLD:
+// async function handleFileUpload(req, res) {
+//   try {
+//     upload.any()(req, res, async (err) => {
+//       ...
+//       } catch (err) {
+//         console.error("Save design error:", err);
+//         return res.status(500).json({ message: err.message || "Internal server error" });
+//       }
+//     });
+//   } catch (err) { ... }
+// }
+// NEW: wrap multer in a Promise so handler awaits it; detect JWT errors → 401
 async function handleFileUpload(req, res) {
+  // Step 1: run multer and wait for it to finish parsing the multipart body
   try {
-    upload.any()(req, res, async (err) => {
-      if (err) {
-        console.error("Multer error:", err);
-        return res.status(500).json({ message: "File upload failed" });
-      }
-
-      try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) return res.status(401).json({ message: "No token provided" });
-        const token   = authHeader.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId  = decoded.id;
-
-        const { productId } = req.body;
-        const attrMap = (() => {
-          try { return req.body?.attrMap ? JSON.parse(req.body.attrMap) : {}; }
-          catch { return {}; }
-        })();
-
-        if (req.files && req.files.length > 0) {
-          const saved = await Promise.all(
-            req.files.map(async (file) => {
-              const cloudResult = await uploadToCloudinary(file.buffer, file.originalname);
-
-              // Use secure_url directly — NO fl_attachment (causes ERR_INVALID_RESPONSE)
-              // File is public (type:upload, access_mode:public) so URL works directly
-              const fileUrl = cloudResult.secure_url;
-
-              console.log("✅ Uploaded:", { fileUrl, type: cloudResult.type, access_mode: cloudResult.access_mode });
-
-              const savedDoc = await DesignUpload.create({
-                user:          userId,
-                product:       productId,
-                fileName:      file.originalname,
-                fileUrl,
-                attribute:     file.fieldname,
-                attributeName: attrMap[file.fieldname] || file.fieldname,
-              });
-
-              return savedDoc;
-            })
-          );
-
-          return res.status(200).json({ success: true, data: saved, message: "Files uploaded" });
-        }
-
-        // JSON metadata fallback
-        let { files } = req.body;
-        if (files) {
-          try { files = JSON.parse(files); } catch { /* already parsed */ }
-          const savedFiles = await Promise.all(
-            files.map(async (file) => {
-              const fileUrl   = file.url && file.url !== "undefined"
-                ? file.url
-                : `/uploads/orders/${file.name || "unknown-file"}`;
-              const fileName  = file.name || fileUrl.split("/").pop() || "Unnamed file";
-              const attribute = file.attribute || file.fieldname || null;
-              return await DesignUpload.create({
-                user: userId, product: productId, fileUrl, fileName, attribute,
-              });
-            })
-          );
-          return res.status(200).json({ success: true, data: savedFiles, message: "Files saved" });
-        }
-
-        return res.status(400).json({ message: "No file or files provided" });
-
-      } catch (err) {
-        console.error("Save design error:", err);
-        return res.status(500).json({ message: err.message || "Internal server error" });
-      }
+    await new Promise((resolve, reject) => {
+      upload.any()(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
     });
   } catch (err) {
-    console.error("Upload outer error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("Multer error:", err);
+    return res.status(500).json({ message: "File upload failed" });
+  }
+
+  // Step 2: handle the request now that multer has populated req.files / req.body
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "No token provided" });
+    const token   = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId  = decoded.id;
+
+    const { productId } = req.body;
+    const attrMap = (() => {
+      try { return req.body?.attrMap ? JSON.parse(req.body.attrMap) : {}; }
+      catch { return {}; }
+    })();
+
+    if (req.files && req.files.length > 0) {
+      const saved = await Promise.all(
+        req.files.map(async (file) => {
+          const cloudResult = await uploadToCloudinary(file.buffer, file.originalname);
+          const fileUrl = cloudResult.secure_url;
+          console.log("✅ Uploaded:", { fileUrl, type: cloudResult.type, access_mode: cloudResult.access_mode });
+          const savedDoc = await DesignUpload.create({
+            user:          userId,
+            product:       productId,
+            fileName:      file.originalname,
+            fileUrl,
+            attribute:     file.fieldname,
+            attributeName: attrMap[file.fieldname] || file.fieldname,
+          });
+          return savedDoc;
+        })
+      );
+      return res.status(200).json({ success: true, data: saved, message: "Files uploaded" });
+    }
+
+    // JSON metadata fallback
+    let { files } = req.body;
+    if (files) {
+      try { files = JSON.parse(files); } catch { /* already parsed */ }
+      const savedFiles = await Promise.all(
+        files.map(async (file) => {
+          const fileUrl   = file.url && file.url !== "undefined"
+            ? file.url
+            : `/uploads/orders/${file.name || "unknown-file"}`;
+          const fileName  = file.name || fileUrl.split("/").pop() || "Unnamed file";
+          const attribute = file.attribute || file.fieldname || null;
+          return await DesignUpload.create({
+            user: userId, product: productId, fileUrl, fileName, attribute,
+          });
+        })
+      );
+      return res.status(200).json({ success: true, data: savedFiles, message: "Files saved" });
+    }
+
+    return res.status(400).json({ message: "No file or files provided" });
+
+  } catch (err) {
+    console.error("Save design error:", err);
+    // JWT expired or invalid → tell frontend to re-login
+    if (err.name === "TokenExpiredError" || err.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Session expired. Please login again." });
+    }
+    return res.status(500).json({ message: err.message || "Internal server error" });
   }
 }
 
