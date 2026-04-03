@@ -24,7 +24,9 @@ export default async function handler(req, res) {
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const { items, subtotal, gstAmount = 0, paymentMethod, couponCode } = req.body;
+    // OLD: const { items, subtotal, gstAmount = 0, paymentMethod, couponCode } = req.body;
+    // NEW: also extract orderName (B2B mandatory field)
+    const { items, subtotal, gstAmount = 0, paymentMethod, couponCode, orderName = "" } = req.body;
 
     const normalizedPaymentMethod =
       typeof paymentMethod === "string" ? paymentMethod.toLowerCase() : null;
@@ -98,46 +100,27 @@ export default async function handler(req, res) {
       finalTotal = subtotal + Number(gstAmount || 0);
     }
 
+    // ── UPDATED: generate orderNumber before session so it's available for wallet tx description
+    // OLD: orderNumber generated inside Order.create, so wallet tx had no reference to it
+    // NEW: pre-generate orderNumber, create Order first, then create WalletTransaction with referenceId + full description
+    const orderNumber = `ORD-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`;
+
     // CREATE ORDER + WALLET — atomic
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      // WALLET PAYMENT
-      if (normalizedPaymentMethod === "wallet") {
-        const wallet = await Wallet.findOne({ user: user._id }).session(session);
-        if (!wallet) throw new Error("Wallet not found");
-        if (wallet.balance < finalTotal) throw new Error("Insufficient wallet balance");
-
-        wallet.balance -= finalTotal;
-        await wallet.save({ session });
-
-        await WalletTransaction.create(
-          [{ user: user._id, type: "debit", amount: finalTotal, description: "Order Payment", referenceType: "order_payment", status: "success" }],
-          { session }
-        );
-      }
-
-      // ── CREATE ORDER ────────────────────────────────────────────────────────
+      // ── CREATE ORDER FIRST (so we have _id for wallet tx reference) ──────────
       const order = await Order.create(
         [
           {
             user: fullUser._id,
-
-            // ── FIX: carry uploadedFiles + uploadedAttributeFiles from cart ──
-            // OLD (missing files):
-            //   items: items.map((i) => ({ product, quantity, price }))
-            //
-            // NEW (files included):
-            //   items: items.map((i) => ({ product, quantity, price,
-            //            uploadedFiles, uploadedAttributeFiles, remarks }))
             items: items.map((i) => ({
               product:  i.product,
               quantity: i.quantity,
               price:    i.price,
               remarks:  i.remarks || "",
-
-              // These two lines are the ENTIRE fix:
+              selectedAttrs: i.selectedAttrs || {},
               uploadedFiles:          Array.isArray(i.uploadedFiles) ? i.uploadedFiles : [],
               uploadedAttributeFiles: Array.isArray(i.uploadedAttributeFiles)
                 ? i.uploadedAttributeFiles.map((f) => ({
@@ -171,11 +154,38 @@ export default async function handler(req, res) {
                 ? { orderId: req.body.razorpayOrderId || null, paymentId: null, signature: null }
                 : undefined,
 
-            orderNumber: `ORD-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`,
+            orderNumber,
+            // NEW: B2B order name entered by customer on product page
+            orderName: orderName || "",
           },
         ],
         { session }
       );
+
+      // ── WALLET PAYMENT — after order so we can reference order._id + orderNumber ──
+      if (normalizedPaymentMethod === "wallet") {
+        const wallet = await Wallet.findOne({ user: user._id }).session(session);
+        if (!wallet) throw new Error("Wallet not found");
+        if (wallet.balance < finalTotal) throw new Error("Insufficient wallet balance");
+
+        wallet.balance -= finalTotal;
+        await wallet.save({ session });
+
+        // OLD: description: "Order Payment", no referenceId
+        // NEW: description includes order number, referenceId links back to order
+        await WalletTransaction.create(
+          [{
+            user: user._id,
+            type: "debit",
+            amount: finalTotal,
+            description: `Order Payment - #${orderNumber}`,
+            referenceType: "order_payment",
+            referenceId: order[0]._id.toString(),
+            status: "success",
+          }],
+          { session }
+        );
+      }
 
       // INCREMENT COUPON USAGE
       if (couponData) {

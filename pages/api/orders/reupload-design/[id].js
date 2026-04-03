@@ -73,7 +73,9 @@ export default async function handler(req, res) {
     const fileUrl = `/uploads/reuploads/${req.file.filename}`;
 
     order.reuploadedFiles.push({ fileUrl });
-    order.status = "In Progress"; // reset flow
+    // OLD: order.status = "In Progress"; // was auto-advancing status after re-upload
+    // NEW: stay "Pending" so admin reviews the new file before advancing
+    order.status = "Pending";
 
     await order.save();
 

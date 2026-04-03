@@ -325,6 +325,15 @@ export default function OrderDetailPage() {
 
           {/* ── Hero card ── */}
           <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "24px 28px", marginBottom: 16 }}>
+
+            {/* NEW: Order Name highlight banner (B2B) */}
+            {order.orderName && (
+              <div style={{ background: "#f3f0ff", border: "1.5px solid #c4b5fd", borderRadius: 10, padding: "10px 16px", marginBottom: 18, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#7c3aed", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Order Name</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#4c1d95" }}>{order.orderName}</span>
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
               <div>
                 <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9ca3af" }}>Order</p>
@@ -505,15 +514,14 @@ export default function OrderDetailPage() {
             <p style={sectionLabel}><FiPackage size={11} style={{ marginRight: 5 }} />Ordered Items</p>
 
             <div style={{ border: "1px solid #f0f0f0", borderRadius: 10, overflow: "hidden" }}>
-              {/* Table header */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 100px 100px", padding: "10px 16px", background: "#f7f7f5", borderBottom: "1px solid #f0f0f0" }}>
-                {["Product", "Qty", "Price", "Subtotal"].map(h => (
+              {/* OLD header removed — new header with Attributes column is inside the items render below */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 80px 100px 100px", padding: "10px 16px", background: "#f7f7f5", borderBottom: "1px solid #f0f0f0" }}>
+                {["Product", "Attributes", "Qty", "Price", "Subtotal"].map(h => (
                   <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
                 ))}
               </div>
-
               {order.items?.map((item, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 100px 100px", padding: "14px 16px", borderBottom: i < order.items.length - 1 ? "1px solid #f5f5f5" : "none", alignItems: "center" }}>
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto 80px 100px 100px", padding: "14px 16px", borderBottom: i < order.items.length - 1 ? "1px solid #f5f5f5" : "none", alignItems: "center", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     {item.product?.mainImage ? (
                       <img src={item.product.mainImage} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8, border: "1px solid #f0f0f0" }} />
@@ -527,7 +535,22 @@ export default function OrderDetailPage() {
                         {item.product?.name || "Product"}
                       </p>
                       <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>₹{item.price.toFixed(2)} each</p>
+                      {item.remarks && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280" }}>Note: {item.remarks}</p>}
                     </div>
+                  </div>
+                  {/* Attributes — OLD: not shown. NEW: show selectedAttrs key-value pairs */}
+                  <div style={{ minWidth: 120 }}>
+                    {item.selectedAttrs && Object.keys(item.selectedAttrs).length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        {Object.entries(item.selectedAttrs).map(([key, val]) => (
+                          <span key={key} style={{ fontSize: 11, background: "#f3f0ff", color: "#5b21b6", borderRadius: 4, padding: "2px 7px", display: "inline-block", width: "fit-content" }}>
+                            {key}: {Array.isArray(val) ? val.join(", ") : val}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>
+                    )}
                   </div>
                   <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>{item.quantity}</span>
                   <span style={{ fontSize: 14, color: "#374151" }}>₹{item.price.toFixed(2)}</span>

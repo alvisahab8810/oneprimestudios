@@ -93,6 +93,7 @@ handler.post(
         minOrderQty,
         isFeatured,
         gstPercent,
+        hsnCode,         // NEW: HSN/SAC code
          productFor,     // ⭐ ADD THIS
         b2bOptions,
         b2cOptions,
@@ -179,6 +180,7 @@ parsedAttributes.forEach(attr => {
         minOrderQty: minOrderQty ? Number(minOrderQty) : 1,
         isFeatured: isFeatured === "true" || isFeatured === true,
         gstPercent: gstPercent ? Number(gstPercent) : 0,
+        hsnCode: hsnCode || "",             // NEW
           productFor: productFor || "both", // ⭐ FINAL FIX ⭐
 
         attributes: parsedAttributes,

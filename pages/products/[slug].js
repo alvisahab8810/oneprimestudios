@@ -39,6 +39,7 @@ const formatImageDimensions = (dim) => {
 
 export default function ProductDetails() {
   const [specialRemarks, setSpecialRemarks] = useState("");
+  const [orderName, setOrderName] = useState("");
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [uploadedAttrFiles, setUploadedAttrFiles] = useState({});
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -247,6 +248,11 @@ export default function ProductDetails() {
   // NEW:
   const addToCart = async () => {
     if (!product) return toast.error("Product not loaded");
+    // NEW: validate orderName is filled for B2B products
+    if (product.b2bOptions?.enabled && !orderName.trim()) {
+      toast.error("Please enter an Order Name before adding to cart.");
+      return;
+    }
     if (!validateUploadAttrs()) return;
     const token = localStorage.getItem("token");
     if (!token) return toast.error("Please login first");
@@ -285,6 +291,8 @@ export default function ProductDetails() {
           selectedAttrs,
           price: finalPrice,
           remarks: specialRemarks,
+          // NEW: pass orderName to cart
+          orderName: orderName.trim(),
           uploadedFiles: uploadedFiles.map((f) => f.url),
           uploadedAttributeFiles: uploadedAttrUrls,
         },
@@ -361,6 +369,24 @@ export default function ProductDetails() {
                 <div className={styles.b2bOrderSection} id="b2border-section">
 
                   <div className="b2b-container-area">
+                    {/* NEW: mandatory order name field for B2B */}
+                    <div className={styles.inputGroup} style={{ marginBottom: 16 }}>
+                      <label className={styles.inputLabel}>
+                        Order Name <span className={styles.required}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Spring Campaign Flyers, Monthly Business Cards..."
+                        value={orderName}
+                        onChange={(e) => setOrderName(e.target.value)}
+                        className={styles.inputField}
+                        style={{ borderColor: orderName.trim() ? "" : "#e0d0ff" }}
+                      />
+                      <p style={{ fontSize: 12, color: "#9b8ac4", marginTop: 4 }}>
+                        Give this order a name to identify it easily later.
+                      </p>
+                    </div>
+
                     <div className={styles.inputGroup}>
                       <label className={styles.inputLabel}>Quantity</label>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -626,6 +652,24 @@ export default function ProductDetails() {
               <button type="button" className="ops-mobile-panel-close" onClick={() => setMobilePanelOpen(false)}>✕</button>
             </div>
             <div className="ops-mobile-panel-body">
+              {/* NEW: Order Name field — first in panel, mandatory for B2B */}
+              {product.b2bOptions?.enabled && (
+                <div className="ops-mobile-attr-item" style={{ borderColor: "#e0d0ff", background: "#faf8ff" }}>
+                  <label className="ops-mobile-attr-label">
+                    Order Name <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Spring Campaign Flyers..."
+                    value={orderName}
+                    onChange={(e) => setOrderName(e.target.value)}
+                    className={styles.inputField}
+                    style={{ width: "100%" }}
+                  />
+                  <p style={{ fontSize: 11, color: "#9b8ac4", marginTop: 4 }}>Required — used to identify this order.</p>
+                </div>
+              )}
+
               {product.attributes?.map((attr, i) => {
                 const safeName = (attr.name || "attr").trim();
                 const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;

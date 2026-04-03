@@ -178,9 +178,11 @@ export default async function handler(req, res) {
   quantity = 1,
   selectedAttrs = {},
   uploadedFiles = [],
-  uploadedAttributeFiles = [], // ✅ ADD
+  uploadedAttributeFiles = [],
   price = 0,
   remarks = "",
+  // NEW: B2B mandatory order name
+  orderName = "",
 } = req.body;
 
       if (!productId) return res.status(400).json({ message: "productId required" });
@@ -213,6 +215,8 @@ export default async function handler(req, res) {
   uploadedAttributeFiles: uploadedAttributeFiles || [],
   price: unitPrice,
   remarks: remarks || "",
+  // NEW: order name stored per cart item, carried through to order
+  orderName: orderName || "",
   createdAt: new Date(),
 });
 

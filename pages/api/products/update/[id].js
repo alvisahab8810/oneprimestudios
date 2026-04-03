@@ -62,6 +62,7 @@ handler.put(async (req, res) => {
       minOrderQty,
       isFeatured,
       gstPercent,
+      hsnCode,      // NEW: HSN/SAC code
       attributes,
       pricingTiers,
       b2bOptions,
@@ -127,6 +128,7 @@ handler.put(async (req, res) => {
       minOrderQty: Number(minOrderQty),
       isFeatured: isFeatured === "true" || isFeatured === true,
       gstPercent: gstPercent ? Number(gstPercent) : 0,
+      hsnCode: hsnCode || "",  // NEW
       attributes: safeParse(attributes, []),
       pricingTiers: safeParse(pricingTiers, []),
       b2bOptions: safeParse(b2bOptions, {}),

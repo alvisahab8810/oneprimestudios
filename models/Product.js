@@ -217,6 +217,7 @@ const ProductSchema = new mongoose.Schema(
     isPopular: { type: Boolean, default: false },
 
     gstPercent: { type: Number, default: 0 }, // GST % applicable on this product (0, 5, 12, 18, 28)
+    hsnCode: { type: String, default: "" }, // NEW: HSN/SAC code for GST invoicing
 
     productFor: {
       type: String,

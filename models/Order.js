@@ -152,6 +152,10 @@ const OrderSchema = new mongoose.Schema(
       required: true,
     },
 
+    // OLD: selectedAttrs was missing — got dropped when order was created from cart
+    // NEW: stored so admin can see what options the customer selected
+    selectedAttrs: { type: Object, default: {} },
+
     // ✅ REQUIRED FOR PRINT FILES
     uploadedFiles: {
       type: [String],
@@ -286,6 +290,9 @@ const OrderSchema = new mongoose.Schema(
     remarks: { type: String, default: "" }, // ✅ Added remarks
 
     customerRemarks: { type: String, default: "" },
+
+    // NEW: order name entered by B2B customer on product page (mandatory)
+    orderName: { type: String, default: "" },
 
     orderNumber: { type: String, unique: true },
   },

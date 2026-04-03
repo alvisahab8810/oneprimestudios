@@ -98,20 +98,38 @@ export default function WalletStatement() {
                   </tr>
                 )}
 
+                {/* OLD: showed raw description + raw referenceId (ObjectId) with no links */}
+                {/* NEW: description shows prominently; referenceId is a "View Order" link */}
                 {filteredTransactions.map((tx) => (
                   <tr key={tx._id}>
-                    <td className="muted">
-                      {new Date(tx.createdAt).toLocaleDateString()}
+                    <td className="muted" style={{ whiteSpace: "nowrap" }}>
+                      {new Date(tx.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      <br />
+                      <span style={{ fontSize: 11, color: "#aaa" }}>
+                        {new Date(tx.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
                     </td>
-                    <td>{tx.description}</td>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{tx.description}</div>
+                      <div style={{ fontSize: 11, color: "#888", marginTop: 2, textTransform: "capitalize" }}>
+                        {tx.referenceType?.replace(/_/g, " ")}
+                      </div>
+                    </td>
                     <td className="credit">
-                      {tx.type === "credit" ? `₹${tx.amount}` : "—"}
+                      {tx.type === "credit" ? `₹${Number(tx.amount).toFixed(2)}` : "—"}
                     </td>
                     <td className="debit">
-                      {tx.type === "debit" ? `₹${tx.amount}` : "—"}
+                      {tx.type === "debit" ? `₹${Number(tx.amount).toFixed(2)}` : "—"}
                     </td>
                     <td className="muted reference">
-                      {tx.referenceId || "—"}
+                      {tx.referenceId ? (
+                        <a
+                          href={`/orders/${tx.referenceId}`}
+                          style={{ fontSize: 12, color: "#6c5dd4", textDecoration: "none", fontWeight: 500 }}
+                        >
+                          View Order →
+                        </a>
+                      ) : "—"}
                     </td>
                   </tr>
                 ))}

@@ -37,6 +37,7 @@ export default function EditProductPage() {
     minOrderQty: 1,
     isFeatured: false,
     gstPercent: 0,
+    hsnCode: "",       // NEW: HSN/SAC code for invoicing
     productFor: "both",
     status: "draft",
     attributes: [],
@@ -147,6 +148,7 @@ export default function EditProductPage() {
         minOrderQty: p.minOrderQty || 1,
         isFeatured: !!p.isFeatured,
         gstPercent: p.gstPercent || 0,
+        hsnCode: p.hsnCode || "",         // NEW
         productFor: p.productFor || "both",
         status: p.status || "draft",
         // attributes: p.attributes || [],
@@ -285,6 +287,7 @@ export default function EditProductPage() {
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("gstPercent", String(form.gstPercent || 0));
+      fd.append("hsnCode", form.hsnCode || "");   // NEW
       fd.append("productFor", form.productFor || "both");
       fd.append("status", form.status || "draft");
 
@@ -454,6 +457,11 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                       <option value={18}>18%</option>
                       <option value={28}>28%</option>
                     </select>
+                  </div>
+                  {/* NEW: HSN/SAC Code */}
+                  <div>
+                    <label>HSN / SAC Code</label>
+                    <input name="hsnCode" value={form.hsnCode} onChange={handleChange} className="input-primary" placeholder="e.g. 4911, 4901" />
                   </div>
                 </div>
 

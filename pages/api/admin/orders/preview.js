@@ -30,11 +30,14 @@ export default async function handler(req, res) {
     }
 
     // 🔥 Convert order items → invoice items
+    // OLD: no hsnCode in items
+    // NEW: include hsnCode from product so invoice create can auto-fill it
     const invoiceItems = order.items.map((item) => ({
       description: item.product?.name || "Item",
       qty: item.quantity,
       rate: item.price,
-      amount: item.quantity * item.price
+      amount: item.quantity * item.price,
+      hsnCode: item.product?.hsnCode || "",
     }));
 
     return res.status(200).json({

@@ -1137,7 +1137,9 @@ const placeOrder = async (method) => {
   quantity: item.quantity,
   price: item.price,
   remarks: item.remarks || "",
-// ✅ COPY FILES FROM CART
+  // OLD: selectedAttrs was missing — so Size, GSM etc. were lost at checkout
+  // NEW: include selectedAttrs so it flows into the order
+  selectedAttrs: item.selectedAttrs || {},
   uploadedFiles: item.uploadedFiles || [],
   uploadedAttributeFiles: item.uploadedAttributeFiles || [],
 
@@ -1151,6 +1153,8 @@ const placeOrder = async (method) => {
       total: finalAmount,
       couponCode: appliedCoupon?.code || null,
       paymentMethod: method,
+      // NEW: pass orderName from first cart item (B2B mandatory field)
+      orderName: cartItems[0]?.orderName || "",
     };
 
     const res = await fetch("/api/orders/create", {

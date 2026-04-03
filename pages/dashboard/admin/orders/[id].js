@@ -114,6 +114,15 @@ export default function AdminOrderDetail() {
           <div className="card border-0 shadow-sm p-4">
 
             {/* Header */}
+
+            {/* NEW: Order Name highlight banner (B2B) */}
+            {order.orderName && (
+              <div className="alert mb-4" style={{ background: "#f3f0ff", border: "1.5px solid #c4b5fd", borderRadius: 8, padding: "10px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+                <span className="fw-bold" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7c3aed", whiteSpace: "nowrap" }}>Order Name</span>
+                <span className="fw-bold fs-5" style={{ color: "#4c1d95" }}>{order.orderName}</span>
+              </div>
+            )}
+
             <div className="d-flex justify-content-between align-items-center mb-4">
               <div>
                 <h4 className="fw-bold mb-0">Order #{order.orderNumber}</h4>
@@ -189,44 +198,48 @@ export default function AdminOrderDetail() {
                      → guaranteed to show ONLY files for THIS order item
                      → no DB query needed at all
             ─────────────────────────────────────────────────────────────── */}
-            <h6 className="fw-semibold mb-3">Uploaded Design Files</h6>
-            {order.items.map((item, idx) => (
-              <div key={idx} className="border rounded p-3 mb-3 bg-white">
-                <div className="d-flex align-items-center gap-2 mb-2">
-                  {item.product?.mainImage && (
-                    <img src={item.product.mainImage} alt={item.product?.name} width={40} height={40} style={{ objectFit: "cover", borderRadius: 6 }} />
-                  )}
-                  <strong>{item.product?.name}</strong>
-                  <span className="text-muted small">Qty: {item.quantity}</span>
-                </div>
-
-                {/* Pass the whole item — component reads uploadedAttributeFiles + uploadedFiles from it */}
-                <DesignUploads item={item} />
-              </div>
-            ))}
-
-            {/* Re-uploaded files — show only the latest */}
-            {order.reuploadedFiles?.length > 0 && (() => {
+            {/* OLD: always showed original uploaded files + re-uploaded below it */}
+            {/* NEW: if customer has re-uploaded, show ONLY the latest re-uploaded file (replaces original) */}
+            {order.reuploadedFiles?.length > 0 ? (() => {
               const latest = order.reuploadedFiles[order.reuploadedFiles.length - 1];
               return (
-                <div className="alert alert-info mt-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                  <div>
-                    <strong>Latest Re-uploaded Design</strong>
-                    {latest.uploadedAt && (
-                      <span className="text-muted ms-2" style={{ fontSize: 12 }}>
-                        — {new Date(latest.uploadedAt).toLocaleString("en-IN")}
-                      </span>
-                    )}
-                    {order.reuploadedFiles.length > 1 && (
-                      <span className="badge bg-secondary ms-2">{order.reuploadedFiles.length} uploads total</span>
-                    )}
+                <>
+                  <h6 className="fw-semibold mb-3">Uploaded Design Files</h6>
+                  <div className="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                      <strong>Latest Re-uploaded Design</strong>
+                      {latest.uploadedAt && (
+                        <span className="text-muted ms-2" style={{ fontSize: 12 }}>
+                          — {new Date(latest.uploadedAt).toLocaleString("en-IN")}
+                        </span>
+                      )}
+                      {order.reuploadedFiles.length > 1 && (
+                        <span className="badge bg-secondary ms-2">{order.reuploadedFiles.length} uploads total</span>
+                      )}
+                    </div>
+                    <a href={latest.fileUrl} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary">
+                      Download File
+                    </a>
                   </div>
-                  <a href={latest.fileUrl} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary">
-                    Download File
-                  </a>
-                </div>
+                </>
               );
-            })()}
+            })() : (
+              <>
+                <h6 className="fw-semibold mb-3">Uploaded Design Files</h6>
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="border rounded p-3 mb-3 bg-white">
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      {item.product?.mainImage && (
+                        <img src={item.product.mainImage} alt={item.product?.name} width={40} height={40} style={{ objectFit: "cover", borderRadius: 6 }} />
+                      )}
+                      <strong>{item.product?.name}</strong>
+                      <span className="text-muted small">Qty: {item.quantity}</span>
+                    </div>
+                    <DesignUploads item={item} />
+                  </div>
+                ))}
+              </>
+            )}
 
             {/* Items Table — unchanged */}
             <h6 className="fw-semibold mb-3 mt-4">
@@ -235,7 +248,9 @@ export default function AdminOrderDetail() {
             <div className="table-responsive">
               <table className="table table-hover align-middle">
                 <thead className="table-light">
-                  <tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr>
+                  {/* OLD: <tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr> — no attributes column */}
+                  {/* NEW: added Attributes column */}
+                  <tr><th>Product</th><th>Attributes</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr>
                 </thead>
                 <tbody>
                   {order.items?.map((it) => (
@@ -246,8 +261,23 @@ export default function AdminOrderDetail() {
                           <div>
                             <div className="fw-semibold">{it.product?.name}</div>
                             <div className="text-muted small">₹{it.price.toFixed(2)} each</div>
+                            {it.remarks && <div className="text-muted small mt-1">Note: {it.remarks}</div>}
                           </div>
                         </div>
+                      </td>
+                      <td>
+                        {it.selectedAttrs && Object.keys(it.selectedAttrs).length > 0 ? (
+                          <ul className="list-unstyled mb-0" style={{ fontSize: 12 }}>
+                            {Object.entries(it.selectedAttrs).map(([key, val]) => (
+                              <li key={key}>
+                                <span className="fw-semibold">{key}:</span>{" "}
+                                {Array.isArray(val) ? val.join(", ") : val}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-muted small">—</span>
+                        )}
                       </td>
                       <td>{it.quantity}</td>
                       <td>₹{it.price.toFixed(2)}</td>
@@ -313,7 +343,10 @@ export default function AdminOrderDetail() {
             <div className="mt-4 pt-3 border-top">
               <h6 className="fw-semibold mb-2">Update Order Status</h6>
               <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
+                {/* OLD: missing "Pending" option — so newly placed orders had no matching option in dropdown */}
+                {/* NEW: "Pending" added as first option */}
                 <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="form-select w-auto">
+                  <option value="Pending">Pending</option>
                   <option value="Order Received">Order Received</option>
                   <option value="Design Approved">Design Approved</option>
                   <option value="Design Rejected">Design Rejected</option>

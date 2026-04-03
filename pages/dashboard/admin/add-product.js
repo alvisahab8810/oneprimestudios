@@ -36,6 +36,7 @@ export default function AddProduct() {
     minOrderQty: 1,
     isFeatured: false,
     gstPercent: 0,
+    hsnCode: "",      // NEW: HSN/SAC code for invoicing
     productFor: "b2b",
     attributes: [],
     pricingTiers: [],
@@ -151,6 +152,7 @@ export default function AddProduct() {
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("gstPercent", String(form.gstPercent || 0));
+      fd.append("hsnCode", form.hsnCode || "");  // NEW
       fd.append("productFor", form.productFor || "both");
       fd.append("attributes", JSON.stringify(transformedAttributes));
       fd.append("pricingTiers", JSON.stringify(transformedTiers));
@@ -179,7 +181,7 @@ export default function AddProduct() {
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
         stock: 0, stockStatus: "in_stock", minOrderQty: 1, isFeatured: false,
-        gstPercent: 0, productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [],
+        gstPercent: 0, hsnCode: "", productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [],
         b2b_enabled: false, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
         b2c_enabled: true, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
       });
@@ -372,6 +374,11 @@ export default function AddProduct() {
                         <option value={18}>18%</option>
                         <option value={28}>28%</option>
                       </select>
+                    </div>
+                    {/* NEW: HSN/SAC Code */}
+                    <div>
+                      <label>HSN / SAC Code</label>
+                      <input name="hsnCode" value={form.hsnCode} onChange={handleChange} className="input-primary" placeholder="e.g. 4911, 4901" />
                     </div>
                   </div>
 

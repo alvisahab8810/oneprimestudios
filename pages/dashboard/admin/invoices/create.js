@@ -22,7 +22,9 @@ export default function CreateInvoiceAdmin() {
   const [loading, setLoading]             = useState(false);
 
   // ── Invoice items (editable) ────────────────────────────────────────────────
-  const [items, setItems] = useState([{ description: "", qty: 1, rate: 0, amount: 0 }]);
+  // OLD: { description, qty, rate, amount }
+  // NEW: added hsnCode field — auto-filled from product when order is loaded
+  const [items, setItems] = useState([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
 
   // ── Fetch single order preview ──────────────────────────────────────────────
   const fetchOrderPreview = async (index) => {
@@ -93,7 +95,7 @@ export default function CreateInvoiceAdmin() {
   };
 
   const addItemRow = () =>
-    setItems([...items, { description: "", qty: 1, rate: 0, amount: 0 }]);
+    setItems([...items, { description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
 
   const removeItemRow = (index) =>
     setItems(items.filter((_, i) => i !== index));
@@ -136,7 +138,7 @@ export default function CreateInvoiceAdmin() {
       setSellerGst("");
       setSellerAddress("");
       setRemarks("");
-      setItems([{ description: "", qty: 1, rate: 0, amount: 0 }]);
+      setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
     } catch (err) {
       console.error("create invoice:", err);
       toast.error(err.response?.data?.message || "Failed to create invoice");
@@ -297,12 +299,19 @@ export default function CreateInvoiceAdmin() {
 
             {items.map((item, index) => (
               <div className="row g-2 align-items-end mb-2" key={index}>
-                <div className="col-md-4">
+                <div className="col-md-3">
                   <label className="form-label">Description</label>
                   <input className="form-control" value={item.description}
                     onChange={(e) => handleItemChange(index, "description", e.target.value)} />
                 </div>
+                {/* NEW: HSN/SAC code column — auto-filled from product, editable */}
                 <div className="col-md-2">
+                  <label className="form-label">HSN / SAC</label>
+                  <input className="form-control" value={item.hsnCode || ""}
+                    onChange={(e) => handleItemChange(index, "hsnCode", e.target.value)}
+                    placeholder="e.g. 4911" />
+                </div>
+                <div className="col-md-1">
                   <label className="form-label">Qty</label>
                   <input type="number" className="form-control" value={item.qty}
                     onChange={(e) => handleItemChange(index, "qty", e.target.value)} />
@@ -379,7 +388,7 @@ export default function CreateInvoiceAdmin() {
               setOrderInputs([{ id: "", preview: null, loading: false }]);
               setGstPercent(0); setGstType("INTRA"); setPartnerType("B2B");
               setSellerGst(""); setSellerAddress(""); setRemarks("");
-              setItems([{ description: "", qty: 1, rate: 0, amount: 0 }]);
+              setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
             }}>
               Reset
             </button>

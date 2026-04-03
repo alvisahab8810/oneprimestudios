@@ -30,6 +30,8 @@ const CartItemSchema = new mongoose.Schema({
 
   price:   { type: Number, required: true },
   remarks: { type: String, default: "" },
+  // NEW: mandatory order name entered by B2B customer
+  orderName: { type: String, default: "" },
 });
 
 const CartSchema = new mongoose.Schema({

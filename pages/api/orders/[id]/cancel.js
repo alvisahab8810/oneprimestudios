@@ -130,22 +130,16 @@ const BLOCKED_STATUSES = [
     // });
 
     await WalletTransaction.create({
-  user: user._id,
-  type: "credit",
-  amount: order.total,
-
-  // ✅ PRODUCT NAME IN STATEMENT
-  description: `Refund - ${order.items
-    .map((i) => i.product?.name || "Product")
-    .join(", ")}`,
-
-  referenceType: "refund",
-
-  // ✅ ObjectId (CRITICAL)
-  referenceId: order._id,
-
-  status: "success",
-});
+      user: user._id,
+      type: "credit",
+      amount: order.total,
+      // OLD: no order number in description; referenceId was raw ObjectId
+      // NEW: order number in description + string referenceId for View Order link
+      description: `Refund - #${order.orderNumber} (${order.items.map((i) => i.product?.name || "Product").join(", ")})`,
+      referenceType: "refund",
+      referenceId: order._id.toString(),
+      status: "success",
+    });
 
 
     order.paymentStatus = "REFUNDED";

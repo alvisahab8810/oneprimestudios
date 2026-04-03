@@ -131,9 +131,11 @@ export default async function handler(req, res) {
             user: order.user,
             type: "credit",
             amount: order.total,
-            description: `Refund - Admin cancelled Order #${order.orderNumber}`,
+            // OLD: referenceId was raw ObjectId
+            // NEW: referenceId as string for View Order link; description includes product names
+            description: `Refund - #${order.orderNumber} (${order.items?.map((i) => i.product?.name || "Product").join(", ") || "Order"})`,
             referenceType: "refund",
-            referenceId: order._id,
+            referenceId: order._id.toString(),
             status: "success",
           });
 
