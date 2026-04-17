@@ -5,7 +5,7 @@ import User from "@/models/User";
 import Admin from "@/models/Admin";
 import mongoose from "mongoose";
 import { verifyJWT } from "@/lib/verifyJWT";
-import { hasPermission } from "@/lib/hasPermission";
+import { hasPermission, canViewPayments } from "@/lib/hasPermission";
 
 export default async function handler(req, res) {
   try {
@@ -127,11 +127,21 @@ export default async function handler(req, res) {
       .limit(limitNum)
       .lean();
 
+    const showPayments = canViewPayments(user);
+
+    // Strip payment fields for non-authorized users
+    const safeOrders = orders.map((o) => {
+      if (showPayments) return o;
+      const { paymentMethod, paymentStatus, razorpay, ...rest } = o;
+      return rest;
+    });
+
     return res.status(200).json({
-      orders,
+      orders:      safeOrders,
       total:       totalOrders,
       totalPages:  Math.ceil(totalOrders / limitNum),
       currentPage: pageNum,
+      canViewPayments: showPayments,
     });
 
   } catch (error) {

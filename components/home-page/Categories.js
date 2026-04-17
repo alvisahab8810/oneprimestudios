@@ -26,9 +26,8 @@ export default function Categories() {
   useEffect(() => {
     const fetchParentCategories = async () => {
       try {
-        // Directly fetch top-level categories (parent: null)
-        // The ?parents=true param is already supported in your /api/categories
-        const res = await axios.get("/api/categories?parents=true");
+        const userType = localStorage.getItem("userType") || "b2c";
+        const res = await axios.get(`/api/categories?parents=true&userType=${userType}`);
         setCategories(res.data || []);
       } catch (err) {
         console.error("Error fetching categories:", err);

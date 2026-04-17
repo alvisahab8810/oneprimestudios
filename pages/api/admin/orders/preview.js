@@ -40,31 +40,51 @@ export default async function handler(req, res) {
       hsnCode: item.product?.hsnCode || "",
     }));
 
+    const partnerState   = order.user?.state   || order.shipping?.state || "";
+    const partnerPincode = order.user?.pinCode || order.shipping?.zip   || "";
+
+    // Auto-detect GST type: pincode takes priority over state
+    // UP pincodes: 200001–285999
+    const pin = Number(partnerPincode);
+    const validPin = String(partnerPincode).trim().length === 6 && !isNaN(pin);
+    let autoGstType;
+    if (validPin) {
+      autoGstType = (pin >= 200001 && pin <= 285999) ? "INTRA" : "INTER";
+    } else {
+      const upStates = ["uttar pradesh", "up"];
+      autoGstType = upStates.includes(partnerState.toLowerCase().trim()) ? "INTRA"
+        : partnerState ? "INTER" : "INTRA";
+    }
+
     return res.status(200).json({
       orderId: order._id,
       orderNumber: `#${order.orderNumber}`,
       orderDate: order.createdAt,
 
-      // ✅ Partner snapshot (WITH EMAIL)
-      partnerName: order.user?.name || "—",
+      partnerName:        order.user?.name        || "—",
+      partnerCompanyName: order.user?.companyName || "",
+      partnerGst:         order.user?.gstNumber   || "",
       partnerAddress: {
-        name: order.shipping?.name || order.user?.name || "—",
-        phone: order.shipping?.phone || "—",
-        email: order.user?.email || "", // 🔥 ADD THIS
-        street: order.shipping?.street || "",
-        city: order.shipping?.city || "",
-        state: order.shipping?.state || "",
-        zip: order.shipping?.zip || "",
+        name:        order.shipping?.name   || order.user?.name || "—",
+        companyName: order.user?.companyName || "",
+        gst:         order.user?.gstNumber   || "",
+        phone:       order.shipping?.phone   || order.user?.phone || "—",
+        email:       order.user?.email       || "",
+        street:      order.user?.businessAddress || order.shipping?.street || "",
+        city:        order.user?.city   || order.shipping?.city  || "",
+        state:       partnerState,
+        zip:         partnerPincode,
       },
 
-      orderAmount: order.total,
-      orderSubtotal: order.subtotal,
-      orderGstAmount: order.gstAmount || 0,
-      paymentMethod: order.paymentMethod,
-      paymentStatus: order.paymentStatus,
+      orderAmount:       order.total,
+      orderSubtotal:     order.subtotal,
+      orderGstAmount:    order.gstAmount || 0,
+      paymentMethod:     order.paymentMethod,
+      paymentStatus:     order.paymentStatus,
       productGstPercent: order.items[0]?.product?.gstPercent ?? 0,
+      autoGstType,
 
-      items: invoiceItems
+      items: invoiceItems,
     });
 
   } catch (error) {

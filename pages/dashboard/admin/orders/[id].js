@@ -25,6 +25,7 @@ export default function AdminOrderDetail() {
   const router = useRouter();
 
   const [order, setOrder] = useState(null);
+  const [canViewPayments, setCanViewPayments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newStatus, setNewStatus] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -43,6 +44,7 @@ export default function AdminOrderDetail() {
       .then((res) => {
         setOrder(res.data.order);
         setNewStatus(res.data.order.status);
+        setCanViewPayments(res.data.canViewPayments === true);
       })
       .catch((err) => {
         console.error(err);
@@ -145,13 +147,13 @@ export default function AdminOrderDetail() {
                     <strong>Reason for Rejection:</strong> {order.remarks}
                   </div>
                 )}
-                {order.status === "Cancelled" && order.paymentStatus === "REFUNDED" && (
+                {canViewPayments && order.status === "Cancelled" && order.paymentStatus === "REFUNDED" && (
                   <div className="alert alert-success mt-2 py-1 px-3" style={{ fontSize: 13 }}>
                     ✅ Wallet refund of <strong>₹{order.total}</strong> issued
                     {order.refundedAt && <> on {new Date(order.refundedAt).toLocaleString("en-IN")}</>}
                   </div>
                 )}
-                {order.status === "Cancelled" && order.paymentMethod === "Razorpay" && (
+                {canViewPayments && order.status === "Cancelled" && order.paymentMethod === "Razorpay" && (
                   <div className="alert alert-warning mt-2 py-1 px-3" style={{ fontSize: 13 }}>
                     ℹ Razorpay payment — manual refund required via Razorpay dashboard.
                   </div>
@@ -180,12 +182,14 @@ export default function AdminOrderDetail() {
                 <div>{order.shipping?.phone}</div>
                 <div>{order.shipping?.street}, {order.shipping?.city}, {order.shipping?.state} - {order.shipping?.zip}</div>
               </div>
+              {canViewPayments && (
               <div className="col-md-4">
                 <h6 className="fw-semibold mb-2"><FaCreditCard className="me-2 text-primary" />Payment</h6>
                 <div>Method: {order.paymentMethod || "Not available"}</div>
                 <div>Transaction ID: {order.transactionId || "—"}</div>
                 <div>Paid: <span className="fw-semibold text-success">₹{order.total}</span></div>
               </div>
+              )}
             </div>
 
             {/* ── DESIGN FILES — FIX ──────────────────────────────────────────

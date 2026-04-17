@@ -90,9 +90,10 @@ export default function PartnerSalesDetail() {
   }, [status, from, to, search]);
 
   // =========================
-  // SUMMARY
+  // SUMMARY — exclude cancelled orders from totals
   // =========================
-  const totalSales = filteredOrders.reduce((sum, o) => sum + o.total, 0);
+  const activeFilteredOrders = filteredOrders.filter((o) => o.status !== "Cancelled");
+  const totalSales = activeFilteredOrders.reduce((sum, o) => sum + o.total, 0);
 
   return (
     <div className="d-flex bg-light min-vh-100">
@@ -113,7 +114,12 @@ export default function PartnerSalesDetail() {
               <div className="col-md-3">
                 <div className="card p-3 shadow-sm">
                   <strong>Total Orders</strong>
-                  <h4>{filteredOrders.length}</h4>
+                  <h4>{activeFilteredOrders.length}</h4>
+                  {filteredOrders.length !== activeFilteredOrders.length && (
+                    <small className="text-muted">
+                      ({filteredOrders.length - activeFilteredOrders.length} cancelled excluded)
+                    </small>
+                  )}
                 </div>
               </div>
 
@@ -123,6 +129,7 @@ export default function PartnerSalesDetail() {
                   <h4 className="text-success">
                     ₹{totalSales.toLocaleString("en-IN")}
                   </h4>
+                  <small className="text-muted">excl. cancelled orders</small>
                 </div>
               </div>
             </div>
@@ -209,17 +216,18 @@ export default function PartnerSalesDetail() {
                         <td>
                           {o.items.map((it, idx) => (
                             <div key={idx} className="small">
-                              • {it.product?.name || "Deleted Product"} ×{" "}
-                              {it.quantity}
+                              • {it.productName || it.product?.name || <span className="text-danger">Deleted Product</span>} × {it.quantity}
                             </div>
                           ))}
                         </td>
                         <td>
-                          <span className="badge bg-secondary">
+                          <span className={`badge ${o.status === "Cancelled" ? "bg-danger" : "bg-secondary"}`}>
                             {o.status}
                           </span>
                         </td>
-                        <td className="fw-bold">₹{o.total}</td>
+                        <td className={`fw-bold ${o.status === "Cancelled" ? "text-decoration-line-through text-muted" : ""}`}>
+                          ₹{o.total}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

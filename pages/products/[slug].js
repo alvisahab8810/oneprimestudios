@@ -363,6 +363,43 @@ export default function ProductDetails() {
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
             <p className="product-min-order">Minimum Order: {product.minOrderQty}</p>
 
+            {/* ── GST Breakdown (B2B only) ── */}
+            {product.b2bOptions?.enabled && Number(product.gstPercent) > 0 && (() => {
+              const gstPct = Number(product.gstPercent);
+              const gstAmt = finalPrice * gstPct / 100;
+              const totalWithGst = finalPrice + gstAmt;
+              return (
+                <div style={{
+                  background: "linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)",
+                  border: "1.5px solid #4f6ef7",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  margin: "12px 0 16px",
+                  fontSize: "13.5px",
+                }}>
+                  <div style={{ fontWeight: 700, color: "#3b4fb8", marginBottom: 8, fontSize: 13, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                    Price Breakdown (incl. GST)
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, color: "#444" }}>
+                    <span>Base Price (excl. GST)</span>
+                    <span>₹{finalPrice.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, color: "#e67e22" }}>
+                    <span>GST ({gstPct}%){product.hsnCode ? ` · HSN ${product.hsnCode}` : ""}</span>
+                    <span>+ ₹{gstAmt.toFixed(2)}</span>
+                  </div>
+                  <div style={{
+                    display: "flex", justifyContent: "space-between",
+                    borderTop: "1px dashed #b0bef7", paddingTop: 8, marginTop: 4,
+                    fontWeight: 700, fontSize: 15, color: "#2d3a9a"
+                  }}>
+                    <span>Total (incl. GST)</span>
+                    <span>₹{totalWithGst.toFixed(2)}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── B2B Section ── */}
             {product.b2bOptions?.enabled ? (
               <div className={styles.b2bForm}>

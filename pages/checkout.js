@@ -948,7 +948,6 @@ export default function CheckoutPage() {
           street: data.businessAddress || "",
           city: data.city || "",
           state: data.state || "",
-          // zip: data.zip || "",
           zip: data.pinCode || "",
           companyName: data.companyName || "",
           gstNumber: data.gstNumber || "",
@@ -1153,8 +1152,13 @@ const placeOrder = async (method) => {
       total: finalAmount,
       couponCode: appliedCoupon?.code || null,
       paymentMethod: method,
-      // NEW: pass orderName from first cart item (B2B mandatory field)
       orderName: cartItems[0]?.orderName || "",
+      shippingAddress: {
+        street: formData.street,
+        city:   formData.city,
+        state:  formData.state,
+        zip:    formData.zip,
+      },
     };
 
     const res = await fetch("/api/orders/create", {
@@ -1387,10 +1391,7 @@ const placeOrder = async (method) => {
                       readOnly={!!prefilled.phone}
                       style={
                         prefilled.phone
-                          ? {
-                              backgroundColor: "#f5f5f5",
-                              cursor: "not-allowed",
-                            }
+                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
                           : {}
                       }
                     />

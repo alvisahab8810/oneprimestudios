@@ -80,6 +80,14 @@ handler.get(async (req, res) => {
     if (parents === "true") filter.parent = null;
     if (search) filter.name = { $regex: search, $options: "i" };
 
+    // Filter by categoryFor based on userType:
+    // B2C users see only "b2c" or "both" categories.
+    // B2B/partner users see all categories.
+    const { userType } = req.query;
+    if (!userType || (userType !== "b2b" && userType !== "partner")) {
+      filter.categoryFor = { $in: ["b2c", "both"] };
+    }
+
     const categories = await Category.find(filter).sort({ name: 1 }).lean();
     return res.status(200).json(categories);
 

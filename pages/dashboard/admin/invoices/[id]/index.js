@@ -22,9 +22,17 @@ export default function InvoiceViewAdmin() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [canViewPayments, setCanViewPayments] = useState(false);
 
   useEffect(() => {
     if (!id) return;
+    // Fetch admin role to check payment visibility
+    axios.get("/api/admin/me", { withCredentials: true })
+      .then(r => {
+        const role = r.data?.role;
+        const perms = r.data?.permissions || [];
+        setCanViewPayments(role === "admin" || role === "super_admin" || perms.includes("payments.view"));
+      }).catch(() => {});
     axios.get(`/api/admin/invoices/${id}`, { withCredentials: true })
       .then(r => setInvoice(r.data))
       .catch(() => toast.error("Failed to load invoice"))
@@ -122,34 +130,37 @@ export default function InvoiceViewAdmin() {
         <div style={{ padding: 24, maxWidth: 960, margin: "0 auto" }}>
 
           {/* ── Invoice card ── */}
-          <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "32px 36px", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+          <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "36px 40px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
 
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
               <div>
-                <img src="/assets/images/logo.png" alt="Logo" style={{ height: 52, marginBottom: 12 }} />
-                {inv.sellerAddress && <p style={{ margin: 0, fontSize: 12, color: "#6b7280", lineHeight: 1.6 }}>{inv.sellerAddress}</p>}
-                {inv.sellerGst && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>GSTIN: <strong>{inv.sellerGst}</strong></p>}
+                <img src="/assets/images/logo.png" alt="Logo" style={{ height: 56, marginBottom: 14, display: "block" }} />
+                {inv.sellerAddress && <p style={{ margin: 0, fontSize: 12, color: "#6b7280", lineHeight: 1.7, maxWidth: 280 }}>{inv.sellerAddress}</p>}
+                {inv.sellerGst && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#374151" }}>GSTIN: <strong>{inv.sellerGst}</strong></p>}
               </div>
               <div style={{ textAlign: "right" }}>
-                <h2 style={{ margin: "0 0 6px", fontSize: 28, fontWeight: 900, letterSpacing: "-1px", color: "#111" }}>INVOICE</h2>
-                <p style={{ margin: "0 0 3px", fontSize: 13, color: "#374151" }}><strong>Invoice No:</strong> {inv.invoiceNumber}</p>
-                <p style={{ margin: "0 0 3px", fontSize: 13, color: "#374151" }}><strong>Invoice Date:</strong> {new Date(inv.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"long", year:"numeric" })}</p>
-                <p style={{ margin: "0 0 8px", fontSize: 13, color: "#374151" }}><strong>Order Ref:</strong> #{inv.orderNumber}</p>
-                <span style={{ ...sc, borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>{inv.status}</span>
+                <div style={{ display: "inline-block", background: "#111", color: "#fff", padding: "4px 18px", borderRadius: 6, fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", marginBottom: 12 }}>TAX INVOICE</div>
+                <p style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 900, letterSpacing: "-0.5px", color: "#111" }}>{inv.invoiceNumber}</p>
+                <p style={{ margin: "0 0 3px", fontSize: 12, color: "#6b7280" }}>
+                  Date: <strong style={{ color: "#111" }}>{new Date(inv.invoiceDate || inv.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}</strong>
+                </p>
+                {inv.orderNumber && <p style={{ margin: "0 0 10px", fontSize: 12, color: "#6b7280" }}>Order Ref: <strong style={{ color: "#111" }}>#{inv.orderNumber}</strong></p>}
+                <span style={{ background: sc.bg, color: sc.color, borderRadius: 6, padding: "4px 14px", fontSize: 11, fontWeight: 700 }}>{inv.status}</span>
               </div>
             </div>
 
             <div style={{ height: 1, background: "#f0f0f0", marginBottom: 24 }} />
 
-            {/* Bill To + Payment */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginBottom: 28 }}>
+            {/* Bill To + Ship To + Payment */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 20, marginBottom: 28 }}>
+              {/* Bill To */}
               <div>
                 <p style={secLbl}>Bill To</p>
-                <p style={{ margin: "0 0 3px", fontWeight: 700, fontSize: 15 }}>{inv.partnerName}</p>
+                <p style={{ margin: "0 0 3px", fontWeight: 700, fontSize: 14 }}>{inv.partnerName}</p>
                 {inv.partnerAddress?.companyName && <p style={infoTxt}>{inv.partnerAddress.companyName}</p>}
                 {inv.partnerAddress?.street && <p style={infoTxt}>{inv.partnerAddress.street}</p>}
-                {(inv.partnerAddress?.city || inv.partnerAddress?.state) && (
+                {[inv.partnerAddress?.city, inv.partnerAddress?.state, inv.partnerAddress?.zip].filter(Boolean).length > 0 && (
                   <p style={infoTxt}>{[inv.partnerAddress.city, inv.partnerAddress.state, inv.partnerAddress.zip].filter(Boolean).join(", ")}</p>
                 )}
                 {inv.partnerAddress?.gst && <p style={{ ...infoTxt, fontWeight: 600, color: "#374151" }}>GSTIN: {inv.partnerAddress.gst}</p>}
@@ -157,6 +168,25 @@ export default function InvoiceViewAdmin() {
                 {inv.partnerAddress?.email && <p style={infoTxt}>✉ {inv.partnerAddress.email}</p>}
               </div>
 
+              {/* Ship To */}
+              <div>
+                <p style={secLbl}>Ship To (Consignee)</p>
+                {(() => {
+                  const s = inv.shipToAddress || inv.partnerAddress;
+                  return <>
+                    <p style={{ margin: "0 0 3px", fontWeight: 700, fontSize: 14 }}>{s?.name || inv.partnerName}</p>
+                    {s?.companyName && <p style={infoTxt}>{s.companyName}</p>}
+                    {s?.street && <p style={infoTxt}>{s.street}</p>}
+                    {[s?.city, s?.state, s?.zip].filter(Boolean).length > 0 && (
+                      <p style={infoTxt}>{[s.city, s.state, s.zip].filter(Boolean).join(", ")}</p>
+                    )}
+                    {s?.gst && <p style={{ ...infoTxt, fontWeight: 600, color: "#374151" }}>GSTIN: {s.gst}</p>}
+                    {s?.phone && <p style={infoTxt}>📞 {s.phone}</p>}
+                  </>;
+                })()}
+              </div>
+
+              {/* Invoice Type / GST */}
               <div>
                 <p style={secLbl}>Invoice Type</p>
                 <div style={{ marginBottom: 8 }}>
@@ -170,6 +200,8 @@ export default function InvoiceViewAdmin() {
                 {inv.gstType === "NONE"  && <p style={infoTxt}>No GST applicable</p>}
               </div>
 
+              {/* Payment — restricted to admin/accounts */}
+              {canViewPayments && (
               <div>
                 <p style={secLbl}>Payment</p>
                 <p style={infoTxt}>Method: <strong>{inv.paymentSnapshot?.paymentMethod || "—"}</strong></p>
@@ -177,6 +209,7 @@ export default function InvoiceViewAdmin() {
                 <p style={infoTxt}>Txn ID: <span style={{ fontFamily: "monospace", fontSize: 12 }}>{inv.paymentSnapshot?.transactionId || "—"}</span></p>
                 {inv.sentAt && <p style={infoTxt}>Sent: {new Date(inv.sentAt).toLocaleDateString("en-IN")}</p>}
               </div>
+              )}
             </div>
 
             <div style={{ height: 1, background: "#f0f0f0", marginBottom: 24 }} />
@@ -224,40 +257,57 @@ export default function InvoiceViewAdmin() {
 
             {/* Totals */}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <div style={{ minWidth: 300 }}>
+              <div style={{ minWidth: 320, background: "#fafafa", borderRadius: 10, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
                 {[
-                  { label: "Taxable Value",       value: fmt(inv.taxableValue || inv.subTotal) },
+                  { label: "Taxable Value",           value: fmt(inv.taxableValue || inv.subTotal) },
                   ...(inv.gstType === "INTRA" ? [
                     { label: `CGST @ ${inv.cgstPercent}%`, value: fmt(inv.cgstAmount) },
                     { label: `SGST @ ${inv.sgstPercent}%`, value: fmt(inv.sgstAmount) },
                   ] : inv.gstType === "INTER" ? [
                     { label: `IGST @ ${inv.igstPercent}%`, value: fmt(inv.igstAmount) },
                   ] : []),
-                  { label: "Total Tax",           value: fmt(inv.gstAmount),   bold: true },
+                  { label: "Total Tax", value: fmt(inv.gstAmount) },
                 ].map(r => (
-                  <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f5f5f5" }}>
-                    <span style={{ fontSize: 13, color: r.bold ? "#111" : "#6b7280", fontWeight: r.bold ? 700 : 400 }}>{r.label}</span>
-                    <span style={{ fontSize: 13, fontWeight: r.bold ? 700 : 500, color: "#111" }}>{r.value}</span>
+                  <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f0f0f0" }}>
+                    <span style={{ fontSize: 13, color: "#6b7280" }}>{r.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#111" }}>{r.value}</span>
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "14px 0 0", marginTop: 4 }}>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>Grand Total</span>
-                  <span style={{ fontSize: 22, fontWeight: 900, color: "#111", letterSpacing: "-0.5px" }}>{fmt(inv.grandTotal)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0 0", marginTop: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>Grand Total</span>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: "#111", letterSpacing: "-0.5px" }}>{fmt(inv.grandTotal)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Remarks */}
-            {inv.remarks && (
-              <>
-                <div style={{ height: 1, background: "#f0f0f0", margin: "24px 0 16px" }} />
-                <p style={secLbl}>Remarks</p>
-                <p style={{ margin: 0, fontSize: 14, color: "#374151" }}>{inv.remarks}</p>
-              </>
-            )}
+            {/* Remarks + Declaration */}
+            <div style={{ height: 1, background: "#f0f0f0", margin: "28px 0 20px" }} />
+            <div style={{ display: "grid", gridTemplateColumns: inv.remarks ? "1fr 1fr" : "1fr", gap: 24 }}>
+              {inv.remarks && (
+                <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "14px 16px" }}>
+                  <p style={secLbl}>Remarks</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "#374151", lineHeight: 1.6 }}>{inv.remarks}</p>
+                </div>
+              )}
+              <div style={{ background: "#f9fafb", border: "1px solid #f0f0f0", borderRadius: 8, padding: "14px 16px" }}>
+                <p style={secLbl}>Declaration</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#6b7280", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+                  {inv.declaration || "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction."}
+                </p>
+              </div>
+            </div>
 
-            <div style={{ height: 1, background: "#f0f0f0", margin: "24px 0 16px" }} />
-            <p style={{ textAlign: "center", fontSize: 12, color: "#9ca3af", margin: 0 }}>This is a computer-generated invoice.</p>
+            {/* Footer: signatory only — no bank details */}
+            <div style={{ height: 1, background: "#f0f0f0", margin: "28px 0 20px" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>This is a computer-generated invoice.</p>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ margin: "0 0 36px", fontSize: 12, color: "#6b7280" }}>For: One Prime Studios</p>
+                <div style={{ borderTop: "1.5px solid #374151", paddingTop: 6, display: "inline-block", minWidth: 180 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: "#374151", fontWeight: 700 }}>Authorized Signatory</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

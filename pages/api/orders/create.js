@@ -7,6 +7,7 @@ import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
 import Order from "@/models/Order";
 import User from "@/models/User";
+import Product from "@/models/Product";
 import Coupon from "@/models/Coupon";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
@@ -111,15 +112,22 @@ export default async function handler(req, res) {
 
     try {
       // ── CREATE ORDER FIRST (so we have _id for wallet tx reference) ──────────
+      // Snapshot product names so they survive product deletion
+      const productIds = items.map((i) => i.product);
+      const productDocs = await Product.find({ _id: { $in: productIds } }, "name").lean();
+      const productNameMap = {};
+      productDocs.forEach((p) => { productNameMap[String(p._id)] = p.name; });
+
       const order = await Order.create(
         [
           {
             user: fullUser._id,
             items: items.map((i) => ({
-              product:  i.product,
-              quantity: i.quantity,
-              price:    i.price,
-              remarks:  i.remarks || "",
+              product:     i.product,
+              productName: productNameMap[String(i.product)] || "",
+              quantity:    i.quantity,
+              price:       i.price,
+              remarks:     i.remarks || "",
               selectedAttrs: i.selectedAttrs || {},
               uploadedFiles:          Array.isArray(i.uploadedFiles) ? i.uploadedFiles : [],
               uploadedAttributeFiles: Array.isArray(i.uploadedAttributeFiles)
@@ -140,10 +148,10 @@ export default async function handler(req, res) {
             shipping: {
               name:   fullUser.name,
               phone:  fullUser.phone,
-              street: fullUser.address || fullUser.businessAddress || "",
-              city:   fullUser.city || "",
-              state:  fullUser.state || "",
-              zip:    fullUser.pincode || "",
+              street: req.body.shippingAddress?.street || fullUser.businessAddress || fullUser.address || "",
+              city:   req.body.shippingAddress?.city   || fullUser.city    || "",
+              state:  req.body.shippingAddress?.state  || fullUser.state   || "",
+              zip:    req.body.shippingAddress?.zip    || fullUser.pinCode || "",
             },
 
             paymentMethod: normalizedPaymentMethod === "wallet" ? "Wallet" : "Razorpay",

@@ -11,15 +11,18 @@ export default async function handler(req, res) {
     await dbConnect();
 
     let {
-      orderId,          // may be ObjectId string OR order number string
-      orderNumbers = [], // all order numbers for multi-order invoice
+      orderId,
+      orderNumbers = [],
       items,
       gstPercent = 0,
       gstType = "INTRA",
       partnerType = "B2B",
-      sellerGst = "",
-      sellerAddress = "",
       remarks = "",
+      declaration = "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction.",
+      invoiceNumber: manualInvoiceNumber,
+      invoiceDate: manualInvoiceDate,
+      shipToAddress = null,
+      billToAddress = null,
     } = req.body;
 
     if (!orderId || !items?.length) {
@@ -70,8 +73,12 @@ export default async function handler(req, res) {
     const hasGst = !!(order.user?.gstNumber);
     const resolvedPartnerType = partnerType || (hasGst ? "B2B" : "B2C");
 
+    const invoiceNum = manualInvoiceNumber?.trim() || generateInvoiceNumber();
+    const invoiceDateVal = manualInvoiceDate ? new Date(manualInvoiceDate) : new Date();
+
     const invoice = await Invoice.create({
-      invoiceNumber: generateInvoiceNumber(),
+      invoiceNumber: invoiceNum,
+      invoiceDate:   invoiceDateVal,
       orderId:       order._id,
       orderNumber:   order.orderNumber,
       orderNumbers:  orderNumbers.length > 0 ? orderNumbers : [order.orderNumber],
@@ -79,7 +86,7 @@ export default async function handler(req, res) {
       partnerName:   order.user?.name || "—",
       partnerType:   resolvedPartnerType,
 
-      partnerAddress: {
+      partnerAddress: billToAddress || {
         name:        order.user?.name || "—",
         companyName: order.user?.companyName || "",
         gst:         order.user?.gstNumber || "",
@@ -91,8 +98,9 @@ export default async function handler(req, res) {
         zip:         order.user?.pinCode || order.shipping?.zip || "",
       },
 
-      sellerGst,
-      sellerAddress,
+      sellerGst:     "09CORPG5317P1Z6",
+      sellerAddress: "591/eya/19 kumhar mandi, Kharika telibagh Lucknow",
+      shipToAddress: shipToAddress || null,
       items: enrichedItems,
 
       subTotal,
@@ -111,6 +119,7 @@ export default async function handler(req, res) {
       },
 
       remarks,
+      declaration,
       status: "DRAFT",
     });
 

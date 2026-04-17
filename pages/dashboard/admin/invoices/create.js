@@ -6,27 +6,74 @@ import Sidebar from "@/components/admin-panel/Sidebar";
 import toast from "react-hot-toast";
 import Link from "next/link";
 
+// ── One Prime Studios constants (never manual) ────────────────────────────────
+const OPS = {
+  name:    "One Prime Studios",
+  address: "591/eya/19 kumhar mandi, Kharika telibagh Lucknow",
+  phone:   "8081815141",
+  email:   "admin@oneprimestudios.com",
+  gstin:   "09CORPG5317P1Z6",
+  state:   "09-Uttar Pradesh",
+  bank: {
+    name:          "UCO BANK, VRINDAVAN YOJNA",
+    accountNo:     "31350210001073",
+    ifsc:          "UCBA0003135",
+    accountHolder: "ONE PRIME STUDIOS",
+  },
+};
+
+// ── Detect GST type: pincode takes priority over state ────────────────────────
+// UP pincodes: 200001–285999. If valid 6-digit pincode is given, use it first.
+const detectGstType = (state = "", pincode = "") => {
+  const pin = Number(pincode);
+  const validPin = String(pincode).trim().length === 6 && !isNaN(pin);
+  if (validPin) {
+    return (pin >= 200001 && pin <= 285999) ? "INTRA" : "INTER";
+  }
+  // No valid pincode — fall back to state name
+  const upStates = ["uttar pradesh", "up"];
+  if (upStates.includes(state.toLowerCase().trim())) return "INTRA";
+  if (state) return "INTER";
+  return "INTRA"; // default when neither pincode nor state provided
+};
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
 export default function CreateInvoiceAdmin() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // ── Multi-order inputs ──────────────────────────────────────────────────────
   const [orderInputs, setOrderInputs] = useState([{ id: "", preview: null, loading: false }]);
 
-  // ── Invoice meta ────────────────────────────────────────────────────────────
-  const [gstPercent, setGstPercent]       = useState(0);
-  const [gstType, setGstType]             = useState("INTRA");
-  const [partnerType, setPartnerType]     = useState("B2B");
-  const [sellerGst, setSellerGst]         = useState("");
-  const [sellerAddress, setSellerAddress] = useState("");
-  const [remarks, setRemarks]             = useState("");
-  const [loading, setLoading]             = useState(false);
+  // ── Manual Invoice meta ─────────────────────────────────────────────────────
+  const [manualInvoiceNo, setManualInvoiceNo] = useState("");
+  const [invoiceDate,     setInvoiceDate]     = useState(todayISO());
 
-  // ── Invoice items (editable) ────────────────────────────────────────────────
-  // OLD: { description, qty, rate, amount }
-  // NEW: added hsnCode field — auto-filled from product when order is loaded
+  // ── Invoice settings ────────────────────────────────────────────────────────
+  const [gstPercent,  setGstPercent]  = useState(0);
+  const [gstType,     setGstType]     = useState("INTRA");
+  const [partnerType, setPartnerType] = useState("B2B");
+  const [remarks,     setRemarks]     = useState("");
+  const [declaration, setDeclaration] = useState("We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction.");
+  const [loading,     setLoading]     = useState(false);
+
+  // ── Bill To (auto-filled, editable) ────────────────────────────────────────
+  const [billTo, setBillTo] = useState({
+    name: "", companyName: "", gst: "", phone: "", email: "",
+    street: "", city: "", state: "", zip: "",
+  });
+
+  // ── Ship To / Consignee (auto-filled from Bill To, editable) ───────────────
+  const [shipSameAsBill, setShipSameAsBill] = useState(true);
+  const [shipTo, setShipTo] = useState({
+    name: "", companyName: "", gst: "", phone: "", email: "",
+    street: "", city: "", state: "", zip: "",
+  });
+
+  // ── Invoice items ────────────────────────────────────────────────────────────
   const [items, setItems] = useState([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
 
-  // ── Fetch single order preview ──────────────────────────────────────────────
+  // ── Fetch order preview ─────────────────────────────────────────────────────
   const fetchOrderPreview = async (index) => {
     const orderId = orderInputs[index].id.trim();
     if (!orderId) return;
@@ -38,9 +85,7 @@ export default function CreateInvoiceAdmin() {
     });
 
     try {
-      const res = await axios.get(
-        `/api/admin/orders/preview?orderId=${encodeURIComponent(orderId)}`
-      );
+      const res = await axios.get(`/api/admin/orders/preview?orderId=${encodeURIComponent(orderId)}`);
       const data = res.data;
 
       setOrderInputs((prev) => {
@@ -49,20 +94,39 @@ export default function CreateInvoiceAdmin() {
         return u;
       });
 
-      // Auto-fill partner info from first successful preview
+      // Auto-fill from first successful order
       if (index === 0 || !orderInputs.some((o) => o.preview)) {
-        if (data.productGstPercent !== undefined) {
+        // GST %
+        if (data.productGstPercent !== undefined && data.productGstPercent > 0) {
           setGstPercent(data.productGstPercent);
         }
+        // GST Type auto-detect
+        if (data.autoGstType) setGstType(data.autoGstType);
+
+        // Partner type
+        setPartnerType(data.partnerGst ? "B2B" : "B2C");
+
+        // Bill To
+        const addr = data.partnerAddress || {};
+        const filled = {
+          name:        data.partnerName || "",
+          companyName: addr.companyName || data.partnerCompanyName || "",
+          gst:         addr.gst || data.partnerGst || "",
+          phone:       addr.phone || "",
+          email:       addr.email || "",
+          street:      addr.street || "",
+          city:        addr.city || "",
+          state:       addr.state || "",
+          zip:         addr.zip || "",
+        };
+        setBillTo(filled);
+        if (shipSameAsBill) setShipTo(filled);
       }
 
-      // Combine items from this order into the items table
+      // Append items
       if (data.items && data.items.length > 0) {
         setItems((prev) => {
-          // Remove placeholder empty row if this is the first real data
-          const existingNonEmpty = prev.filter(
-            (it) => it.description.trim() || it.rate > 0
-          );
+          const existingNonEmpty = prev.filter((it) => it.description.trim() || it.rate > 0);
           return [...existingNonEmpty, ...data.items];
         });
       }
@@ -79,17 +143,15 @@ export default function CreateInvoiceAdmin() {
   const addOrderInput = () =>
     setOrderInputs((prev) => [...prev, { id: "", preview: null, loading: false }]);
 
-  const removeOrderInput = (index) => {
+  const removeOrderInput = (index) =>
     setOrderInputs((prev) => prev.filter((_, i) => i !== index));
-  };
 
   // ── Item helpers ────────────────────────────────────────────────────────────
   const handleItemChange = (index, field, value) => {
     const updated = [...items];
     updated[index][field] = value;
     if (field === "qty" || field === "rate") {
-      updated[index].amount =
-        Number(updated[index].qty) * Number(updated[index].rate);
+      updated[index].amount = Number(updated[index].qty) * Number(updated[index].rate);
     }
     setItems(updated);
   };
@@ -103,42 +165,38 @@ export default function CreateInvoiceAdmin() {
   // ── Create invoice ──────────────────────────────────────────────────────────
   const handleCreateInvoice = async () => {
     const validPreviews = orderInputs.filter((o) => o.preview);
-    if (validPreviews.length === 0) {
-      return toast.error("Load at least one order first");
-    }
-    if (items.length === 0) {
-      return toast.error("At least one item is required");
-    }
+    if (validPreviews.length === 0) return toast.error("Load at least one order first");
+    if (items.length === 0) return toast.error("At least one item is required");
 
     try {
       setLoading(true);
-
       const primaryPreview = validPreviews[0].preview;
       const allOrderNumbers = validPreviews.map((o) => o.preview.orderNumber.replace(/^#/, ""));
 
       await axios.post("/api/admin/invoices/create", {
-        orderId: primaryPreview.orderId,
-        orderNumbers: allOrderNumbers,
+        orderId:          primaryPreview.orderId,
+        orderNumbers:     allOrderNumbers,
         items,
         gstPercent,
         gstType,
         partnerType,
-        sellerGst,
-        sellerAddress,
         remarks,
+        declaration,
+        invoiceNumber:    manualInvoiceNo.trim() || undefined,
+        invoiceDate:      invoiceDate || undefined,
+        shipToAddress:    shipSameAsBill ? billTo : shipTo,
+        billToAddress:    billTo,
       });
 
-      toast.success("Invoice created successfully (DRAFT)");
+      toast.success("Invoice created successfully");
 
       // Reset
       setOrderInputs([{ id: "", preview: null, loading: false }]);
-      setGstPercent(0);
-      setGstType("INTRA");
-      setPartnerType("B2B");
-      setSellerGst("");
-      setSellerAddress("");
-      setRemarks("");
+      setGstPercent(0); setGstType("INTRA"); setPartnerType("B2B");
+      setRemarks(""); setDeclaration("We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction."); setManualInvoiceNo(""); setInvoiceDate(todayISO());
       setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
+      setBillTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
+      setShipTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
     } catch (err) {
       console.error("create invoice:", err);
       toast.error(err.response?.data?.message || "Failed to create invoice");
@@ -149,12 +207,13 @@ export default function CreateInvoiceAdmin() {
 
   // ── Computed totals ─────────────────────────────────────────────────────────
   const subTotal   = items.reduce((s, i) => s + Number(i.amount || 0), 0);
-  let gstAmount    = 0;
-  if (gstType === "INTRA") gstAmount = subTotal * gstPercent / 100;
-  if (gstType === "INTER") gstAmount = subTotal * gstPercent / 100;
+  const gstAmount  = gstType !== "NONE" ? subTotal * gstPercent / 100 : 0;
   const grandTotal = subTotal + gstAmount;
 
   const primaryPreview = orderInputs.find((o) => o.preview)?.preview;
+
+  const inputCls = "form-control form-control-sm";
+  const labelCls = "form-label mb-1 small fw-semibold text-secondary";
 
   return (
     <div className="d-flex">
@@ -165,20 +224,49 @@ export default function CreateInvoiceAdmin() {
 
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h1 className="dashboard-main-h">Create Invoice</h1>
-            <Link href="/dashboard/admin/invoices" className="btn btn-outline-secondary">
-              Back to Invoices
+            <Link href="/dashboard/admin/invoices" className="btn btn-outline-secondary btn-sm">
+              ← Back to Invoices
             </Link>
           </div>
 
-          <div className="card p-3 mb-4">
-            <h5 className="mb-3">Order References</h5>
+          {/* ── OPS Company Details (read-only) ── */}
+          <div className="card p-3 mb-4 border-0" style={{ background: "#f8f9ff" }}>
+            <div className="d-flex justify-content-between align-items-start">
+              <div>
+                <h5 className="fw-bold mb-1" style={{ color: "#1e3a8a" }}>{OPS.name}</h5>
+                <div className="small text-muted">
+                  {OPS.address}<br />
+                  📞 {OPS.phone} &nbsp;|&nbsp; ✉ {OPS.email}<br />
+                  <strong>GSTIN:</strong> {OPS.gstin} &nbsp;|&nbsp; <strong>State:</strong> {OPS.state}
+                </div>
+              </div>
+            </div>
+          </div>
 
+          {/* ── Invoice No. + Date (manual) ── */}
+          <div className="card p-3 mb-4">
+            <h5 className="mb-3">Invoice Details</h5>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <label className={labelCls}>Invoice No. <span className="text-muted fw-normal">(leave blank to auto-generate)</span></label>
+                <input className={inputCls} placeholder="e.g. OPS/2025-26/333"
+                  value={manualInvoiceNo} onChange={(e) => setManualInvoiceNo(e.target.value)} />
+              </div>
+              <div className="col-md-3">
+                <label className={labelCls}>Invoice Date</label>
+                <input type="date" className={inputCls}
+                  value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Order References ── */}
+          <div className="card p-3 mb-4">
+            <h5 className="mb-3">Order Reference(s)</h5>
             {orderInputs.map((input, index) => (
               <div key={index} className="row g-2 align-items-center mb-2">
                 <div className="col-md-5">
-                  <input
-                    className="form-control"
-                    placeholder={`Order Number (e.g. OPS-2025-001)`}
+                  <input className={inputCls} placeholder="Order Number (e.g. ORD-20260403-1234)"
                     value={input.id}
                     onChange={(e) => {
                       const u = [...orderInputs];
@@ -189,77 +277,122 @@ export default function CreateInvoiceAdmin() {
                   />
                 </div>
                 <div className="col-md-2">
-                  <button
-                    className="btn btn-outline-primary w-100"
-                    onClick={() => fetchOrderPreview(index)}
-                    disabled={input.loading}
-                  >
-                    {input.loading ? "Loading..." : "Load"}
+                  <button className="btn btn-outline-primary btn-sm w-100"
+                    onClick={() => fetchOrderPreview(index)} disabled={input.loading}>
+                    {input.loading ? "Loading..." : "Load Order"}
                   </button>
                 </div>
                 {orderInputs.length > 1 && (
                   <div className="col-md-1">
-                    <button
-                      className="btn btn-outline-danger"
-                      onClick={() => removeOrderInput(index)}
-                    >
-                      ✕
-                    </button>
+                    <button className="btn btn-outline-danger btn-sm" onClick={() => removeOrderInput(index)}>✕</button>
                   </div>
                 )}
                 {input.preview && (
                   <div className="col-12">
                     <div className="alert alert-success py-2 mb-0 small">
-                      <strong>{input.preview.orderNumber}</strong> —{" "}
-                      {input.preview.partnerName} |{" "}
-                      ₹{input.preview.orderAmount} |{" "}
-                      {input.preview.paymentStatus}
-                      {index === 0 && (
-                        <span className="badge bg-primary ms-2">Primary (partner info from here)</span>
-                      )}
+                      <strong>{input.preview.orderNumber}</strong> — {input.preview.partnerName} | ₹{input.preview.orderAmount} | {input.preview.paymentStatus}
                     </div>
                   </div>
                 )}
               </div>
             ))}
-
             <button className="btn btn-outline-secondary btn-sm mt-1" onClick={addOrderInput}>
               + Add Another Order
             </button>
           </div>
 
-          {/* Partner Preview (from primary order) */}
-          {primaryPreview && (
-            <div className="card p-3 mb-4 bg-light">
-              <h6 className="mb-2">Bill To (from primary order)</h6>
-              <div className="row g-2">
-                <div className="col-md-4">
-                  <strong>{primaryPreview.partnerName}</strong><br />
-                  <span className="text-muted" style={{ fontSize: 13 }}>
-                    {primaryPreview.partnerAddress?.street}
-                    {primaryPreview.partnerAddress?.city && `, ${primaryPreview.partnerAddress.city}`}
-                    {primaryPreview.partnerAddress?.state && `, ${primaryPreview.partnerAddress.state}`}
-                    {primaryPreview.partnerAddress?.zip && ` - ${primaryPreview.partnerAddress.zip}`}<br />
-                    {primaryPreview.partnerAddress?.phone && `📞 ${primaryPreview.partnerAddress.phone}`}<br />
-                    {primaryPreview.partnerAddress?.email && `📧 ${primaryPreview.partnerAddress.email}`}
-                  </span>
+          {/* ── Bill To + Ship To ── */}
+          <div className="card p-3 mb-4">
+            <h5 className="mb-3">Consignee / Bill To / Ship To</h5>
+            <div className="row g-3">
+              {/* Bill To */}
+              <div className="col-md-6">
+                <h6 className="fw-semibold mb-2" style={{ color: "#374151" }}>Bill To</h6>
+                <div className="alert alert-warning py-2 px-3 mb-2 small">
+                  ⚠️ City, State & Pincode may be empty if not saved in partner profile. Please fill them manually if needed.
                 </div>
-                <div className="col-md-4">
-                  <strong>Payment:</strong><br />
-                  {primaryPreview.paymentMethod} — {primaryPreview.paymentStatus}
+                {[
+                  ["name", "Name"],
+                  ["companyName", "Company Name"],
+                  ["gst", "GSTIN"],
+                  ["phone", "Phone"],
+                  ["email", "Email"],
+                  ["street", "Address"],
+                  ["city", "City"],
+                  ["state", "State"],
+                  ["zip", "Pincode"],
+                ].map(([field, label]) => (
+                  <div className="mb-2" key={field}>
+                    <label className={labelCls}>{label}</label>
+                    <input className={inputCls} value={billTo[field]}
+                      onChange={(e) => {
+                        const updated = { ...billTo, [field]: e.target.value };
+                        setBillTo(updated);
+                        if (shipSameAsBill) {
+                          setShipTo(updated);
+                          // Re-detect GST type if state changes
+                          if (field === "state" || field === "zip") {
+                            setGstType(detectGstType(updated.state, updated.zip));
+                          }
+                        }
+                        if (field === "state" || field === "zip") {
+                          setGstType(detectGstType(
+                            field === "state" ? e.target.value : billTo.state,
+                            field === "zip"   ? e.target.value : billTo.zip
+                          ));
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Ship To */}
+              <div className="col-md-6">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="fw-semibold mb-0" style={{ color: "#374151" }}>Ship To (Consignee)</h6>
+                  <div className="form-check form-switch mb-0">
+                    <input className="form-check-input" type="checkbox" id="shipSame"
+                      checked={shipSameAsBill}
+                      onChange={(e) => {
+                        setShipSameAsBill(e.target.checked);
+                        if (e.target.checked) setShipTo({ ...billTo });
+                      }} />
+                    <label className="form-check-label small" htmlFor="shipSame">Same as Bill To</label>
+                  </div>
                 </div>
+                {[
+                  ["name", "Name"],
+                  ["companyName", "Company Name"],
+                  ["gst", "GSTIN"],
+                  ["phone", "Phone"],
+                  ["email", "Email"],
+                  ["street", "Address"],
+                  ["city", "City"],
+                  ["state", "State"],
+                  ["zip", "Pincode"],
+                ].map(([field, label]) => (
+                  <div className="mb-2" key={field}>
+                    <label className={labelCls}>{label}</label>
+                    <input className={inputCls} value={shipTo[field]}
+                      disabled={shipSameAsBill}
+                      onChange={(e) => setShipTo((prev) => ({ ...prev, [field]: e.target.value }))}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Invoice Settings */}
+          {/* ── GST Settings ── */}
           <div className="card p-3 mb-4">
-            <h5 className="mb-3">Invoice Settings</h5>
+            <h5 className="mb-3">Tax Settings</h5>
             <div className="row g-3">
               <div className="col-md-3">
-                <label className="form-label">GST %</label>
-                <select className="form-select" value={gstPercent} onChange={(e) => setGstPercent(Number(e.target.value))}>
-                  <option value={0}>0% (None)</option>
+                <label className={labelCls}>GST % (auto-filled from product)</label>
+                <select className="form-select form-select-sm" value={gstPercent}
+                  onChange={(e) => setGstPercent(Number(e.target.value))}>
+                  <option value={0}>0% (Exempt)</option>
                   <option value={5}>5%</option>
                   <option value={12}>12%</option>
                   <option value={18}>18%</option>
@@ -267,79 +400,72 @@ export default function CreateInvoiceAdmin() {
                 </select>
               </div>
               <div className="col-md-3">
-                <label className="form-label">GST Type</label>
-                <select className="form-select" value={gstType} onChange={(e) => setGstType(e.target.value)}>
-                  <option value="INTRA">INTRA (CGST + SGST)</option>
-                  <option value="INTER">INTER (IGST)</option>
-                  <option value="NONE">NONE</option>
+                <label className={labelCls}>GST Type (auto-detected from pincode)</label>
+                <select className="form-select form-select-sm" value={gstType}
+                  onChange={(e) => setGstType(e.target.value)}>
+                  <option value="INTRA">INTRA — CGST + SGST (Within UP)</option>
+                  <option value="INTER">INTER — IGST (Outside UP)</option>
+                  <option value="NONE">NONE (Exempt / Unregistered)</option>
                 </select>
+                <div className="small text-muted mt-1">
+                  {gstType === "INTRA" && "✅ Within Uttar Pradesh"}
+                  {gstType === "INTER" && "🔄 Outside Uttar Pradesh"}
+                </div>
               </div>
               <div className="col-md-3">
-                <label className="form-label">Partner Type</label>
-                <select className="form-select" value={partnerType} onChange={(e) => setPartnerType(e.target.value)}>
+                <label className={labelCls}>Partner Type</label>
+                <select className="form-select form-select-sm" value={partnerType}
+                  onChange={(e) => setPartnerType(e.target.value)}>
                   <option value="B2B">B2B (has GSTIN)</option>
                   <option value="B2C">B2C (individual)</option>
                   <option value="UNREGISTERED">Unregistered</option>
                 </select>
               </div>
-              <div className="col-md-3">
-                <label className="form-label">Seller GSTIN</label>
-                <input className="form-control" value={sellerGst} onChange={(e) => setSellerGst(e.target.value)} placeholder="Your company GSTIN" />
-              </div>
-              <div className="col-12">
-                <label className="form-label">Seller Address</label>
-                <input className="form-control" value={sellerAddress} onChange={(e) => setSellerAddress(e.target.value)} placeholder="Your company address (shown on invoice header)" />
-              </div>
             </div>
           </div>
 
-          {/* Invoice Items */}
+          {/* ── Invoice Items ── */}
           <div className="card p-3 mb-4">
             <h5 className="mb-3">Invoice Items</h5>
-
             {items.map((item, index) => (
               <div className="row g-2 align-items-end mb-2" key={index}>
                 <div className="col-md-3">
-                  <label className="form-label">Description</label>
-                  <input className="form-control" value={item.description}
+                  <label className={labelCls}>Description</label>
+                  <input className={inputCls} value={item.description}
                     onChange={(e) => handleItemChange(index, "description", e.target.value)} />
                 </div>
-                {/* NEW: HSN/SAC code column — auto-filled from product, editable */}
                 <div className="col-md-2">
-                  <label className="form-label">HSN / SAC</label>
-                  <input className="form-control" value={item.hsnCode || ""}
+                  <label className={labelCls}>HSN / SAC</label>
+                  <input className={inputCls} value={item.hsnCode || ""}
                     onChange={(e) => handleItemChange(index, "hsnCode", e.target.value)}
                     placeholder="e.g. 4911" />
                 </div>
                 <div className="col-md-1">
-                  <label className="form-label">Qty</label>
-                  <input type="number" className="form-control" value={item.qty}
+                  <label className={labelCls}>Qty</label>
+                  <input type="number" className={inputCls} value={item.qty}
                     onChange={(e) => handleItemChange(index, "qty", e.target.value)} />
                 </div>
                 <div className="col-md-2">
-                  <label className="form-label">Rate</label>
-                  <input type="number" className="form-control" value={item.rate}
+                  <label className={labelCls}>Rate (₹)</label>
+                  <input type="number" className={inputCls} value={item.rate}
                     onChange={(e) => handleItemChange(index, "rate", e.target.value)} />
                 </div>
                 <div className="col-md-2">
-                  <label className="form-label">Amount</label>
-                  <input className="form-control" value={item.amount} disabled />
+                  <label className={labelCls}>Amount (₹)</label>
+                  <input className={inputCls} value={Number(item.amount).toFixed(2)} disabled />
                 </div>
-                <div className="col-md-2">
-                  <button className="btn btn-outline-danger w-100" onClick={() => removeItemRow(index)}
-                    disabled={items.length === 1}>
-                    Remove
-                  </button>
+                <div className="col-md-1">
+                  <button className="btn btn-outline-danger btn-sm w-100"
+                    onClick={() => removeItemRow(index)} disabled={items.length === 1}>✕</button>
                 </div>
               </div>
             ))}
-
-            <button className="btn btn-outline-primary mt-2" onClick={addItemRow}>+ Add Item</button>
+            <button className="btn btn-outline-primary btn-sm mt-2" onClick={addItemRow}>+ Add Item</button>
 
             {/* Totals */}
-            <div className="mt-4 ms-auto" style={{ maxWidth: 300 }}>
+            <div className="mt-4 ms-auto" style={{ maxWidth: 320 }}>
               <div className="d-flex justify-content-between mb-1">
-                <span>Sub Total</span>
+                <span>Sub Total (Taxable)</span>
                 <strong>₹{subTotal.toFixed(2)}</strong>
               </div>
               {gstType !== "NONE" && gstPercent > 0 && (
@@ -347,51 +473,61 @@ export default function CreateInvoiceAdmin() {
                   {gstType === "INTRA" && (
                     <>
                       <div className="d-flex justify-content-between mb-1 text-muted small">
-                        <span>CGST ({gstPercent / 2}%)</span>
+                        <span>CGST @ {gstPercent / 2}%</span>
                         <span>₹{(gstAmount / 2).toFixed(2)}</span>
                       </div>
                       <div className="d-flex justify-content-between mb-1 text-muted small">
-                        <span>SGST ({gstPercent / 2}%)</span>
+                        <span>SGST @ {gstPercent / 2}%</span>
                         <span>₹{(gstAmount / 2).toFixed(2)}</span>
                       </div>
                     </>
                   )}
                   {gstType === "INTER" && (
                     <div className="d-flex justify-content-between mb-1 text-muted small">
-                      <span>IGST ({gstPercent}%)</span>
+                      <span>IGST @ {gstPercent}%</span>
                       <span>₹{gstAmount.toFixed(2)}</span>
                     </div>
                   )}
                 </>
               )}
               <hr className="my-1" />
-              <div className="d-flex justify-content-between fw-bold">
+              <div className="d-flex justify-content-between fw-bold fs-6">
                 <span>Grand Total</span>
                 <span>₹{grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
-          {/* Remarks */}
+          {/* ── Remarks + Declaration (editable) ── */}
           <div className="card p-3 mb-4">
-            <label className="form-label">Remarks</label>
-            <textarea className="form-control" rows="3" value={remarks}
-              onChange={(e) => setRemarks(e.target.value)} />
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className={labelCls}>Remarks (optional — printed on invoice)</label>
+                <textarea className="form-control form-control-sm" rows="3" value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="e.g. Special instructions, payment terms..." />
+              </div>
+              <div className="col-md-6">
+                <label className={labelCls}>Declaration (editable — printed on invoice)</label>
+                <textarea className="form-control form-control-sm" rows="3" value={declaration}
+                  onChange={(e) => setDeclaration(e.target.value)} />
+              </div>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="mb-4">
+          {/* ── Actions ── */}
+          <div className="mb-5">
             <button className="btn btn-success me-2" onClick={handleCreateInvoice} disabled={loading}>
               {loading ? "Creating..." : "Create Invoice"}
             </button>
             <button className="btn btn-outline-secondary" onClick={() => {
               setOrderInputs([{ id: "", preview: null, loading: false }]);
               setGstPercent(0); setGstType("INTRA"); setPartnerType("B2B");
-              setSellerGst(""); setSellerAddress(""); setRemarks("");
+              setRemarks(""); setDeclaration("We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction."); setManualInvoiceNo(""); setInvoiceDate(todayISO());
               setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
-            }}>
-              Reset
-            </button>
+              setBillTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
+              setShipTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
+            }}>Reset</button>
           </div>
 
         </div>

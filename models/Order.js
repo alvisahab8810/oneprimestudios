@@ -142,6 +142,9 @@ const OrderSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Snapshot of product name at time of order — preserved even if product is deleted
+    productName: { type: String, default: "" },
+
     quantity: {
       type: Number,
       required: true,

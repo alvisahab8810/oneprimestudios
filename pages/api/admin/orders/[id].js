@@ -14,7 +14,7 @@ import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 
 import { verifyJWT } from "@/lib/verifyJWT";
-import { hasPermission } from "@/lib/hasPermission";
+import { hasPermission, canViewPayments } from "@/lib/hasPermission";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -75,7 +75,16 @@ export default async function handler(req, res) {
       // ✅ Ensure uploadedFiles always exists
       order.uploadedFiles = order.uploadedFiles || [];
 
-      return res.status(200).json({ order });
+      const showPayments = canViewPayments(user);
+      if (!showPayments) {
+        const orderObj = order.toObject ? order.toObject() : order;
+        delete orderObj.paymentMethod;
+        delete orderObj.paymentStatus;
+        delete orderObj.razorpay;
+        return res.status(200).json({ order: orderObj, canViewPayments: false });
+      }
+
+      return res.status(200).json({ order, canViewPayments: true });
     } catch (err) {
       console.error("❌ Error fetching order:", err);
       return res.status(500).json({ message: "Failed to fetch order" });

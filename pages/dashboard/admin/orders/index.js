@@ -23,6 +23,7 @@ export default function AdminOrdersPage() {
   const [totalPages, setTotalPages]       = useState(1);
   const [totalCount, setTotalCount]       = useState(0);
   const [sidebarOpen, setSidebarOpen]     = useState(true);
+  const [canViewPayments, setCanViewPayments] = useState(false);
 
   // ── Debounce search ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function AdminOrdersPage() {
       setOrders(res.data.orders || []);
       setTotalPages(res.data.totalPages || 1);
       setTotalCount(res.data.total || res.data.orders?.length || 0);
+      setCanViewPayments(res.data.canViewPayments === true);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to load orders");
     } finally {
@@ -88,7 +90,7 @@ export default function AdminOrdersPage() {
       UserType:  o.user?.userType,
       Total:     o.total,
       Status:    o.status,
-      Payment:   o.paymentMethod,
+      ...(canViewPayments ? { Payment: o.paymentMethod } : {}),
       Products:  o.items.map((i) => i.product?.name).join(", "),
       CreatedAt: new Date(o.createdAt).toLocaleString(),
     }));
@@ -343,7 +345,7 @@ export default function AdminOrdersPage() {
                         <input type="checkbox" checked={allChecked}
                           onChange={e => setSelectedOrders(e.target.checked ? orders.map(o => o._id) : [])} />
                       </th>
-                      {["Order No", "Products", "Customer", "Type", "Total", "Status", "Payment", "Date", "Actions"].map(h => (
+                      {["Order No", "Products", "Customer", "Type", "Total", "Status", ...(canViewPayments ? ["Payment"] : []), "Date", "Actions"].map(h => (
                         <th key={h} style={thStyle}>{h}</th>
                       ))}
                     </tr>
@@ -391,7 +393,7 @@ export default function AdminOrdersPage() {
                           <span style={statusBadge(o.status)}>{o.status}</span>
                         </td>
 
-                        <td style={tdStyle}>{o.paymentMethod || "—"}</td>
+                        {canViewPayments && <td style={tdStyle}>{o.paymentMethod || "—"}</td>}
 
                         <td style={{ ...tdStyle, whiteSpace: "nowrap", color: "#888" }}>
                           {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}

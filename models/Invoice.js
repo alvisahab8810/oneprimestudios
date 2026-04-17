@@ -29,9 +29,24 @@ const invoiceSchema = new mongoose.Schema(
       zip:         String,
     },
 
+    // ── Invoice date (manual override) ───────────────────────────────────────
+    invoiceDate: { type: Date, default: null },
+
+    // ── Ship To / Consignee (can differ from Bill To) ─────────────────────────
+    shipToAddress: {
+      name:        String,
+      companyName: String,
+      gst:         String,
+      phone:       String,
+      street:      String,
+      city:        String,
+      state:       String,
+      zip:         String,
+    },
+
     // ── Seller info (your company) ────────────────────────────────────────────
-    sellerGst:     { type: String, default: "" },   // your company GSTIN
-    sellerAddress: { type: String, default: "" },   // your company address
+    sellerGst:     { type: String, default: "09CORPG5317P1Z6" },
+    sellerAddress: { type: String, default: "591/eya/19 kumhar mandi, Kharika telibagh Lucknow" },
 
     // ── Invoice items with HSN ────────────────────────────────────────────────
     items: [
@@ -78,7 +93,8 @@ const invoiceSchema = new mongoose.Schema(
       transactionId:  String,
     },
 
-    remarks:   { type: String, default: "" },
+    remarks:     { type: String, default: "" },
+    declaration: { type: String, default: "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction." },
 
     status: {
       type: String,

@@ -36,7 +36,8 @@ export default async function handler(req, res) {
 const orders = await Order.find({ user: partnerId })
   .sort({ createdAt: -1 })
   .select("orderNumber total status createdAt items paymentMethod")
-  .populate("items.product", "name");
+  .populate("items.product", "name")
+  .lean();
 
 
     return res.status(200).json({

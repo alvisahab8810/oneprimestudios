@@ -27,6 +27,7 @@ export default async function handler(req, res) {
 
     const {
       name,
+      phone,
       companyName,
       gstNumber,
       businessAddress,
@@ -37,8 +38,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Invalid GST number" });
     }
 
+    if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
+    }
+
     // ✅ Update allowed fields only
     if (name) dbUser.name = name;
+    if (phone) dbUser.phone = phone;
     if (companyName) dbUser.companyName = companyName;
     if (gstNumber) dbUser.gstNumber = gstNumber;
     if (businessAddress) dbUser.businessAddress = businessAddress;
@@ -50,6 +56,7 @@ export default async function handler(req, res) {
       user: {
         name: dbUser.name,
         email: dbUser.email,
+        phone: dbUser.phone,
         companyName: dbUser.companyName,
         gstNumber: dbUser.gstNumber,
         businessAddress: dbUser.businessAddress,

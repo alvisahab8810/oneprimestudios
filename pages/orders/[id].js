@@ -307,7 +307,7 @@ export default function OrderDetailPage() {
   if (!order) return null;
 
   const c = scfg(order.status);
-  const canCancel = ["Pending","Order Received","In Packaging","Design Rejected"].includes(order.status);
+  const canCancel = order.status === "Order Received" || order.status === "Design Rejected";
 
   return (
     <>

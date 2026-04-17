@@ -8,6 +8,7 @@ import Footer from "@/components/footer/Footer";
 export default function ProfilePage() {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -37,22 +38,30 @@ export default function ProfilePage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const validate = () => {
+    const newErrors = {};
+    if (form.phone && !/^[6-9]\d{9}$/.test(form.phone)) {
+      newErrors.phone = "Enter a valid 10-digit mobile number.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
+    if (!validate()) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.put("/api/user/update", form, {
+      const res = await axios.put("/api/user/update", form, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       toast.success("Profile updated successfully");
 
-      // 🔥 Sync updated name/email with localStorage (for header popup)
-localStorage.setItem("name", res.data.user.name);
-localStorage.setItem("email", res.data.user.email);
-
-// Optional: force header re-render on all pages
-window.dispatchEvent(new Event("user-profile-updated"));
-
+      if (res.data?.user) {
+        localStorage.setItem("name", res.data.user.name || form.name);
+        localStorage.setItem("email", res.data.user.email || form.email);
+        window.dispatchEvent(new Event("user-profile-updated"));
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Update failed");
     }
@@ -74,6 +83,19 @@ window.dispatchEvent(new Event("user-profile-updated"));
             value={form.name || ""}
             onChange={handleChange}
           />
+        </div>
+
+        <div className="mb-3">
+          <label>Mobile Number</label>
+          <input
+            className={`form-control ${errors.phone ? "is-invalid" : ""}`}
+            name="phone"
+            value={form.phone || ""}
+            onChange={handleChange}
+            placeholder="10-digit mobile number"
+            maxLength={10}
+          />
+          {errors.phone && <div className="invalid-feedback">{errors.phone}</div>}
         </div>
 
         <div className="mb-3">
