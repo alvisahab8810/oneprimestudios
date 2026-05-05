@@ -12,6 +12,11 @@
 
 @media(max-width:760px){
 
+    .b2b-container-area {
+    gap: 0px;
+    flex-wrap: wrap;
+}
+
         .contact-form {
         width: 100%;
     }

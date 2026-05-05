@@ -259,7 +259,7 @@ export default function InvoiceViewAdmin() {
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <div style={{ minWidth: 320, background: "#fafafa", borderRadius: 10, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
                 {[
-                  { label: "Taxable Value",           value: fmt(inv.taxableValue || inv.subTotal) },
+                  { label: "Taxable Value", value: fmt(inv.taxableValue || inv.subTotal) },
                   ...(inv.gstType === "INTRA" ? [
                     { label: `CGST @ ${inv.cgstPercent}%`, value: fmt(inv.cgstAmount) },
                     { label: `SGST @ ${inv.sgstPercent}%`, value: fmt(inv.sgstAmount) },
@@ -273,6 +273,23 @@ export default function InvoiceViewAdmin() {
                     <span style={{ fontSize: 13, fontWeight: 500, color: "#111" }}>{r.value}</span>
                   </div>
                 ))}
+                {/* Coupon — after GST, before grand total.
+                    Use saved couponDiscount if available; otherwise infer from totals
+                    (handles invoices created before the coupon-save fix). */}
+                {(() => {
+                  const saved    = Number(inv.couponDiscount || 0);
+                  const inferred = Math.round(((inv.subTotal || 0) + (inv.gstAmount || 0) - (inv.grandTotal || 0)) * 100) / 100;
+                  const discount = saved > 0 ? saved : (inferred > 0.001 ? inferred : 0);
+                  if (!discount) return null;
+                  return (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f0f0f0" }}>
+                      <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
+                        Coupon Discount {inv.couponCode ? `(${inv.couponCode})` : ""}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>− {fmt(discount)}</span>
+                    </div>
+                  );
+                })()}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0 0", marginTop: 4 }}>
                   <span style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>Grand Total</span>
                   <span style={{ fontSize: 24, fontWeight: 900, color: "#111", letterSpacing: "-0.5px" }}>{fmt(inv.grandTotal)}</span>

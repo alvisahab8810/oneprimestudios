@@ -15,6 +15,7 @@ import WalletTransaction from "@/models/WalletTransaction";
 
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission, canViewPayments } from "@/lib/hasPermission";
+import { logActivity } from "@/lib/logActivity";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -154,6 +155,12 @@ export default async function handler(req, res) {
       }
 
       await order.save();
+
+      // Fire-and-forget activity log
+      logActivity(req, "order_status_updated",
+        `Order #${order.orderNumber || id} status changed to "${status}"`,
+        { entity: "order", entityId: id, meta: { status, orderNumber: order.orderNumber } }
+      );
 
       /* ===== EMAIL LOGIC (UNCHANGED) ===== */
       const emailHtml = orderStatusTemplate({

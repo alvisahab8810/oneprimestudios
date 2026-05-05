@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Invoice from "@/models/Invoice";
 import Order from "@/models/Order";
 import { generateInvoiceNumber } from "@/utils/generateInvoiceNumber";
+import { logActivity } from "@/lib/logActivity";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
       invoiceDate: manualInvoiceDate,
       shipToAddress = null,
       billToAddress = null,
+      coupon = null,
     } = req.body;
 
     if (!orderId || !items?.length) {
@@ -40,9 +42,21 @@ export default async function handler(req, res) {
     }
     if (!order) return res.status(404).json({ message: "Order not found" });
 
+    // ── Duplicate invoice guard ───────────────────────────────────────────────
+    const existing = await Invoice.findOne({ orderId: order._id });
+    if (existing) {
+      return res.status(400).json({
+        message: `Invoice ${existing.invoiceNumber} already exists for this order.`,
+      });
+    }
+
     // ── Tax calculations ──────────────────────────────────────────────────────
-    const subTotal     = items.reduce((s, i) => s + Number(i.amount || 0), 0);
-    const taxableValue = subTotal;
+    const subTotal       = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+    const couponDiscount = Number(coupon?.discountAmount || 0);
+    const couponCode     = coupon?.code || "";
+    // GST is on the full item amount (as charged at order time).
+    // Coupon discount reduces the final grand total, not the taxable base.
+    const taxableValue   = subTotal;
 
     let cgstPercent = 0, sgstPercent = 0, igstPercent = 0;
     let cgstAmount  = 0, sgstAmount  = 0, igstAmount  = 0;
@@ -61,7 +75,7 @@ export default async function handler(req, res) {
     }
     // NONE → all zero
 
-    const grandTotal = taxableValue + gstAmount;
+    const grandTotal = taxableValue + gstAmount - couponDiscount;
 
     // ── Items with taxable amount ──────────────────────────────────────────────
     const enrichedItems = items.map(item => ({
@@ -104,6 +118,8 @@ export default async function handler(req, res) {
       items: enrichedItems,
 
       subTotal,
+      couponCode,
+      couponDiscount,
       taxableValue,
       gstPercent,
       gstType,
@@ -123,7 +139,12 @@ export default async function handler(req, res) {
       status: "DRAFT",
     });
 
-    return res.status(201).json({ message: "Invoice draft created", invoice });
+    res.status(201).json({ message: "Invoice draft created", invoice });
+    logActivity(req, "invoice_created",
+      `Invoice ${invoice.invoiceNumber} created for order #${invoice.orderNumber} (${invoice.partnerName})`,
+      { entity: "invoice", entityId: String(invoice._id), meta: { invoiceNumber: invoice.invoiceNumber, orderNumber: invoice.orderNumber } }
+    );
+    return;
 
   } catch (error) {
     console.error("INVOICE CREATE ERROR:", error);

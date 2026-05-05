@@ -279,6 +279,13 @@ export default async function handler(req, res) {
           ? `<tr><td>IGST @ ${inv.igstPercent||0}%</td><td class="r">₹${fmt(inv.igstAmount)}</td></tr>`
           : ""}
       <tr><td>Total Tax</td><td class="r">₹${fmt(inv.gstAmount)}</td></tr>
+      ${(() => {
+        const saved    = Number(inv.couponDiscount || 0);
+        const inferred = Math.round(((inv.subTotal || 0) + (inv.gstAmount || 0) - (inv.grandTotal || 0)) * 100) / 100;
+        const discount = saved > 0 ? saved : (inferred > 0.001 ? inferred : 0);
+        if (!discount) return "";
+        return `<tr><td style="color:#16a34a;font-weight:600">Coupon Discount${inv.couponCode ? ` (${inv.couponCode})` : ""}</td><td class="r" style="color:#16a34a;font-weight:600">− ₹${fmt(discount)}</td></tr>`;
+      })()}
       <tr class="grand-row"><td>Grand Total</td><td class="r">₹${fmt(inv.grandTotal)}</td></tr>
     </table>
   </div>

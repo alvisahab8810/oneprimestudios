@@ -50,8 +50,9 @@ export default async function handler(req, res) {
           igstAmount  = (taxableValue * igstPercent) / 100;
         }
 
-        const gstAmount  = cgstAmount + sgstAmount + igstAmount;
-        const grandTotal = taxableValue + gstAmount;
+        const gstAmount      = cgstAmount + sgstAmount + igstAmount;
+        const couponDiscount = Number(invoice.couponDiscount || 0);
+        const grandTotal     = taxableValue + gstAmount - couponDiscount;
 
         invoice.items          = items.map(i => ({ ...i, taxableAmount: Number(i.amount || 0) }));
         invoice.subTotal       = subTotal;

@@ -107,7 +107,8 @@ export default function EditProductPage() {
   options: Array.isArray(attr.values)
     ? attr.values.map((v) => ({
         label: v.label,
-        priceModifier: v.priceModifier,
+        priceModifier: v.priceModifier ?? 0,
+        pricingTiers: Array.isArray(v.pricingTiers) ? v.pricingTiers : [],
       }))
     : [],
 
@@ -300,6 +301,9 @@ export default function EditProductPage() {
   const values = rawOptions.map((o) => ({
     label: String(o.label || "").trim(),
     priceModifier: Number(o.priceModifier || 0),
+    pricingTiers: (o.pricingTiers || [])
+      .filter(t => t.minQty !== "" && t.priceModifier !== "")
+      .map(t => ({ minQty: Number(t.minQty), priceModifier: Number(t.priceModifier) })),
   }));
 
   return {
@@ -620,44 +624,62 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                         <div className="options-section ms-3">
                           <label className="fw-bold">Options:</label>
                           {attr.options?.map((opt, j) => (
-                            <div
-                              key={j}
-                              className="d-flex align-items-center gap-2 mb-2"
-                            >
-                              <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Option Label (e.g. Single Side)"
-                                value={opt.label}
-                                onChange={(e) => {
-                                  const newOptions = [...attr.options];
-                                  newOptions[j].label = e.target.value;
-                                  updateAttribute(i, { options: newOptions });
-                                }}
-                              />
-                              <input
-                                type="number"
-                                className="form-control"
-                                placeholder="Price Modifier (₹)"
-                                value={opt.priceModifier}
-                                onChange={(e) => {
-                                  const newOptions = [...attr.options];
-                                  newOptions[j].priceModifier = e.target.value;
-                                  updateAttribute(i, { options: newOptions });
-                                }}
-                              />
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => {
-                                  const newOptions = attr.options.filter(
-                                    (_, idx) => idx !== j
-                                  );
-                                  updateAttribute(i, { options: newOptions });
-                                }}
-                              >
-                                ❌
-                              </button>
+                            <div key={j} className="mb-3 p-2 border rounded" style={{ background: "#f9f9f9" }}>
+                              {/* ── Option label + default price ── */}
+                              <div className="d-flex align-items-center gap-2 mb-1">
+                                <input type="text" className="form-control" placeholder="Option Label (e.g. Single Side)" value={opt.label}
+                                  onChange={(e) => { const o = [...attr.options]; o[j] = { ...o[j], label: e.target.value }; updateAttribute(i, { options: o }); }} />
+                                <input type="number" className="form-control" placeholder="Default Price (₹)" value={opt.priceModifier}
+                                  style={{ maxWidth: 160 }}
+                                  onChange={(e) => { const o = [...attr.options]; o[j] = { ...o[j], priceModifier: e.target.value }; updateAttribute(i, { options: o }); }} />
+                                <button type="button" className="btn btn-sm btn-outline-danger"
+                                  onClick={() => { updateAttribute(i, { options: attr.options.filter((_, idx) => idx !== j) }); }}>❌</button>
+                              </div>
+
+                              {/* ── Qty-based pricing tiers for this option ── */}
+                              <div className="ms-2 mt-1">
+                                <div className="d-flex align-items-center gap-2 mb-1">
+                                  <small className="text-muted fw-semibold">Qty Pricing Tiers (optional):</small>
+                                  <button type="button" className="btn btn-xs btn-outline-secondary"
+                                    style={{ fontSize: 11, padding: "1px 8px" }}
+                                    onClick={() => {
+                                      const o = [...attr.options];
+                                      o[j] = { ...o[j], pricingTiers: [...(o[j].pricingTiers || []), { minQty: "", priceModifier: "" }] };
+                                      updateAttribute(i, { options: o });
+                                    }}>+ Add Tier</button>
+                                </div>
+                                {(opt.pricingTiers || []).map((tier, ti) => (
+                                  <div key={ti} className="d-flex align-items-center gap-2 mb-1">
+                                    <span style={{ fontSize: 12, color: "#6b7280", minWidth: 28 }}>≥</span>
+                                    <input type="number" className="form-control form-control-sm" placeholder="Min Qty" value={tier.minQty}
+                                      style={{ maxWidth: 100 }}
+                                      onChange={(e) => {
+                                        const o = [...attr.options];
+                                        const tiers = [...(o[j].pricingTiers || [])];
+                                        tiers[ti] = { ...tiers[ti], minQty: e.target.value };
+                                        o[j] = { ...o[j], pricingTiers: tiers };
+                                        updateAttribute(i, { options: o });
+                                      }} />
+                                    <span style={{ fontSize: 12, color: "#6b7280" }}>→ ₹</span>
+                                    <input type="number" className="form-control form-control-sm" placeholder="Price" value={tier.priceModifier}
+                                      style={{ maxWidth: 100 }}
+                                      onChange={(e) => {
+                                        const o = [...attr.options];
+                                        const tiers = [...(o[j].pricingTiers || [])];
+                                        tiers[ti] = { ...tiers[ti], priceModifier: e.target.value };
+                                        o[j] = { ...o[j], pricingTiers: tiers };
+                                        updateAttribute(i, { options: o });
+                                      }} />
+                                    <button type="button" className="btn btn-xs btn-outline-danger"
+                                      style={{ fontSize: 11, padding: "1px 6px" }}
+                                      onClick={() => {
+                                        const o = [...attr.options];
+                                        o[j] = { ...o[j], pricingTiers: (o[j].pricingTiers || []).filter((_, ti2) => ti2 !== ti) };
+                                        updateAttribute(i, { options: o });
+                                      }}>✕</button>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           ))}
 
@@ -823,15 +845,11 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
 
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline-primary"
+                            className="btn btn-sm btn-outline-primary mt-2"
                             onClick={() => {
-                              const newOptions = attr.options
-                                ? [
-                                    ...attr.options,
-                                    { label: "", priceModifier: 0 },
-                                  ]
-                                : [{ label: "", priceModifier: 0 }];
-                              updateAttribute(i, { options: newOptions });
+                              updateAttribute(i, {
+                                options: [...(attr.options || []), { label: "", priceModifier: 0, pricingTiers: [] }],
+                              });
                             }}
                           >
                             ➕ Add Option

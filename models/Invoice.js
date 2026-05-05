@@ -74,6 +74,9 @@ const invoiceSchema = new mongoose.Schema(
     igstAmount:    Number,
     gstAmount:     Number,   // total tax = cgst+sgst OR igst
 
+    couponCode:       { type: String, default: "" },
+    couponDiscount:   { type: Number, default: 0 },  // amount deducted before tax
+
     grandTotal:    Number,   // taxableValue + gstAmount
 
     // ── GST type (intra vs inter state) ───────────────────────────────────────

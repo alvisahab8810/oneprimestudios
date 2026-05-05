@@ -82,7 +82,12 @@ export default async function handler(req, res) {
     }
 
     // ── Step 3: fetch orders ─────────────────────────────────────────────────
-    const total = await Order.countDocuments(filter);
+    const [countResult, amtResult] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.aggregate([{ $match: filter }, { $group: { _id: null, sum: { $sum: "$total" } } }]),
+    ]);
+    const total       = countResult;
+    const totalAmount = amtResult[0]?.sum || 0;
 
     let orders = await Order.find(filter)
       .populate({
@@ -107,6 +112,7 @@ export default async function handler(req, res) {
     return res.json({
       orders,
       total,
+      totalAmount,
       totalPages: Math.ceil(total / limitNum),
       currentPage: pageNum,
     });

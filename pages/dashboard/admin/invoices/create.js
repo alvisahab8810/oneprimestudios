@@ -73,6 +73,9 @@ export default function CreateInvoiceAdmin() {
   // ── Invoice items ────────────────────────────────────────────────────────────
   const [items, setItems] = useState([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
 
+  // ── Coupon (auto-fetched from order) ─────────────────────────────────────────
+  const [coupon, setCoupon] = useState(null); // { code, discountAmount }
+
   // ── Fetch order preview ─────────────────────────────────────────────────────
   const fetchOrderPreview = async (index) => {
     const orderId = orderInputs[index].id.trim();
@@ -121,6 +124,9 @@ export default function CreateInvoiceAdmin() {
         };
         setBillTo(filled);
         if (shipSameAsBill) setShipTo(filled);
+
+        // Coupon discount
+        setCoupon(data.coupon || null);
       }
 
       // Append items
@@ -186,6 +192,7 @@ export default function CreateInvoiceAdmin() {
         invoiceDate:      invoiceDate || undefined,
         shipToAddress:    shipSameAsBill ? billTo : shipTo,
         billToAddress:    billTo,
+        coupon:           coupon || null,
       });
 
       toast.success("Invoice created successfully");
@@ -197,6 +204,7 @@ export default function CreateInvoiceAdmin() {
       setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
       setBillTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
       setShipTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
+      setCoupon(null);
     } catch (err) {
       console.error("create invoice:", err);
       toast.error(err.response?.data?.message || "Failed to create invoice");
@@ -206,11 +214,12 @@ export default function CreateInvoiceAdmin() {
   };
 
   // ── Computed totals ─────────────────────────────────────────────────────────
-  const subTotal   = items.reduce((s, i) => s + Number(i.amount || 0), 0);
-  const gstAmount  = gstType !== "NONE" ? subTotal * gstPercent / 100 : 0;
-  const grandTotal = subTotal + gstAmount;
-
-  const primaryPreview = orderInputs.find((o) => o.preview)?.preview;
+  // GST is on the full item subtotal (as charged at order time).
+  // Coupon discount reduces the final grand total directly.
+  const subTotal       = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const couponDiscount = coupon?.discountAmount || 0;
+  const gstAmount      = gstType !== "NONE" ? subTotal * gstPercent / 100 : 0;
+  const grandTotal     = subTotal + gstAmount - couponDiscount;
 
   const inputCls = "form-control form-control-sm";
   const labelCls = "form-label mb-1 small fw-semibold text-secondary";
@@ -273,7 +282,6 @@ export default function CreateInvoiceAdmin() {
                       u[index] = { ...u[index], id: e.target.value, preview: null };
                       setOrderInputs(u);
                     }}
-                    onBlur={() => fetchOrderPreview(index)}
                   />
                 </div>
                 <div className="col-md-2">
@@ -463,7 +471,7 @@ export default function CreateInvoiceAdmin() {
             <button className="btn btn-outline-primary btn-sm mt-2" onClick={addItemRow}>+ Add Item</button>
 
             {/* Totals */}
-            <div className="mt-4 ms-auto" style={{ maxWidth: 320 }}>
+            <div className="mt-4 ms-auto" style={{ maxWidth: 340 }}>
               <div className="d-flex justify-content-between mb-1">
                 <span>Sub Total (Taxable)</span>
                 <strong>₹{subTotal.toFixed(2)}</strong>
@@ -489,6 +497,12 @@ export default function CreateInvoiceAdmin() {
                     </div>
                   )}
                 </>
+              )}
+              {coupon && couponDiscount > 0 && (
+                <div className="d-flex justify-content-between mb-1 text-success small fw-semibold">
+                  <span>Coupon Discount ({coupon.code})</span>
+                  <span>− ₹{couponDiscount.toFixed(2)}</span>
+                </div>
               )}
               <hr className="my-1" />
               <div className="d-flex justify-content-between fw-bold fs-6">
@@ -527,6 +541,7 @@ export default function CreateInvoiceAdmin() {
               setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
               setBillTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
               setShipTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
+              setCoupon(null);
             }}>Reset</button>
           </div>
 

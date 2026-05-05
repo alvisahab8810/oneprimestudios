@@ -1,6 +1,7 @@
 // pages/api/products/index.js
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
+import { logActivity } from "@/lib/logActivity";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -19,6 +20,10 @@ export default async function handler(req, res) {
       const product = new Product(req.body);
       await product.save();
       res.status(201).json(product);
+      logActivity(req, "product_added",
+        `Product "${product.name}" added`,
+        { entity: "product", entityId: String(product._id), meta: { productName: product.name, slug: product.slug } }
+      );
     } catch (err) {
       res.status(400).json({ message: err.message });
     }

@@ -29,6 +29,28 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    // ── Gate: invoice only allowed after customer places dispatch request ──────
+    const dispatchOk =
+      order.dispatchRequest === "pending" ||
+      order.dispatchRequest === "approved" ||
+      order.status === "Order Dispatched" ||
+      order.status === "Order Delivered";
+
+    if (!dispatchOk) {
+      return res.status(400).json({
+        message: `Invoice cannot be created yet. Customer must place a dispatch request first. Current status: "${order.status}"`,
+      });
+    }
+
+    // ── Gate: no duplicate invoice for same order ─────────────────────────────
+    const Invoice = (await import("@/models/Invoice")).default;
+    const existing = await Invoice.findOne({ orderId: order._id });
+    if (existing) {
+      return res.status(400).json({
+        message: `Invoice ${existing.invoiceNumber} already exists for this order.`,
+      });
+    }
+
     // 🔥 Convert order items → invoice items
     // OLD: no hsnCode in items
     // NEW: include hsnCode from product so invoice create can auto-fill it
@@ -83,6 +105,10 @@ export default async function handler(req, res) {
       paymentStatus:     order.paymentStatus,
       productGstPercent: order.items[0]?.product?.gstPercent ?? 0,
       autoGstType,
+
+      coupon: order.coupon?.code
+        ? { code: order.coupon.code, discountAmount: order.coupon.discountAmount || 0 }
+        : null,
 
       items: invoiceItems,
     });

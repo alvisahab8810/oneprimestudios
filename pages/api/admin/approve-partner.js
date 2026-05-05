@@ -125,6 +125,7 @@
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import { sendEmail } from "@/lib/sendEmail";
+import { logActivity } from "@/lib/logActivity";
 // import nodemailer from "nodemailer";
 
 export default async function handler(req, res) {
@@ -154,6 +155,15 @@ export default async function handler(req, res) {
         : "Partner approval revoked 🚫",
       user,
     });
+
+    // Fire-and-forget activity log
+    logActivity(req,
+      isApproved ? "partner_approved" : "partner_revoked",
+      isApproved
+        ? `Partner "${user.name}" (${user.email}) approved`
+        : `Partner "${user.name}" (${user.email}) approval revoked`,
+      { entity: "user", entityId: String(user._id), meta: { userName: user.name, userEmail: user.email } }
+    );
 
     // ✅ Send email asynchronously (keeps original body text)
     sendApprovalEmail(user).catch((err) =>

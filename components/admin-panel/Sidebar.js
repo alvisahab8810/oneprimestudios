@@ -147,6 +147,7 @@ import {
   FaTags,
   FaFileInvoice,
   FaStar,
+  FaHistory,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
@@ -383,6 +384,16 @@ export default function Sidebar({ sidebarOpen }) {
             }`}
           >
             <img src="/assets/images/admin/partner.svg" /> complaint Requests
+          </Link>
+        )}
+
+        {/* ================= ACTIVITY LOG ================= */}
+        {user.role === "admin" && (
+          <Link
+            href="/dashboard/admin/activity-log"
+            className={`ops-item ${isActive("/dashboard/admin/activity-log") ? "active" : ""}`}
+          >
+            <FaHistory className="me-2" /> Activity Log
           </Link>
         )}
 

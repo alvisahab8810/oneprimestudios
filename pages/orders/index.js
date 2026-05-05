@@ -50,6 +50,27 @@ export default function OrdersListPage() {
   const [page, setPage]               = useState(1);
   const [totalPages, setTotalPages]   = useState(1);
   const [total, setTotal]             = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
+
+  // ── Month quick-filter ────────────────────────────────────────────────────
+  const nowISO = () => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+  };
+  const [selectedMonth, setSelectedMonth] = useState(nowISO());
+
+  // Generate last 18 months + "All Time"
+  const monthOptions = (() => {
+    const opts = [{ value: "", label: "All Time" }];
+    const now = new Date();
+    for (let i = 0; i < 18; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const lbl = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      opts.push({ value: val, label: lbl });
+    }
+    return opts;
+  })();
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -58,18 +79,31 @@ export default function OrdersListPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Sync month picker → dateFrom / dateTo
+  useEffect(() => {
+    if (!selectedMonth) {
+      setDateFrom(""); setDateTo(""); setPage(1);
+      return;
+    }
+    const [y, m] = selectedMonth.split("-").map(Number);
+    setDateFrom(new Date(y, m - 1, 1).toISOString().slice(0, 10));
+    setDateTo(new Date(y, m, 0).toISOString().slice(0, 10));
+    setPage(1);
+  }, [selectedMonth]);
+
   useEffect(() => {
     const fetchMeta = async () => {
       try {
         const [prodRes, catRes] = await Promise.all([
           axios.get("/api/products?limit=200", { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get("/api/categories"),
+          // withChildren=true skips the categoryFor filter and returns all categories
+          axios.get("/api/categories?withChildren=true"),
         ]);
         const products = prodRes.data?.products || prodRes.data?.data || [];
         setAllProducts(products);
-        const cats = catRes.data || [];
-        setParentCategories(cats.filter(c => !c.parent));
-        setChildCategories(cats.filter(c => c.parent));
+        const topLevel = catRes.data || [];  // [{...parent, children:[...]}, ...]
+        setParentCategories(topLevel);
+        setChildCategories(topLevel.flatMap(c => c.children || []));
       } catch {}
     };
     fetchMeta();
@@ -104,6 +138,7 @@ export default function OrdersListPage() {
       });
       setOrders(res.data.orders || []);
       setTotal(res.data.total || 0);
+      setTotalAmount(res.data.totalAmount || 0);
       setTotalPages(res.data.totalPages || 1);
     } catch {
       toast.error("Failed to load orders");
@@ -122,7 +157,7 @@ export default function OrdersListPage() {
   const clearFilters = () => {
     setSearchInput(""); setSearch("");
     setProductFilter(""); setCategoryFilter("");
-    setParentFilter(""); setDateFrom(""); setDateTo("");
+    setParentFilter(""); setSelectedMonth(""); setDateFrom(""); setDateTo("");
     setPage(1);
   };
 
@@ -145,9 +180,63 @@ export default function OrdersListPage() {
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 20px 80px" }}>
 
           {/* ── Header ── */}
-          <div style={{ marginBottom: 32 }}>
-            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9ca3af" }}>Dashboard</p>
-            <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, color: "#111", letterSpacing: "-0.5px" }}>My Orders</h1>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9ca3af" }}>Dashboard</p>
+              <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, color: "#111", letterSpacing: "-0.5px" }}>My Orders</h1>
+            </div>
+
+            {/* Month picker */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>Period</span>
+              <select
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                style={{
+                  padding: "8px 14px", border: "1.5px solid #e5e5e5", borderRadius: 10,
+                  fontSize: 13, fontWeight: 600, color: "#111", background: "#fff",
+                  outline: "none", cursor: "pointer", minWidth: 160,
+                }}
+              >
+                {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* ── Sales Summary Card ── */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr",
+            gap: 12, marginBottom: 24,
+          }}>
+            <div style={{
+              background: "#111", borderRadius: 14, padding: "20px 24px",
+              color: "#fff",
+            }}>
+              <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9ca3af" }}>
+                Total Sales
+              </p>
+              <p style={{ margin: 0, fontSize: 28, fontWeight: 900, letterSpacing: "-0.5px" }}>
+                ₹{totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
+                {selectedMonth
+                  ? monthOptions.find(o => o.value === selectedMonth)?.label || selectedMonth
+                  : "All time"}
+              </p>
+            </div>
+            <div style={{
+              background: "#fff", border: "1.5px solid #f0f0f0", borderRadius: 14, padding: "20px 24px",
+            }}>
+              <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9ca3af" }}>
+                Total Orders
+              </p>
+              <p style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "#111", letterSpacing: "-0.5px" }}>
+                {total}
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>
+                {activeTab !== "All" ? activeTab : "All statuses"}
+              </p>
+            </div>
           </div>
 
           {/* ── Search + Filter row ── */}

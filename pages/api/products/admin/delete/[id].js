@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
+import { logActivity } from "@/lib/logActivity";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -10,7 +11,13 @@ export default async function handler(req, res) {
     if (!deleted)
       return res.status(404).json({ success: false, message: "Product not found" });
 
-    return res.json({ success: true, message: "Product deleted successfully" });
+    res.json({ success: true, message: "Product deleted successfully" });
+
+    logActivity(req, "product_deleted",
+      `Product "${deleted.name}" deleted`,
+      { entity: "product", entityId: id, meta: { productName: deleted.name, slug: deleted.slug } }
+    );
+    return;
   }
 
   res.status(405).json({ success: false, message: "Method not allowed" });

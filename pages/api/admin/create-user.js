@@ -3,6 +3,7 @@ import Admin from "@/models/Admin";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/sendEmail";
+import { logActivity } from "@/lib/logActivity";
 
 
 export default async function handler(req, res) {
@@ -101,10 +102,16 @@ await sendEmail({
 
 
     // 8️⃣ Success response
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: "Invite created successfully",
     });
+
+    // Fire-and-forget activity log
+    logActivity(req, "ops_user_created",
+      `New OPS user "${name}" (${email}) invited as ${role}`,
+      { entity: "admin", entityId: email, meta: { name, email, role } }
+    );
   } catch (error) {
     console.error("Create User Error:", error);
     return res.status(500).json({ message: "Server error" });

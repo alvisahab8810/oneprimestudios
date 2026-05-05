@@ -135,18 +135,29 @@ export default function ProductDetails() {
     const batchCount = effectiveQty / minQty;
     const baseTierPrice = calculateDynamicPrice(effectiveQty, product.pricingTiers, Number(product.basePrice), minQty);
 
+    // Resolve the priceModifier for an attribute option, respecting qty-based tiers.
+    const resolveAttrPrice = (opt, qty) => {
+      const tiers = opt.pricingTiers;
+      if (!tiers || tiers.length === 0) return Number(opt.priceModifier || 0);
+      // Pick the highest-minQty tier that is still <= qty
+      const matched = [...tiers]
+        .filter(t => Number(t.minQty) <= qty)
+        .sort((a, b) => Number(b.minQty) - Number(a.minQty))[0];
+      return matched ? Number(matched.priceModifier || 0) : Number(opt.priceModifier || 0);
+    };
+
     let attrExtraPerBatch = 0;
     (product.attributes || []).forEach((attr) => {
       const sel = selectedAttrs[attr.name];
       if (!sel) return;
       if (attr.type === "select") {
         const opt = (attr.values || []).find((v) => v.label === sel);
-        if (opt) attrExtraPerBatch += Number(opt.priceModifier || 0);
+        if (opt) attrExtraPerBatch += resolveAttrPrice(opt, effectiveQty);
       }
       if (attr.type === "checkbox") {
         (Array.isArray(sel) ? sel : []).forEach((label) => {
           const opt = (attr.values || []).find((v) => v.label === label);
-          if (opt) attrExtraPerBatch += Number(opt.priceModifier || 0);
+          if (opt) attrExtraPerBatch += resolveAttrPrice(opt, effectiveQty);
         });
       }
       if (attr.type === "number") {

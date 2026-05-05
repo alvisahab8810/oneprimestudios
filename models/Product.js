@@ -131,10 +131,19 @@
 import mongoose from "mongoose";
 
 // ---------------- Sub Schemas ----------------
+const AttrValueTierSchema = new mongoose.Schema(
+  {
+    minQty:        { type: Number, required: true },
+    priceModifier: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const AttributeValueSchema = new mongoose.Schema(
   {
-    label: { type: String, required: true },
-    priceModifier: { type: Number, default: 0 },
+    label:         { type: String, required: true },
+    priceModifier: { type: Number, default: 0 },           // flat default (kept for backward compat)
+    pricingTiers:  { type: [AttrValueTierSchema], default: [] }, // NEW: qty-based overrides
   },
   { _id: false }
 );
