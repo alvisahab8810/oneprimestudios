@@ -113,33 +113,13 @@ const UserSchema = new mongoose.Schema(
 );
 
 
-// ✅ ADD THIS BLOCK EXACTLY HERE 👇
-UserSchema.pre("save", async function (next) {
-  if (this.userType === "partner" && !this.memberId) {
-    const count = await mongoose.models.User.countDocuments({
-      userType: "partner",
-      memberId: { $exists: true },
-    });
-
-    // this.memberId = `PRT-${100000 + count + 1}`;
-    this.memberId = `OPS-${100000 + count + 1}`;
-
-  }
-  next();
-});
+// memberId is generated in signup.js handler to avoid Mongoose model cache issues.
 
 
-// ✅ ENSURE GST IS UNIQUE FOR PARTNERS ONLY
-UserSchema.index(
-  { gstNumber: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      userType: "partner",
-      gstNumber: { $exists: true, $ne: "" },
-    },
-  }
-);
+// GST uniqueness is enforced at the application level (see signup.js check).
+// Sparse index for query performance only — no unique constraint so null/missing
+// gstNumber values don't conflict across customers and partners without GST.
+UserSchema.index({ gstNumber: 1 }, { sparse: true });
 
 
 export default mongoose.models.User || mongoose.model("User", UserSchema);

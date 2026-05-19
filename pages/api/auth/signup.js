@@ -201,19 +201,32 @@ export default async function handler(req, res) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate memberId here (not in pre-save hook) to avoid Mongoose model cache issues.
+    // Find the actual highest memberId in DB and increment — avoids gaps from deleted users.
+    let memberId;
+    if (userType === "partner") {
+      const last = await User.findOne(
+        { memberId: { $regex: /^OPS-/ } },
+        { memberId: 1 }
+      ).sort({ memberId: -1 }).lean();
+
+      let nextNum = 100001;
+      if (last?.memberId) {
+        const parsed = parseInt(last.memberId.replace("OPS-", ""), 10);
+        if (!isNaN(parsed)) nextNum = parsed + 1;
+      }
+      memberId = `OPS-${nextNum}`;
+    }
+
     const user = await User.create({
       name,
       companyName: userType === "partner" ? companyName : undefined,
       gstNumber: userType === "partner" ? gstNumber : undefined,
       businessAddress: userType === "partner" ? businessAddress : undefined,
-
-      // ✅ NEW
-  city: userType === "partner" ? city : undefined,
-  state: userType === "partner" ? state : undefined,
-  pinCode: userType === "partner" ? pinCode : undefined,
-
-
-      
+      city: userType === "partner" ? city : undefined,
+      state: userType === "partner" ? state : undefined,
+      pinCode: userType === "partner" ? pinCode : undefined,
+      memberId,
       phone,
       email,
       password: hashedPassword,
@@ -234,7 +247,21 @@ export default async function handler(req, res) {
       isApproved: user.isApproved,
     });
   } catch (err) {
-    console.error("Signup error:", err.message);
-    res.status(500).json({ message: "Server error" });
+    console.error("Signup error:", err);
+
+    // Duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0] || "field";
+      const labels = { email: "Email", phone: "Phone number", gstNumber: "GST number", memberId: "Member ID" };
+      return res.status(400).json({ message: `${labels[field] || field} already registered` });
+    }
+
+    // Mongoose validation error
+    if (err.name === "ValidationError") {
+      const msg = Object.values(err.errors).map(e => e.message).join(", ");
+      return res.status(400).json({ message: msg });
+    }
+
+    res.status(500).json({ message: "Server error. Please try again." });
   }
 }
