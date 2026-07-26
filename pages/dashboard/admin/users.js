@@ -295,6 +295,7 @@ export default function AdminUsersPage() {
                 <option value="manager">Manager</option>
                 <option value="designer">Designer</option>
                 <option value="product_manager">Product Manager</option>
+                <option value="finance">Finance</option>
               </select>
             </div>
           </div>

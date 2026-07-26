@@ -60,6 +60,13 @@ export default function ActivityLogPage() {
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo,   setDateTo]   = useState(today);
   const [action,   setAction]   = useState("");
+  const [orderId,  setOrderId]  = useState("");
+  const [orderIdDebounced, setOrderIdDebounced] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setOrderIdDebounced(orderId.trim()), 400);
+    return () => clearTimeout(t);
+  }, [orderId]);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -68,6 +75,7 @@ export default function ActivityLogPage() {
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo)   params.dateTo   = dateTo;
       if (action)   params.action   = action;
+      if (orderIdDebounced) params.orderId = orderIdDebounced;
       const { data } = await axios.get("/api/admin/activity-log", { params, withCredentials: true });
       setLogs(data.logs || []);
       setTotal(data.total || 0);
@@ -76,7 +84,7 @@ export default function ActivityLogPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, dateFrom, dateTo, action]);
+  }, [page, dateFrom, dateTo, action, orderIdDebounced]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -86,6 +94,7 @@ export default function ActivityLogPage() {
     setDateFrom(today);
     setDateTo(today);
     setAction("");
+    setOrderId("");
     setPage(1);
   }
 
@@ -140,6 +149,21 @@ export default function ActivityLogPage() {
                 style={{
                   padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8,
                   fontSize: 14, outline: "none",
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>
+                Order ID
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. ORD-20260725-4544"
+                value={orderId}
+                onChange={e => { setOrderId(e.target.value); setPage(1); }}
+                style={{
+                  padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8,
+                  fontSize: 14, outline: "none", minWidth: 200,
                 }}
               />
             </div>

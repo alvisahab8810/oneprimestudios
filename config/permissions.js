@@ -11,4 +11,5 @@ export const PERMISSIONS = [
   
   { key: "products", label: "Products" },
   { key: "coupons", label: "Coupons" },
+  { key: "invoices", label: "Invoices" },
 ];

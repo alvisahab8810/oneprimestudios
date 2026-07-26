@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import Link from "next/link";
 import { FiArrowLeft, FiPlus, FiTrash2, FiSave } from "react-icons/fi";
+import { computeGstBreakdown } from "@/utils/gstBreakdown";
 
 export default function InvoiceEditPage() {
   const router = useRouter();
@@ -17,7 +18,6 @@ export default function InvoiceEditPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [items, setItems]           = useState([]);
-  const [gstPercent, setGstPercent] = useState(18);
   const [gstType, setGstType]       = useState("INTRA");
   const [partnerType, setPartnerType] = useState("B2B");
   const [remarks, setRemarks]       = useState("");
@@ -30,8 +30,11 @@ export default function InvoiceEditPage() {
       .then(r => {
         const inv = r.data;
         setInvoice(inv);
-        setItems(inv.items || []);
-        setGstPercent(inv.gstPercent || 18);
+        // Older invoices saved before per-item GST% existed fall back to the invoice-wide rate.
+        setItems((inv.items || []).map((it) => ({
+          ...it,
+          gstPercent: it.gstPercent ?? inv.gstPercent ?? 0,
+        })));
         setGstType(inv.gstType || "INTRA");
         setPartnerType(inv.partnerType || "B2B");
         setRemarks(inv.remarks || "");
@@ -52,14 +55,14 @@ export default function InvoiceEditPage() {
     setItems(updated);
   };
 
-  const addItem = () => setItems([...items, { description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
+  const addItem = () => setItems([...items, { description: "", hsnCode: "", qty: 1, rate: 0, amount: 0, gstPercent: 0 }]);
   const removeItem = (i) => setItems(items.filter((_, idx) => idx !== i));
 
   const subTotal = items.reduce((s, i) => s + Number(i.amount || 0), 0);
-  let cgstAmt = 0, sgstAmt = 0, igstAmt = 0;
-  if (gstType === "INTRA") { cgstAmt = subTotal * (gstPercent / 2) / 100; sgstAmt = cgstAmt; }
-  if (gstType === "INTER") { igstAmt = subTotal * gstPercent / 100; }
-  const gstAmount  = cgstAmt + sgstAmt + igstAmt;
+  const { rows: gstRows, totals: gstTotals } = gstType !== "NONE"
+    ? computeGstBreakdown(items, gstType)
+    : { rows: [], totals: { taxable: 0, cgst: 0, sgst: 0, igst: 0, tax: 0 } };
+  const gstAmount  = gstTotals.tax;
   const grandTotal = subTotal + gstAmount;
 
   const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -69,7 +72,7 @@ export default function InvoiceEditPage() {
     setSaving(true);
     try {
       await axios.put(`/api/admin/invoices/${id}`,
-        { items, gstPercent, gstType, partnerType, remarks, sellerGst, sellerAddress },
+        { items, gstType, partnerType, remarks, sellerGst, sellerAddress },
         { withCredentials: true }
       );
       toast.success("Invoice updated");
@@ -130,16 +133,6 @@ export default function InvoiceEditPage() {
                 </select>
               </div>
               <div>
-                <label style={lbl}>GST %</label>
-                <select value={gstPercent} onChange={e => setGstPercent(Number(e.target.value))} style={sel} disabled={gstType === "NONE"}>
-                  <option value={0}>0%</option>
-                  <option value={5}>5%</option>
-                  <option value={12}>12%</option>
-                  <option value={18}>18%</option>
-                  <option value={28}>28%</option>
-                </select>
-              </div>
-              <div>
                 <label style={lbl}>Your GSTIN</label>
                 <input value={sellerGst} onChange={e => setSellerGst(e.target.value)} placeholder="Your company GSTIN" style={inp} />
               </div>
@@ -162,18 +155,25 @@ export default function InvoiceEditPage() {
             </div>
 
             {/* Table header */}
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 80px 80px 90px 90px 36px", gap: 8, marginBottom: 8 }}>
-              {["Description","HSN/SAC","Qty","Rate","Taxable","Amount",""].map(h => (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 90px 60px 80px 70px 90px 90px 36px", gap: 8, marginBottom: 8 }}>
+              {["Description","HSN/SAC","Qty","Rate","GST %","Taxable","Amount",""].map(h => (
                 <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</span>
               ))}
             </div>
 
             {items.map((item, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 100px 80px 80px 90px 90px 36px", gap: 8, marginBottom: 8, alignItems: "center" }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 90px 60px 80px 70px 90px 90px 36px", gap: 8, marginBottom: 8, alignItems: "center" }}>
                 <input value={item.description} onChange={e => handleItemChange(i, "description", e.target.value)} placeholder="Product/service description" style={inp} />
                 <input value={item.hsnCode || ""} onChange={e => handleItemChange(i, "hsnCode", e.target.value)} placeholder="HSN" style={inp} />
                 <input type="number" value={item.qty} onChange={e => handleItemChange(i, "qty", e.target.value)} style={inp} />
                 <input type="number" value={item.rate} onChange={e => handleItemChange(i, "rate", e.target.value)} style={inp} />
+                <select value={item.gstPercent || 0} onChange={e => handleItemChange(i, "gstPercent", Number(e.target.value))} style={sel}>
+                  <option value={0}>0%</option>
+                  <option value={5}>5%</option>
+                  <option value={12}>12%</option>
+                  <option value={18}>18%</option>
+                  <option value={28}>28%</option>
+                </select>
                 <input value={`₹${(Number(item.qty || 0) * Number(item.rate || 0)).toFixed(2)}`} disabled style={{ ...inp, background: "#f9fafb", color: "#6b7280" }} />
                 <input value={`₹${Number(item.amount || 0).toFixed(2)}`} disabled style={{ ...inp, background: "#f9fafb", fontWeight: 700 }} />
                 <button onClick={() => removeItem(i)} disabled={items.length === 1}
@@ -190,12 +190,16 @@ export default function InvoiceEditPage() {
             <div style={{ maxWidth: 320, marginLeft: "auto" }}>
               {[
                 { label: "Taxable Value", value: fmt(subTotal) },
-                ...(gstType === "INTRA" ? [
-                  { label: `CGST @ ${gstPercent / 2}%`, value: fmt(cgstAmt) },
-                  { label: `SGST @ ${gstPercent / 2}%`, value: fmt(sgstAmt) },
-                ] : gstType === "INTER" ? [
-                  { label: `IGST @ ${gstPercent}%`, value: fmt(igstAmt) },
-                ] : []),
+                ...gstRows.filter((g) => g.rate > 0).flatMap((g) =>
+                  gstType === "INTRA"
+                    ? [
+                        { label: `CGST @ ${g.cgstPercent}%`, value: fmt(g.cgst) },
+                        { label: `SGST @ ${g.sgstPercent}%`, value: fmt(g.sgst) },
+                      ]
+                    : gstType === "INTER"
+                      ? [{ label: `IGST @ ${g.igstPercent}%`, value: fmt(g.igst) }]
+                      : []
+                ),
                 { label: "Total Tax", value: fmt(gstAmount), bold: true },
               ].map(r => (
                 <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f5f5f5" }}>

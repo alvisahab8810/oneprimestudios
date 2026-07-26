@@ -2,8 +2,12 @@
 import dbConnect from "@/lib/dbConnect";
 import Invoice from "@/models/Invoice";
 import Order from "@/models/Order";
+import Admin from "@/models/Admin";
 import { generateInvoiceNumber } from "@/utils/generateInvoiceNumber";
 import { logActivity } from "@/lib/logActivity";
+import { verifyJWT } from "@/lib/verifyJWT";
+import { hasPermission } from "@/lib/hasPermission";
+import { computeGstBreakdown } from "@/utils/gstBreakdown";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
@@ -11,11 +15,19 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
 
+    const token = req.cookies?.admin_auth;
+    const decoded = token ? verifyJWT(token) : null;
+    if (!decoded) return res.status(401).json({ message: "Unauthorized" });
+
+    const requester = await Admin.findById(decoded.id, { role: 1, permissions: 1 }).lean();
+    if (!requester || !hasPermission(requester, "invoices")) {
+      return res.status(403).json({ message: "You don't have permission to create invoices" });
+    }
+
     let {
       orderId,
       orderNumbers = [],
       items,
-      gstPercent = 0,
       gstType = "INTRA",
       partnerType = "B2B",
       remarks = "",
@@ -50,38 +62,37 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Tax calculations ──────────────────────────────────────────────────────
-    const subTotal       = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+    // ── Items with taxable amount + each item's own GST % ────────────────────
+    const enrichedItems = items.map(item => ({
+      ...item,
+      taxableAmount: Number(item.amount || 0),
+      gstPercent: Number(item.gstPercent || 0),
+    }));
+
+    // ── Tax calculations — per item, since each product can carry its own GST % ─
+    const subTotal       = enrichedItems.reduce((s, i) => s + Number(i.amount || 0), 0);
     const couponDiscount = Number(coupon?.discountAmount || 0);
     const couponCode     = coupon?.code || "";
     // GST is on the full item amount (as charged at order time).
     // Coupon discount reduces the final grand total, not the taxable base.
     const taxableValue   = subTotal;
 
-    let cgstPercent = 0, sgstPercent = 0, igstPercent = 0;
-    let cgstAmount  = 0, sgstAmount  = 0, igstAmount  = 0;
-    let gstAmount   = 0;
+    const { totals } = gstType === "NONE"
+      ? { totals: { taxable: taxableValue, cgst: 0, sgst: 0, igst: 0, tax: 0 } }
+      : computeGstBreakdown(enrichedItems, gstType);
 
-    if (gstType === "INTRA") {
-      cgstPercent = gstPercent / 2;
-      sgstPercent = gstPercent / 2;
-      cgstAmount  = (taxableValue * cgstPercent) / 100;
-      sgstAmount  = (taxableValue * sgstPercent) / 100;
-      gstAmount   = cgstAmount + sgstAmount;
-    } else if (gstType === "INTER") {
-      igstPercent = gstPercent;
-      igstAmount  = (taxableValue * igstPercent) / 100;
-      gstAmount   = igstAmount;
-    }
-    // NONE → all zero
+    const cgstAmount = totals.cgst;
+    const sgstAmount = totals.sgst;
+    const igstAmount = totals.igst;
+    const gstAmount  = totals.tax;
+
+    // Blended rate kept for legacy display fields (item-level rates are the source of truth).
+    const blendedPercent = taxableValue > 0 ? (gstAmount / taxableValue) * 100 : 0;
+    const cgstPercent = gstType === "INTRA" ? blendedPercent / 2 : 0;
+    const sgstPercent = gstType === "INTRA" ? blendedPercent / 2 : 0;
+    const igstPercent = gstType === "INTER" ? blendedPercent : 0;
 
     const grandTotal = taxableValue + gstAmount - couponDiscount;
-
-    // ── Items with taxable amount ──────────────────────────────────────────────
-    const enrichedItems = items.map(item => ({
-      ...item,
-      taxableAmount: Number(item.amount || 0),
-    }));
 
     // ── Determine partnerType from GST ────────────────────────────────────────
     const hasGst = !!(order.user?.gstNumber);
@@ -121,7 +132,7 @@ export default async function handler(req, res) {
       couponCode,
       couponDiscount,
       taxableValue,
-      gstPercent,
+      gstPercent: blendedPercent,
       gstType,
       cgstPercent, sgstPercent, igstPercent,
       cgstAmount,  sgstAmount,  igstAmount,

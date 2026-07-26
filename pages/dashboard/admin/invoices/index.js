@@ -5,7 +5,8 @@ import axios from "axios";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
-import { FaBell } from "react-icons/fa";
+import * as XLSX from "xlsx";
+import { FaBell, FaFileExcel } from "react-icons/fa";
 import {
   FiFileText, FiSearch, FiDownload, FiEye,
   FiSend, FiFilter, FiX, FiPlus,
@@ -40,6 +41,7 @@ export default function AdminInvoiceList() {
   const [page, setPage]               = useState(1);
   const [totalPages, setTotalPages]   = useState(1);
   const [total, setTotal]             = useState(0);
+  const [exporting, setExporting]     = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -106,6 +108,102 @@ export default function AdminInvoiceList() {
 
   const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
+  const joinAddr = (a) => a ? [a.street, a.city, a.state, a.zip].filter(Boolean).join(", ") : "";
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  // Pulls every invoice matching the current filters (not just the loaded page)
+  // and writes two sheets — one row per invoice, and one row per line item —
+  // so the file carries every detail, not just what's shown in the table.
+  const exportToExcel = async () => {
+    setExporting(true);
+    const toastId = toast.loading("Preparing export...");
+    try {
+      const params = new URLSearchParams({ page: 1, limit: 100000 });
+      if (statusFilter) params.append("status",     statusFilter);
+      if (typeFilter)   params.append("partnerType", typeFilter);
+      if (search)       params.append("search",      search);
+
+      const res = await axios.get(`/api/admin/invoices?${params}`, { withCredentials: true });
+      const all = res.data.invoices || [];
+
+      if (!all.length) {
+        toast.error("No invoices to export", { id: toastId });
+        return;
+      }
+
+      const invoiceRows = all.map((inv) => ({
+        "Invoice No":       inv.invoiceNumber,
+        "Status":           inv.status,
+        "Type":             inv.partnerType || "B2B",
+        "GST Type":         inv.gstType,
+        "Invoice Date":     inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("en-IN") : "",
+        "Created At":       inv.createdAt ? new Date(inv.createdAt).toLocaleString("en-IN") : "",
+        "Sent At":          inv.sentAt ? new Date(inv.sentAt).toLocaleString("en-IN") : "",
+        "Order No":         inv.orderNumber,
+        "All Order Nos":    (inv.orderNumbers || []).join(", "),
+        "Party Name":       inv.partnerName,
+        "Party Company":    inv.partnerAddress?.companyName || "",
+        "Party GST No":     inv.partnerAddress?.gst || "",
+        "Party Phone":      inv.partnerAddress?.phone || "",
+        "Party Email":      inv.partnerAddress?.email || "",
+        "Party Address":    joinAddr(inv.partnerAddress),
+        "Party State Code": inv.partnerAddress?.stateCode || "",
+        "Ship To Name":     inv.shipToAddress?.name || "",
+        "Ship To Company":  inv.shipToAddress?.companyName || "",
+        "Ship To GST":      inv.shipToAddress?.gst || "",
+        "Ship To Phone":    inv.shipToAddress?.phone || "",
+        "Ship To Address":  joinAddr(inv.shipToAddress),
+        "Seller GST":       inv.sellerGst || "",
+        "Seller Address":   inv.sellerAddress || "",
+        "Sub Total":        inv.subTotal || 0,
+        "Taxable Value":    inv.taxableValue || 0,
+        "GST %":            inv.gstPercent || 0,
+        "CGST %":           inv.cgstPercent || 0,
+        "SGST %":           inv.sgstPercent || 0,
+        "IGST %":           inv.igstPercent || 0,
+        "CGST Amount":      inv.cgstAmount || 0,
+        "SGST Amount":      inv.sgstAmount || 0,
+        "IGST Amount":      inv.igstAmount || 0,
+        "Total Tax":        inv.gstAmount || 0,
+        "Coupon Code":      inv.couponCode || "",
+        "Coupon Discount":  inv.couponDiscount || 0,
+        "Grand Total":      inv.grandTotal || 0,
+        "Payment Method":   inv.paymentSnapshot?.paymentMethod || "",
+        "Payment Status":   inv.paymentSnapshot?.paymentStatus || "",
+        "Transaction ID":   inv.paymentSnapshot?.transactionId || "",
+        "Remarks":          inv.remarks || "",
+        "Declaration":      inv.declaration || "",
+        "PDF URL":          inv.pdfUrl || "",
+        "Created By":       inv.createdBy || "",
+      }));
+
+      const itemRows = all.flatMap((inv) =>
+        (inv.items || []).map((it, idx) => ({
+          "Invoice No":     inv.invoiceNumber,
+          "Item #":         idx + 1,
+          "Description":    it.description || "",
+          "HSN/SAC":        it.hsnCode || "",
+          "Qty":            it.qty || 0,
+          "Rate":           it.rate || 0,
+          "Taxable Amount": it.taxableAmount || 0,
+          "GST %":          it.gstPercent || 0,
+          "Amount":         it.amount || 0,
+        }))
+      );
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invoiceRows), "Invoices");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(itemRows), "Items");
+      XLSX.writeFile(wb, `invoices-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+      toast.success(`Exported ${all.length} invoice${all.length !== 1 ? "s" : ""}`, { id: toastId });
+    } catch (err) {
+      toast.error("Failed to export invoices", { id: toastId });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="d-flex bg-light min-vh-100">
       <Sidebar sidebarOpen={sidebarOpen} />
@@ -117,6 +215,10 @@ export default function AdminInvoiceList() {
           <span style={{ fontWeight: 700, fontSize: 18 }}>Invoices</span>
           <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
             <FaBell size={18} color="#9ca3af" />
+            <button onClick={exportToExcel} disabled={exporting}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: exporting ? "not-allowed" : "pointer", opacity: exporting ? 0.7 : 1 }}>
+              <FaFileExcel size={13} /> {exporting ? "Exporting..." : "Export Excel"}
+            </button>
             <Link href="/dashboard/admin/invoices/create"
               style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#111", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
               <FiPlus size={13} /> Create Invoice

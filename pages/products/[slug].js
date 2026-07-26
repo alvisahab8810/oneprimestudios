@@ -15,6 +15,7 @@ import styles from "@/styles/ProductDetails.module.css";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
+import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -59,13 +60,11 @@ export default function ProductDetails() {
   const [files, setFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [selectedAttrs, setSelectedAttrs] = useState({});
+  const [userCity, setUserCity] = useState("");
 
-  const canAddToCart = useMemo(() => {
-    if (!product) return false;
-    const hasLegacyFile = uploadedFiles.length > 0;
-    const hasAttributeUpload = Object.keys(uploadedAttrFiles).length > 0;
-    return hasLegacyFile || hasAttributeUpload;
-  }, [product, uploadedFiles, uploadedAttrFiles]);
+  // File upload is optional — Add to Cart is available as soon as the product loads.
+  // Attributes marked required (e.g. a mandatory upload) are still enforced in validateUploadAttrs().
+  const canAddToCart = !!product;
 
   useEffect(() => {
     if (!slug) return;
@@ -88,6 +87,18 @@ export default function ProductDetails() {
       })
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // City-based pricing: fetch the logged-in buyer's city (if any) so we can
+  // show the city-specific price override. Anonymous visitors keep the
+  // default product price — see lib/resolveProductPrice.js.
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    axios
+      .get("/api/user/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setUserCity(res.data?.city || ""))
+      .catch(() => {});
+  }, []);
 
   const handleAttrChange = (name, value) => {
     setSelectedAttrs((prev) => ({ ...prev, [name]: value }));
@@ -133,7 +144,15 @@ export default function ProductDetails() {
     const minQty = product.minOrderQty || 1;
     const effectiveQty = qty < minQty ? minQty : qty;
     const batchCount = effectiveQty / minQty;
-    const baseTierPrice = calculateDynamicPrice(effectiveQty, product.pricingTiers, Number(product.basePrice), minQty);
+    // Sale price wins over base price when set — same convention used
+    // elsewhere in the app (ProductSlider, cart unit-price fallback).
+    const { basePrice, salePrice } = getEffectivePrice(product);
+    const sellingPrice = salePrice != null ? salePrice : basePrice;
+    const baseTierPrice = calculateDynamicPrice(effectiveQty, product.pricingTiers, sellingPrice, minQty);
+
+    // City pricing is a flat add-on charge for the buyer's city — added once
+    // to the total, not multiplied by quantity.
+    const cityExtraCharge = getCityExtraCharge(product, userCity);
 
     // Resolve the priceModifier for an attribute option, respecting qty-based tiers.
     const resolveAttrPrice = (opt, qty) => {
@@ -166,8 +185,8 @@ export default function ProductDetails() {
       }
     });
 
-    return baseTierPrice + attrExtraPerBatch * batchCount;
-  }, [product, qty, selectedAttrs]);
+    return baseTierPrice + attrExtraPerBatch * batchCount + cityExtraCharge;
+  }, [product, qty, selectedAttrs, userCity]);
 
   const quantityLadder = useMemo(() => {
     if (!product) return [];

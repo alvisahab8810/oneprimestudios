@@ -40,7 +40,7 @@ const AdminSchema = new mongoose.Schema(
     // ✅ Role support (super admin remains valid)
     role: {
       type: String,
-      enum: ["super_admin", "designer", "product_manager", "manager", "admin"],
+      enum: ["super_admin", "designer", "product_manager", "manager", "finance", "admin"],
       default: "super_admin", // IMPORTANT: keeps current flow safe
     },
 

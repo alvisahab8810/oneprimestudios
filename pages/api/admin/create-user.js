@@ -64,11 +64,18 @@ export default async function handler(req, res) {
 
     const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/verify?token=${inviteToken}`;
 
+    // 8️⃣ Success response — respond immediately, don't let a flaky SMTP
+    // provider fail the whole request (the OPS user is already created).
+    res.status(201).json({
+      success: true,
+      message: "Invite created successfully",
+    });
 
-await sendEmail({
-  to: email,
-  subject: "You are invited to One Prime Studios Admin Panel",
-  html: `
+    // Fire-and-forget invite email
+    sendEmail({
+      to: email,
+      subject: "You are invited to One Prime Studios Admin Panel",
+      html: `
     <div style="font-family: Arial, sans-serif;">
       <p>Hi <b>${name}</b>,</p>
 
@@ -98,14 +105,7 @@ await sendEmail({
       <p>— One Prime Studios Team</p>
     </div>
   `,
-});
-
-
-    // 8️⃣ Success response
-    res.status(201).json({
-      success: true,
-      message: "Invite created successfully",
-    });
+    }).catch((err) => console.error("Invite email send error:", err));
 
     // Fire-and-forget activity log
     logActivity(req, "ops_user_created",

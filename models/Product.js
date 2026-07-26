@@ -192,6 +192,17 @@ const PricingTierSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// City-specific price override — falls back to basePrice/salePrice when a
+// buyer's city has no matching entry (see lib/resolveProductPrice.js).
+const CityPriceSchema = new mongoose.Schema(
+  {
+    city:      { type: String, required: true },
+    price:     { type: Number, required: true },
+    salePrice: { type: Number },
+  },
+  { _id: false }
+);
+
 // ---------------- Main Product Schema ----------------
 const ProductSchema = new mongoose.Schema(
   {
@@ -242,6 +253,7 @@ const ProductSchema = new mongoose.Schema(
 
     attributes: [AttributeSchema], // ✅ restored + extended
     pricingTiers: [PricingTierSchema], // ✅ restored
+    cityPrices: [CityPriceSchema], // city-based price overrides
 
     b2bOptions: {
       enabled: { type: Boolean, default: false },

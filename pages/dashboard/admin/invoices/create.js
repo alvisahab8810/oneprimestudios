@@ -5,6 +5,7 @@ import axios from "axios";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { computeGstBreakdown } from "@/utils/gstBreakdown";
 
 // ── One Prime Studios constants (never manual) ────────────────────────────────
 const OPS = {
@@ -50,7 +51,6 @@ export default function CreateInvoiceAdmin() {
   const [invoiceDate,     setInvoiceDate]     = useState(todayISO());
 
   // ── Invoice settings ────────────────────────────────────────────────────────
-  const [gstPercent,  setGstPercent]  = useState(0);
   const [gstType,     setGstType]     = useState("INTRA");
   const [partnerType, setPartnerType] = useState("B2B");
   const [remarks,     setRemarks]     = useState("");
@@ -71,7 +71,8 @@ export default function CreateInvoiceAdmin() {
   });
 
   // ── Invoice items ────────────────────────────────────────────────────────────
-  const [items, setItems] = useState([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
+  // Each item carries its own GST % (auto-filled from the product's GST rate).
+  const [items, setItems] = useState([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0, gstPercent: 0 }]);
 
   // ── Coupon (auto-fetched from order) ─────────────────────────────────────────
   const [coupon, setCoupon] = useState(null); // { code, discountAmount }
@@ -99,11 +100,7 @@ export default function CreateInvoiceAdmin() {
 
       // Auto-fill from first successful order
       if (index === 0 || !orderInputs.some((o) => o.preview)) {
-        // GST %
-        if (data.productGstPercent !== undefined && data.productGstPercent > 0) {
-          setGstPercent(data.productGstPercent);
-        }
-        // GST Type auto-detect
+        // GST Type auto-detect (each item brings its own GST % from the product)
         if (data.autoGstType) setGstType(data.autoGstType);
 
         // Partner type
@@ -163,7 +160,7 @@ export default function CreateInvoiceAdmin() {
   };
 
   const addItemRow = () =>
-    setItems([...items, { description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
+    setItems([...items, { description: "", hsnCode: "", qty: 1, rate: 0, amount: 0, gstPercent: 0 }]);
 
   const removeItemRow = (index) =>
     setItems(items.filter((_, i) => i !== index));
@@ -183,7 +180,6 @@ export default function CreateInvoiceAdmin() {
         orderId:          primaryPreview.orderId,
         orderNumbers:     allOrderNumbers,
         items,
-        gstPercent,
         gstType,
         partnerType,
         remarks,
@@ -199,9 +195,9 @@ export default function CreateInvoiceAdmin() {
 
       // Reset
       setOrderInputs([{ id: "", preview: null, loading: false }]);
-      setGstPercent(0); setGstType("INTRA"); setPartnerType("B2B");
+      setGstType("INTRA"); setPartnerType("B2B");
       setRemarks(""); setDeclaration("We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.\nGoods Once Sold Will Not be Taken back. All disputes are subject to Lucknow's Jurisdiction."); setManualInvoiceNo(""); setInvoiceDate(todayISO());
-      setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0 }]);
+      setItems([{ description: "", hsnCode: "", qty: 1, rate: 0, amount: 0, gstPercent: 0 }]);
       setBillTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
       setShipTo({ name:"",companyName:"",gst:"",phone:"",email:"",street:"",city:"",state:"",zip:"" });
       setCoupon(null);
@@ -214,12 +210,16 @@ export default function CreateInvoiceAdmin() {
   };
 
   // ── Computed totals ─────────────────────────────────────────────────────────
-  // GST is on the full item subtotal (as charged at order time).
+  // Each item carries its own GST % (from the product), so items are grouped
+  // by rate and CGST/SGST/IGST computed per slab, then summed.
   // Coupon discount reduces the final grand total directly.
   const subTotal       = items.reduce((s, i) => s + Number(i.amount || 0), 0);
   const couponDiscount = coupon?.discountAmount || 0;
-  const gstAmount      = gstType !== "NONE" ? subTotal * gstPercent / 100 : 0;
-  const grandTotal     = subTotal + gstAmount - couponDiscount;
+  const { rows: gstRows, totals: gstTotals } = gstType !== "NONE"
+    ? computeGstBreakdown(items, gstType)
+    : { rows: [], totals: { taxable: 0, cgst: 0, sgst: 0, igst: 0, tax: 0 } };
+  const gstAmount  = gstTotals.tax;
+  const grandTotal = subTotal + gstAmount - couponDiscount;
 
   const inputCls = "form-control form-control-sm";
   const labelCls = "form-label mb-1 small fw-semibold text-secondary";
@@ -395,18 +395,10 @@ export default function CreateInvoiceAdmin() {
           {/* ── GST Settings ── */}
           <div className="card p-3 mb-4">
             <h5 className="mb-3">Tax Settings</h5>
+            <div className="small text-muted mb-2">
+              GST % is set per item below (auto-filled from each product's own GST rate).
+            </div>
             <div className="row g-3">
-              <div className="col-md-3">
-                <label className={labelCls}>GST % (auto-filled from product)</label>
-                <select className="form-select form-select-sm" value={gstPercent}
-                  onChange={(e) => setGstPercent(Number(e.target.value))}>
-                  <option value={0}>0% (Exempt)</option>
-                  <option value={5}>5%</option>
-                  <option value={12}>12%</option>
-                  <option value={18}>18%</option>
-                  <option value={28}>28%</option>
-                </select>
-              </div>
               <div className="col-md-3">
                 <label className={labelCls}>GST Type (auto-detected from pincode)</label>
                 <select className="form-select form-select-sm" value={gstType}
@@ -437,7 +429,7 @@ export default function CreateInvoiceAdmin() {
             <h5 className="mb-3">Invoice Items</h5>
             {items.map((item, index) => (
               <div className="row g-2 align-items-end mb-2" key={index}>
-                <div className="col-md-3">
+                <div className="col-md-2">
                   <label className={labelCls}>Description</label>
                   <input className={inputCls} value={item.description}
                     onChange={(e) => handleItemChange(index, "description", e.target.value)} />
@@ -458,6 +450,17 @@ export default function CreateInvoiceAdmin() {
                   <input type="number" className={inputCls} value={item.rate}
                     onChange={(e) => handleItemChange(index, "rate", e.target.value)} />
                 </div>
+                <div className="col-md-1">
+                  <label className={labelCls}>GST %</label>
+                  <select className="form-select form-select-sm" value={item.gstPercent || 0}
+                    onChange={(e) => handleItemChange(index, "gstPercent", Number(e.target.value))}>
+                    <option value={0}>0%</option>
+                    <option value={5}>5%</option>
+                    <option value={12}>12%</option>
+                    <option value={18}>18%</option>
+                    <option value={28}>28%</option>
+                  </select>
+                </div>
                 <div className="col-md-2">
                   <label className={labelCls}>Amount (₹)</label>
                   <input className={inputCls} value={Number(item.amount).toFixed(2)} disabled />
@@ -476,28 +479,28 @@ export default function CreateInvoiceAdmin() {
                 <span>Sub Total (Taxable)</span>
                 <strong>₹{subTotal.toFixed(2)}</strong>
               </div>
-              {gstType !== "NONE" && gstPercent > 0 && (
-                <>
+              {gstType !== "NONE" && gstRows.filter((r) => r.rate > 0).map((r) => (
+                <React.Fragment key={r.rate}>
                   {gstType === "INTRA" && (
                     <>
                       <div className="d-flex justify-content-between mb-1 text-muted small">
-                        <span>CGST @ {gstPercent / 2}%</span>
-                        <span>₹{(gstAmount / 2).toFixed(2)}</span>
+                        <span>CGST @ {r.cgstPercent}%</span>
+                        <span>₹{r.cgst.toFixed(2)}</span>
                       </div>
                       <div className="d-flex justify-content-between mb-1 text-muted small">
-                        <span>SGST @ {gstPercent / 2}%</span>
-                        <span>₹{(gstAmount / 2).toFixed(2)}</span>
+                        <span>SGST @ {r.sgstPercent}%</span>
+                        <span>₹{r.sgst.toFixed(2)}</span>
                       </div>
                     </>
                   )}
                   {gstType === "INTER" && (
                     <div className="d-flex justify-content-between mb-1 text-muted small">
-                      <span>IGST @ {gstPercent}%</span>
-                      <span>₹{gstAmount.toFixed(2)}</span>
+                      <span>IGST @ {r.igstPercent}%</span>
+                      <span>₹{r.igst.toFixed(2)}</span>
                     </div>
                   )}
-                </>
-              )}
+                </React.Fragment>
+              ))}
               {coupon && couponDiscount > 0 && (
                 <div className="d-flex justify-content-between mb-1 text-success small fw-semibold">
                   <span>Coupon Discount ({coupon.code})</span>

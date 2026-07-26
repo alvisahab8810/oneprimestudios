@@ -4,6 +4,7 @@
 // DELETE — cancel invoice
 import dbConnect from "@/lib/dbConnect";
 import Invoice from "@/models/Invoice";
+import { computeGstBreakdown } from "@/utils/gstBreakdown";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -28,36 +29,44 @@ export default async function handler(req, res) {
 
 
       const {
-        items, gstPercent, gstType, partnerType,
+        items, gstType, partnerType,
         remarks, sellerGst, sellerAddress,
       } = req.body;
 
       if (items) {
-        const subTotal     = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+        // Each item carries its own GST % (from the product) — group by rate
+        // and compute CGST/SGST/IGST per slab rather than one uniform rate.
+        const enrichedItems = items.map(i => ({
+          ...i,
+          taxableAmount: Number(i.amount || 0),
+          gstPercent: Number(i.gstPercent || 0),
+        }));
+
+        const subTotal     = enrichedItems.reduce((s, i) => s + Number(i.amount || 0), 0);
         const taxableValue = subTotal;
-        const pct          = Number(gstPercent ?? invoice.gstPercent);
         const type         = gstType ?? invoice.gstType;
 
-        let cgstPercent = 0, sgstPercent = 0, igstPercent = 0;
-        let cgstAmount  = 0, sgstAmount  = 0, igstAmount  = 0;
+        const { totals } = type === "NONE"
+          ? { totals: { taxable: taxableValue, cgst: 0, sgst: 0, igst: 0, tax: 0 } }
+          : computeGstBreakdown(enrichedItems, type);
 
-        if (type === "INTRA") {
-          cgstPercent = pct / 2; sgstPercent = pct / 2;
-          cgstAmount  = (taxableValue * cgstPercent) / 100;
-          sgstAmount  = (taxableValue * sgstPercent) / 100;
-        } else if (type === "INTER") {
-          igstPercent = pct;
-          igstAmount  = (taxableValue * igstPercent) / 100;
-        }
+        const cgstAmount = totals.cgst;
+        const sgstAmount = totals.sgst;
+        const igstAmount = totals.igst;
+        const gstAmount  = totals.tax;
 
-        const gstAmount      = cgstAmount + sgstAmount + igstAmount;
+        const blendedPercent = taxableValue > 0 ? (gstAmount / taxableValue) * 100 : 0;
+        const cgstPercent = type === "INTRA" ? blendedPercent / 2 : 0;
+        const sgstPercent = type === "INTRA" ? blendedPercent / 2 : 0;
+        const igstPercent = type === "INTER" ? blendedPercent : 0;
+
         const couponDiscount = Number(invoice.couponDiscount || 0);
         const grandTotal     = taxableValue + gstAmount - couponDiscount;
 
-        invoice.items          = items.map(i => ({ ...i, taxableAmount: Number(i.amount || 0) }));
+        invoice.items          = enrichedItems;
         invoice.subTotal       = subTotal;
         invoice.taxableValue   = taxableValue;
-        invoice.gstPercent     = pct;
+        invoice.gstPercent     = blendedPercent;
         invoice.gstType        = type;
         invoice.cgstPercent    = cgstPercent;
         invoice.sgstPercent    = sgstPercent;

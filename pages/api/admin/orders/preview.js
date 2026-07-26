@@ -60,6 +60,7 @@ export default async function handler(req, res) {
       rate: item.price,
       amount: item.quantity * item.price,
       hsnCode: item.product?.hsnCode || "",
+      gstPercent: item.product?.gstPercent ?? 0,
     }));
 
     const partnerState   = order.user?.state   || order.shipping?.state || "";

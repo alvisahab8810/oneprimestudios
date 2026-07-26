@@ -42,6 +42,7 @@ export default function EditProductPage() {
     status: "draft",
     attributes: [],
      pricingTiers: [],   // ✅ ADD THIS
+    cityPrices: [],
     // pricingTiersCSV: "",
     // b2b/b2c
     b2b_enabled: false,
@@ -63,6 +64,7 @@ export default function EditProductPage() {
   // existing gallery (strings of paths) and the removed set
   const [existingGallery, setExistingGallery] = useState([]); // current kept ones
   const [removedGallery, setRemovedGallery] = useState([]); // removed ones
+  const [partnerCities, setPartnerCities] = useState([]);
 
   const submittingRef = useRef(false);
 
@@ -72,6 +74,13 @@ export default function EditProductPage() {
     fetchProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    axios
+      .get("/api/admin/users/cities")
+      .then((res) => setPartnerCities(res.data || []))
+      .catch(() => {});
+  }, []);
 
   const toggleSidebar = () => setSidebarOpen((s) => !s);
 
@@ -94,6 +103,14 @@ export default function EditProductPage() {
   ? p.pricingTiers.map((t) => ({
       minQty: t.minQty ?? "",
       pricePerUnit: t.pricePerUnit ?? "",
+    }))
+  : [];
+
+      const normalizedCityPrices = Array.isArray(p.cityPrices)
+  ? p.cityPrices.map((cp) => ({
+      city: cp.city ?? "",
+      price: cp.price ?? "",
+      salePrice: cp.salePrice ?? "",
     }))
   : [];
 
@@ -155,6 +172,7 @@ export default function EditProductPage() {
         // attributes: p.attributes || [],
         attributes: normalizedAttributes,
        pricingTiers: normalizedPricingTiers,
+        cityPrices: normalizedCityPrices,
         b2b_enabled: !!(p.b2bOptions && p.b2bOptions.enabled),
         b2b_allowFileUpload: !!(p.b2bOptions && p.b2bOptions.allowFileUpload),
         b2c_enabled: !!(p.b2cOptions && p.b2cOptions.enabled),
@@ -331,6 +349,15 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
   JSON.stringify(form.pricingTiers || [])
 );
 
+      const transformedCityPrices = (form.cityPrices || [])
+        .filter((cp) => cp.city?.trim() && cp.price !== "" && cp.price != null)
+        .map((cp) => ({
+          city: cp.city.trim(),
+          price: Number(cp.price),
+          ...(cp.salePrice !== "" && cp.salePrice != null ? { salePrice: Number(cp.salePrice) } : {}),
+        }));
+      fd.append("cityPrices", JSON.stringify(transformedCityPrices));
+
 
       // b2b/b2c
       const b2bOptions = {
@@ -439,74 +466,76 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                 <label className="mt-3">Important Notes</label>
                 <ReactQuill value={form.importantNotes} onChange={(v) => setForm((p) => ({ ...p, importantNotes: v }))} theme="snow" />
 
-                {/* Pricing */}
-                <div className="pricing-row mt-3 d-flex gap-3">
-                  <div>
-                    <label>Base Price</label>
-                    <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" required />
+                {/* Pricing & Inventory */}
+                <div className="pricing-section mt-3">
+                  <h4>Pricing & Inventory</h4>
+                  <div className="pricing-row">
+                    <div>
+                      <label>Base Price</label>
+                      <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" required />
+                    </div>
+                    <div>
+                      <label>Sale Price</label>
+                      <input name="salePrice" value={form.salePrice} onChange={handleChange} type="number" className="input-primary" />
+                    </div>
                   </div>
-                  <div>
-                    <label>Sale Price</label>
-                    <input name="salePrice" value={form.salePrice} onChange={handleChange} type="number" className="input-primary" />
+
+                  <div className="pricing-row">
+                    <div>
+                      <label>GST %</label>
+                      <select name="gstPercent" value={form.gstPercent} onChange={handleChange} className="select-primary">
+                        <option value={0}>0% (None)</option>
+                        <option value={5}>5%</option>
+                        <option value={12}>12%</option>
+                        <option value={18}>18%</option>
+                        <option value={28}>28%</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>HSN / SAC Code</label>
+                      <input name="hsnCode" value={form.hsnCode} onChange={handleChange} className="input-primary" placeholder="e.g. 4911, 4901" />
+                    </div>
+                  </div>
+
+                  <div className="sku-stock-row">
+                    <div>
+                      <label>SKU</label>
+                      <input name="sku" value={form.sku} onChange={handleChange} className="input-primary" />
+                    </div>
+                    <div>
+                      <label>Stock</label>
+                      <input name="stock" value={form.stock} onChange={handleChange} type="number" className="input-primary" />
+                    </div>
+                    <div>
+                      <label>Status</label>
+                      <select name="stockStatus" value={form.stockStatus} onChange={handleChange} className="select-primary">
+                        <option value="in_stock">In Stock</option>
+                        <option value="out_of_stock">Out of Stock</option>
+                        <option value="preorder">Preorder</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="min-order-row">
+                    <label>Min Order Qty</label>
+                    <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
+                    <label className="ms-3">
+                      <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} /> Featured
+                    </label>
                   </div>
                 </div>
 
-                <div className="pricing-row mt-3 d-flex gap-3">
-                  <div>
-                    <label>GST %</label>
-                    <select name="gstPercent" value={form.gstPercent} onChange={handleChange} className="select-primary">
-                      <option value={0}>0% (None)</option>
-                      <option value={5}>5%</option>
-                      <option value={12}>12%</option>
-                      <option value={18}>18%</option>
-                      <option value={28}>28%</option>
-                    </select>
-                  </div>
-                  {/* NEW: HSN/SAC Code */}
-                  <div>
-                    <label>HSN / SAC Code</label>
-                    <input name="hsnCode" value={form.hsnCode} onChange={handleChange} className="input-primary" placeholder="e.g. 4911, 4901" />
-                  </div>
-                </div>
+                {/* Pricing Tiers & City-wise Pricing */}
+                <div className="tiers-section">
+                  <h4>Quantity & City Pricing</h4>
 
-                <div className="sku-stock-row d-flex gap-3 mt-3">
-                  <div>
-                    <label>SKU</label>
-                    <input name="sku" value={form.sku} onChange={handleChange} className="input-primary" />
-                  </div>
-                  <div>
-                    <label>Stock</label>
-                    <input name="stock" value={form.stock} onChange={handleChange} type="number" className="input-primary" />
-                  </div>
-                  <div>
-                    <label>Status</label>
-                    <select name="stockStatus" value={form.stockStatus} onChange={handleChange} className="select-primary">
-                      <option value="in_stock">In Stock</option>
-                      <option value="out_of_stock">Out of Stock</option>
-                      <option value="preorder">Preorder</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="min-order-row mt-3">
-                  <label>Min Order Qty</label>
-                  <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
-                  <label className="ms-3">
-                    <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} /> Featured
-                  </label>
-                </div>
-
-                {/* <label className="mt-3">Quantity Pricing Tiers</label> */}
-                {/* <input placeholder="e.g. 1:10,50:8,100:6" value={form.pricingTiersCSV || ""} onChange={(e) => setForm((f) => ({ ...f, pricingTiersCSV: e.target.value }))} className="input-primary" /> */}
-
-                <label className="mt-3">Quantity Pricing Tiers</label>
+                  <label className="mb-2 d-block">Quantity Pricing Tiers</label>
 
 {form.pricingTiers?.map((tier, index) => (
-  <div key={index} className="flex gap-2 mb-2">
+  <div key={index} className="tier-row">
     <input
       type="number"
       placeholder="Min Qty"
-      className="input-primary w-1/2"
       value={tier.minQty}
       onChange={(e) => {
         const updated = [...form.pricingTiers];
@@ -518,7 +547,6 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
     <input
       type="number"
       placeholder="Price"
-      className="input-primary w-1/2"
       value={tier.pricePerUnit}
       onChange={(e) => {
         const updated = [...form.pricingTiers];
@@ -534,16 +562,16 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
         updated.splice(index, 1);
         setForm((f) => ({ ...f, pricingTiers: updated }));
       }}
-      className="bg-red-500 text-white px-2 rounded"
+      className="btn-tier-remove"
     >
-      X
+      ✕
     </button>
   </div>
 ))}
 
 <button
   type="button"
-  className="bg-green-500 text-white px-4 py-1 rounded"
+  className="btn-tier-add"
   onClick={() =>
     setForm((f) => ({
       ...f,
@@ -557,8 +585,31 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
   + Add Tier
 </button>
 
+<hr className="tiers-divider" />
 
-
+{/* City-based extra charge — added once to the order total for buyers in that city */}
+<label className="mb-2 d-block">City-wise Extra Charge (optional)</label>
+<p style={{ fontSize: 12, color: "#718096", marginTop: -6, marginBottom: 10 }}>
+  A flat amount added once to the total order price for buyers from that city — not a replacement price.
+</p>
+<datalist id="partner-cities-list">
+  {partnerCities.map((c) => <option key={c} value={c} />)}
+</datalist>
+{form.cityPrices?.map((cp, index) => (
+  <div key={index} className="tier-row">
+    <input type="text" list="partner-cities-list" placeholder="City (e.g. Lucknow)" value={cp.city}
+      onChange={(e) => { const u = [...form.cityPrices]; u[index] = { ...u[index], city: e.target.value }; setForm((f) => ({ ...f, cityPrices: u })); }} />
+    <input type="number" placeholder="Extra Charge (₹)" value={cp.price}
+      onChange={(e) => { const u = [...form.cityPrices]; u[index] = { ...u[index], price: e.target.value }; setForm((f) => ({ ...f, cityPrices: u })); }} />
+    <button type="button" className="btn-tier-remove"
+      onClick={() => { const u = [...form.cityPrices]; u.splice(index, 1); setForm((f) => ({ ...f, cityPrices: u })); }}>✕</button>
+  </div>
+))}
+<button type="button" className="btn-tier-add"
+  onClick={() => setForm((f) => ({ ...f, cityPrices: [...(f.cityPrices || []), { city: "", price: "", salePrice: "" }] }))}>
+  + Add City Extra Charge
+</button>
+</div>
 
 
 
@@ -869,27 +920,29 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
              
 
                 {/* B2B/B2C Sections */}
-                <div className="b2b-section mt-3">
-                  <h4>B2B Options</h4>
-                  <label><input type="checkbox" name="b2b_enabled" checked={form.b2b_enabled} onChange={handleChange} /> Enable B2B</label>
-                  {form.b2b_enabled && (
-                    <>
-                      <label className="d-block mt-2"><input type="checkbox" name="b2b_allowFileUpload" checked={form.b2b_allowFileUpload} onChange={handleChange} /> Allow file upload</label>
-                      <input placeholder="Quantity options (comma separated)" value={form.b2b_quantityOptionsCSV} onChange={(e) => setForm(f => ({ ...f, b2b_quantityOptionsCSV: e.target.value }))} className="input-primary mt-2" />
-                    </>
-                  )}
-                </div>
+                <div className="b2b-b2c-section">
+                  <div className="options-card">
+                    <h4>B2B Options</h4>
+                    <label><input type="checkbox" name="b2b_enabled" checked={form.b2b_enabled} onChange={handleChange} /> Enable B2B</label>
+                    {form.b2b_enabled && (
+                      <>
+                        <label><input type="checkbox" name="b2b_allowFileUpload" checked={form.b2b_allowFileUpload} onChange={handleChange} /> Allow file upload</label>
+                        <input placeholder="Quantity options (comma separated)" value={form.b2b_quantityOptionsCSV} onChange={(e) => setForm(f => ({ ...f, b2b_quantityOptionsCSV: e.target.value }))} className="input-primary mt-2" />
+                      </>
+                    )}
+                  </div>
 
-                <div className="b2c-section mt-3">
-                  <h4>B2C Options</h4>
-                  <label><input type="checkbox" name="b2c_enabled" checked={form.b2c_enabled} onChange={handleChange} /> Enable B2C</label>
-                  {form.b2c_enabled && (
-                    <>
-                      <label className="d-block mt-2"><input type="checkbox" name="b2c_designUpload" checked={form.b2c_designUpload} onChange={handleChange} /> Allow design upload</label>
-                      <label className="d-block mt-2"><input type="checkbox" name="b2c_whatsapp" checked={form.b2c_whatsapp} onChange={handleChange} /> WhatsApp support</label>
-                      <input placeholder="Fixed quantity options (comma separated)" value={form.b2c_quantityOptionsCSV} onChange={(e) => setForm(f => ({ ...f, b2c_quantityOptionsCSV: e.target.value }))} className="input-primary mt-2" />
-                    </>
-                  )}
+                  <div className="options-card b2c">
+                    <h4>B2C Options</h4>
+                    <label><input type="checkbox" name="b2c_enabled" checked={form.b2c_enabled} onChange={handleChange} /> Enable B2C</label>
+                    {form.b2c_enabled && (
+                      <>
+                        <label><input type="checkbox" name="b2c_designUpload" checked={form.b2c_designUpload} onChange={handleChange} /> Allow design upload</label>
+                        <label><input type="checkbox" name="b2c_whatsapp" checked={form.b2c_whatsapp} onChange={handleChange} /> WhatsApp support</label>
+                        <input placeholder="Fixed quantity options (comma separated)" value={form.b2c_quantityOptionsCSV} onChange={(e) => setForm(f => ({ ...f, b2c_quantityOptionsCSV: e.target.value }))} className="input-primary mt-2" />
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -66,6 +66,7 @@ handler.put(async (req, res) => {
       hsnCode,      // NEW: HSN/SAC code
       attributes,
       pricingTiers,
+      cityPrices,
       b2bOptions,
       b2cOptions,
       existingGallery,
@@ -132,6 +133,7 @@ handler.put(async (req, res) => {
       hsnCode: hsnCode || "",  // NEW
       attributes: safeParse(attributes, []),
       pricingTiers: safeParse(pricingTiers, []),
+      cityPrices: safeParse(cityPrices, []),
       b2bOptions: safeParse(b2bOptions, {}),
       b2cOptions: safeParse(b2cOptions, {}),
     };

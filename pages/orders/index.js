@@ -10,12 +10,14 @@ import {
   FiSearch, FiSliders, FiX, FiChevronRight,
   FiPackage, FiCalendar, FiTag, FiLayers,
   FiChevronLeft, FiChevronRight as FiChevRight,
+  FiClock,
 } from "react-icons/fi";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_TABS = [
   "All", "Order Received", "Design Approved", "Design Rejected",
   "In Progress", "Order Ready", "In Packaging", "Order Dispatched", "Order Delivered",
+  "Cancelled",
 ];
 
 const STATUS_CONFIG = {
@@ -51,6 +53,7 @@ export default function OrdersListPage() {
   const [totalPages, setTotalPages]   = useState(1);
   const [total, setTotal]             = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [dispatchingId, setDispatchingId] = useState(null);
 
   // ── Month quick-filter ────────────────────────────────────────────────────
   const nowISO = () => {
@@ -162,6 +165,20 @@ export default function OrdersListPage() {
   };
 
   const hasFilters = search || productFilter || categoryFilter || parentFilter || dateFrom || dateTo;
+
+  const sendDispatchRequest = async (orderId) => {
+    setDispatchingId(orderId);
+    try {
+      await axios.post(`/api/orders/dispatch-request/${orderId}`, {},
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      toast.success("Dispatch request sent!");
+      loadOrders();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send dispatch request");
+    } finally {
+      setDispatchingId(null);
+    }
+  };
 
   const getProductTitle = (order) => {
     if (!order?.items?.length) return "Order";
@@ -455,6 +472,45 @@ export default function OrdersListPage() {
                             +{o.items.length - 3} more
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Row 2.5: dispatch request banner */}
+                    {o.status === "Order Ready" && o.dispatchRequest === "none" && (
+                      <div style={{
+                        background: "#f5f3ff", border: "1.5px solid #c4b5fd", borderRadius: 10,
+                        padding: "10px 14px", marginBottom: 14,
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        flexWrap: "wrap", gap: 10,
+                      }}>
+                        <div>
+                          <p style={{ margin: "0 0 1px", fontWeight: 700, fontSize: 12.5, color: "#5b21b6" }}>Your order is ready!</p>
+                          <p style={{ margin: 0, fontSize: 12, color: "#6d28d9" }}>Request dispatch when you're ready to receive it.</p>
+                        </div>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendDispatchRequest(o._id); }}
+                          disabled={dispatchingId === o._id}
+                          style={{
+                            padding: "7px 16px", borderRadius: 8, background: "#7c3aed", color: "#fff",
+                            border: "none", fontSize: 12.5, fontWeight: 700,
+                            cursor: dispatchingId === o._id ? "not-allowed" : "pointer",
+                            opacity: dispatchingId === o._id ? 0.7 : 1, whiteSpace: "nowrap",
+                          }}>
+                          {dispatchingId === o._id ? "Sending..." : "Request Dispatch"}
+                        </button>
+                      </div>
+                    )}
+
+                    {o.status === "Order Ready" && o.dispatchRequest === "pending" && (
+                      <div style={{
+                        background: "#eff6ff", border: "1.5px solid #93c5fd", borderRadius: 10,
+                        padding: "9px 14px", marginBottom: 14,
+                        display: "flex", gap: 8, alignItems: "center",
+                      }}>
+                        <FiClock size={14} color="#1d4ed8" />
+                        <p style={{ margin: 0, fontSize: 12.5, color: "#1e40af", fontWeight: 500 }}>
+                          Dispatch request sent — awaiting admin approval.
+                        </p>
                       </div>
                     )}
 

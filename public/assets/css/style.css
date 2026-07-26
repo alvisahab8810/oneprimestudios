@@ -1338,6 +1338,133 @@ margin-top: 50px;
   box-shadow: 0 6px 20px rgba(49,130,206,0.3);
 }
 
+/* Pricing / Inventory & Tiers Sections */
+.pricing-section,
+.tiers-section {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+.pricing-section h4,
+.tiers-section h4 {
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.tier-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.tier-row input {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e0;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.tier-row input:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 2px rgba(49,130,206,0.15);
+  outline: none;
+}
+
+.btn-tier-remove {
+  background: #e53e3e;
+  color: #fff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btn-tier-remove:hover {
+  background: #c53030;
+  transform: translateY(-2px);
+}
+
+.btn-tier-add {
+  background: #fff;
+  color: #3182ce;
+  border: 1.5px dashed #3182ce;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-tier-add:hover {
+  background: #3182ce;
+  color: #fff;
+}
+
+.tiers-divider {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.5rem 0;
+}
+
+/* B2B / B2C Options */
+.b2b-b2c-section {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.b2b-b2c-section .options-card {
+  flex: 1;
+  min-width: 220px;
+  background: #fff;
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border-top: 3px solid #3182ce;
+}
+
+.b2b-b2c-section .options-card.b2c {
+  border-top-color: #38a169;
+}
+
+.b2b-b2c-section h4,
+.b2b-b2c-section h5 {
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+  color: #2d3748;
+}
+
+.b2b-b2c-section label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+}
+
+.b2b-b2c-section input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 /* Tooltips for hints */
 .tooltip {
   position: relative;

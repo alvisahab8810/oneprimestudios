@@ -99,6 +99,7 @@ handler.post(
         b2cOptions,
         attributes,
         pricingTiers,
+        cityPrices,
       } = req.body;
 
       if (!name || !categoryId || basePrice === undefined) {
@@ -149,6 +150,7 @@ parsedAttributes.forEach(attr => {
       const parsedB2B = safeParse(b2bOptions, {});
       const parsedB2C = safeParse(b2cOptions, {});
       const parsedTiers = safeParse(pricingTiers, []);
+      const parsedCityPrices = safeParse(cityPrices, []);
 
       const slugify = (text = "") =>
         text
@@ -185,6 +187,7 @@ parsedAttributes.forEach(attr => {
 
         attributes: parsedAttributes,
         pricingTiers: parsedTiers,
+        cityPrices: parsedCityPrices,
         b2bOptions: parsedB2B,
         b2cOptions: parsedB2C,
       });

@@ -41,6 +41,7 @@ export default function AddProduct() {
     attributes: [],
     pricingTiers: [],
     pricingTiersCSV: "",
+    cityPrices: [],
     b2b_enabled: true,
     b2b_allowFileUpload: true,
     b2b_quantityOptionsCSV: "",
@@ -54,8 +55,16 @@ export default function AddProduct() {
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [previewMain, setPreviewMain] = useState(null);
   const [previewGallery, setPreviewGallery] = useState([]);
+  const [partnerCities, setPartnerCities] = useState([]);
 
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    axios
+      .get("/api/admin/users/cities")
+      .then((res) => setPartnerCities(res.data || []))
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -139,6 +148,13 @@ export default function AddProduct() {
       const transformedTiers = parseTiersCSV(form.pricingTiersCSV || "");
       const b2bQtyOptions = parseQtyOptionsCSV(form.b2b_quantityOptionsCSV || "");
       const b2cQtyOptions = parseQtyOptionsCSV(form.b2c_quantityOptionsCSV || "");
+      const transformedCityPrices = (form.cityPrices || [])
+        .filter((cp) => cp.city?.trim() && cp.price !== "" && cp.price != null)
+        .map((cp) => ({
+          city: cp.city.trim(),
+          price: Number(cp.price),
+          ...(cp.salePrice !== "" && cp.salePrice != null ? { salePrice: Number(cp.salePrice) } : {}),
+        }));
 
       const fd = new FormData();
       fd.append("name", form.name);
@@ -159,6 +175,7 @@ export default function AddProduct() {
       fd.append("productFor", form.productFor || "both");
       fd.append("attributes", JSON.stringify(transformedAttributes));
       fd.append("pricingTiers", JSON.stringify(transformedTiers));
+      fd.append("cityPrices", JSON.stringify(transformedCityPrices));
 
       fd.append("b2bOptions", JSON.stringify({
         enabled: !!form.b2b_enabled,
@@ -184,7 +201,7 @@ export default function AddProduct() {
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
         stock: 0, stockStatus: "in_stock", minOrderQty: 1, isFeatured: false,
-        gstPercent: 0, hsnCode: "", productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [],
+        gstPercent: 0, hsnCode: "", productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
         b2b_enabled: false, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
         b2c_enabled: true, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
       });
@@ -415,86 +432,117 @@ export default function AddProduct() {
                   <label className="mt-3">Important Notes</label>
                   <ReactQuill value={form.importantNotes} onChange={(v) => setForm((p) => ({ ...p, importantNotes: v }))} theme="snow" />
 
-                  {/* Pricing — unchanged */}
-                  <div className="pricing-row mt-3">
-                    <div>
-                      <label>GST %</label>
-                      <select name="gstPercent" value={form.gstPercent} onChange={handleChange} className="select-primary">
-                        <option value={0}>0% (None)</option>
-                        <option value={5}>5%</option>
-                        <option value={12}>12%</option>
-                        <option value={18}>18%</option>
-                        <option value={28}>28%</option>
-                      </select>
+                  {/* Pricing & Inventory */}
+                  <div className="pricing-section">
+                    <h4>Pricing & Inventory</h4>
+                    <div className="pricing-row">
+                      <div>
+                        <label>GST %</label>
+                        <select name="gstPercent" value={form.gstPercent} onChange={handleChange} className="select-primary">
+                          <option value={0}>0% (None)</option>
+                          <option value={5}>5%</option>
+                          <option value={12}>12%</option>
+                          <option value={18}>18%</option>
+                          <option value={28}>28%</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label>HSN / SAC Code</label>
+                        <input name="hsnCode" value={form.hsnCode} onChange={handleChange} className="input-primary" placeholder="e.g. 4911, 4901" />
+                      </div>
                     </div>
-                    {/* NEW: HSN/SAC Code */}
-                    <div>
-                      <label>HSN / SAC Code</label>
-                      <input name="hsnCode" value={form.hsnCode} onChange={handleChange} className="input-primary" placeholder="e.g. 4911, 4901" />
+
+                    <div className="pricing-row">
+                      <div>
+                        <label>Base Price</label>
+                        <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" required />
+                      </div>
+                      <div>
+                        <label>Sale Price</label>
+                        <input name="salePrice" value={form.salePrice} onChange={handleChange} type="number" className="input-primary" />
+                      </div>
+                    </div>
+
+                    <div className="sku-stock-row">
+                      <div>
+                        <label>SKU</label>
+                        <input name="sku" value={form.sku} onChange={handleChange} className="input-primary" />
+                      </div>
+                      <div>
+                        <label>Stock</label>
+                        <input name="stock" value={form.stock} onChange={handleChange} type="number" className="input-primary" />
+                      </div>
+                      <div>
+                        <label>Status</label>
+                        <select name="stockStatus" value={form.stockStatus} onChange={handleChange} className="select-primary">
+                          <option value="in_stock">In Stock</option>
+                          <option value="out_of_stock">Out of Stock</option>
+                          <option value="preorder">Preorder</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="min-order-row">
+                      <label>Min Order Qty</label>
+                      <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
                     </div>
                   </div>
 
-                  <div className="pricing-row mt-3">
-                    <div>
-                      <label>Base Price</label>
-                      <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" required />
-                    </div>
-                    <div>
-                      <label>Sale Price</label>
-                      <input name="salePrice" value={form.salePrice} onChange={handleChange} type="number" className="input-primary" />
-                    </div>
+                  {/* Pricing Tiers & City-wise Pricing */}
+                  <div className="tiers-section">
+                    <h4>Quantity & City Pricing</h4>
+
+                    <label className="mb-2 d-block">Quantity Pricing Tiers</label>
+                    {form.pricingTiers?.map((tier, index) => (
+                      <div key={index} className="tier-row">
+                        <input type="number" placeholder="Min Qty" value={tier.minQty}
+                          onChange={(e) => { const u = [...form.pricingTiers]; u[index].minQty = e.target.value; setForm((f) => ({ ...f, pricingTiers: u })); }} />
+                        <input type="number" placeholder="Price" value={tier.pricePerUnit}
+                          onChange={(e) => { const u = [...form.pricingTiers]; u[index].pricePerUnit = e.target.value; setForm((f) => ({ ...f, pricingTiers: u })); }} />
+                        <button type="button" className="btn-tier-remove"
+                          onClick={() => { const u = [...form.pricingTiers]; u.splice(index, 1); setForm((f) => ({ ...f, pricingTiers: u })); }}>✕</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn-tier-add"
+                      onClick={() => setForm((f) => ({ ...f, pricingTiers: [...(f.pricingTiers || []), { minQty: "", pricePerUnit: "" }] }))}>
+                      + Add Tier
+                    </button>
+
+                    <hr className="tiers-divider" />
+
+                    {/* City-based extra charge — added once to the order total for buyers in that city */}
+                    <label className="mb-2 d-block">City-wise Extra Charge (optional)</label>
+                    <p style={{ fontSize: 12, color: "#718096", marginTop: -6, marginBottom: 10 }}>
+                      A flat amount added once to the total order price for buyers from that city — not a replacement price.
+                    </p>
+                    <datalist id="partner-cities-list">
+                      {partnerCities.map((c) => <option key={c} value={c} />)}
+                    </datalist>
+                    {form.cityPrices?.map((cp, index) => (
+                      <div key={index} className="tier-row">
+                        <input type="text" list="partner-cities-list" placeholder="City (e.g. Lucknow)" value={cp.city}
+                          onChange={(e) => { const u = [...form.cityPrices]; u[index] = { ...u[index], city: e.target.value }; setForm((f) => ({ ...f, cityPrices: u })); }} />
+                        <input type="number" placeholder="Extra Charge (₹)" value={cp.price}
+                          onChange={(e) => { const u = [...form.cityPrices]; u[index] = { ...u[index], price: e.target.value }; setForm((f) => ({ ...f, cityPrices: u })); }} />
+                        <button type="button" className="btn-tier-remove"
+                          onClick={() => { const u = [...form.cityPrices]; u.splice(index, 1); setForm((f) => ({ ...f, cityPrices: u })); }}>✕</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn-tier-add"
+                      onClick={() => setForm((f) => ({ ...f, cityPrices: [...(f.cityPrices || []), { city: "", price: "", salePrice: "" }] }))}>
+                      + Add City Extra Charge
+                    </button>
                   </div>
 
-                  <div className="sku-stock-row">
-                    <div>
-                      <label>SKU</label>
-                      <input name="sku" value={form.sku} onChange={handleChange} className="input-primary" />
-                    </div>
-                    <div>
-                      <label>Stock</label>
-                      <input name="stock" value={form.stock} onChange={handleChange} type="number" className="input-primary" />
-                    </div>
-                    <div>
-                      <label>Status</label>
-                      <select name="stockStatus" value={form.stockStatus} onChange={handleChange} className="select-primary">
-                        <option value="in_stock">In Stock</option>
-                        <option value="out_of_stock">Out of Stock</option>
-                        <option value="preorder">Preorder</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="min-order-row">
-                    <label>Min Order Qty</label>
-                    <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
-                  </div>
-
-                  {/* Pricing Tiers — unchanged */}
-                  <label className="mb-2">Quantity Pricing Tiers</label>
-                  {form.pricingTiers?.map((tier, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
-                      <input type="number" placeholder="Min Qty" className="input-primary w-1/2" value={tier.minQty}
-                        onChange={(e) => { const u = [...form.pricingTiers]; u[index].minQty = e.target.value; setForm((f) => ({ ...f, pricingTiers: u })); }} />
-                      <input type="number" placeholder="Price" className="input-primary w-1/2" value={tier.pricePerUnit}
-                        onChange={(e) => { const u = [...form.pricingTiers]; u[index].pricePerUnit = e.target.value; setForm((f) => ({ ...f, pricingTiers: u })); }} />
-                      <button type="button" className="bg-red-500 px-2 rounded"
-                        onClick={() => { const u = [...form.pricingTiers]; u.splice(index, 1); setForm((f) => ({ ...f, pricingTiers: u })); }}>X</button>
-                    </div>
-                  ))}
-                  <button type="button" className="bg-green-500 px-4 py-1 rounded"
-                    onClick={() => setForm((f) => ({ ...f, pricingTiers: [...(f.pricingTiers || []), { minQty: "", pricePerUnit: "" }] }))}>
-                    + Add Tier
-                  </button>
-
-                  {/* B2B / B2C — unchanged */}
-                  <div className="d-flex gap-5 bg-light px-3 mt-4">
-                    <div className="b2b-section mt-3">
-                      <h5 className="mb-3">B2B Options</h5>
+                  {/* B2B / B2C Options */}
+                  <div className="b2b-b2c-section">
+                    <div className="options-card">
+                      <h5>B2B Options</h5>
                       <label><input type="checkbox" name="b2b_enabled" checked={form.b2b_enabled} onChange={handleChange} /> Enable B2B</label>
                       <label><input type="checkbox" name="b2b_allowFileUpload" checked={form.b2b_allowFileUpload} onChange={handleChange} /> Allow file upload</label>
                     </div>
-                    <div className="b2c-section mt-3">
-                      <h5 className="mb-3">B2C Options</h5>
+                    <div className="options-card b2c">
+                      <h5>B2C Options</h5>
                       <label><input type="checkbox" name="b2c_enabled" checked={form.b2c_enabled} onChange={handleChange} /> Enable B2C</label>
                       <label><input type="checkbox" name="b2c_designUpload" checked={form.b2c_designUpload} onChange={handleChange} /> Allow design upload</label>
                       <label><input type="checkbox" name="b2c_whatsapp" checked={form.b2c_whatsapp} onChange={handleChange} /> WhatsApp support</label>

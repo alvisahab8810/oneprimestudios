@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ message: "Admins only" });
   }
 
-  const { dateFrom, dateTo, action, adminId, page = 1, limit = 50 } = req.query;
+  const { dateFrom, dateTo, action, adminId, orderId, page = 1, limit = 50 } = req.query;
 
   const filter = {};
 
@@ -37,6 +37,16 @@ export default async function handler(req, res) {
 
   if (action) filter.action = action;
   if (adminId) filter.adminId = adminId;
+
+  if (orderId) {
+    const escaped = orderId.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
+    filter.$or = [
+      { description: regex },
+      { entityId: regex },
+      { "meta.orderNumber": regex },
+    ];
+  }
 
   const skip  = (Number(page) - 1) * Number(limit);
   const total = await ActivityLog.countDocuments(filter);

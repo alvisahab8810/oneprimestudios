@@ -57,6 +57,7 @@ const invoiceSchema = new mongoose.Schema(
         rate:          Number,
         taxableAmount: Number,  // = qty × rate (before tax)
         amount:        Number,  // final amount after tax
+        gstPercent:    { type: Number, default: 0 },  // this item's own GST % (from Product)
       }
     ],
 
