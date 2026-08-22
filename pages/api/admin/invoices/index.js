@@ -9,11 +9,24 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
 
-    const { status, partnerType, search, page = 1, limit = 20, summary } = req.query;
+    const { status, partnerType, search, page = 1, limit = 20, summary, fromDate, toDate } = req.query;
+
+    // Shared date-range filter on createdAt (the "Invoice Date" column shown in the UI).
+    // toDate is inclusive of the whole day.
+    const dateFilter = {};
+    if (fromDate) {
+      const d = new Date(fromDate);
+      if (!isNaN(d)) { d.setHours(0, 0, 0, 0); dateFilter.$gte = d; }
+    }
+    if (toDate) {
+      const d = new Date(toDate);
+      if (!isNaN(d)) { d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+    }
 
     // ── Summary mode: return stats for dashboard ──────────────────────────────
     if (summary === "true") {
-      const all = await Invoice.find().lean();
+      const summaryFilter = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
+      const all = await Invoice.find(summaryFilter).lean();
 
       const totalInvoices   = all.length;
       const totalBilling    = all.reduce((s, i) => s + (i.grandTotal || 0), 0);
@@ -73,6 +86,7 @@ export default async function handler(req, res) {
     const filter = {};
     if (status)      filter.status      = status;
     if (partnerType) filter.partnerType = partnerType;
+    if (Object.keys(dateFilter).length) filter.createdAt = dateFilter;
 
     const pageNum  = Math.max(1, Number(page));
     const limitNum = Number(limit);

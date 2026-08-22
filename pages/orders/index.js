@@ -55,25 +55,25 @@ export default function OrdersListPage() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [dispatchingId, setDispatchingId] = useState(null);
 
-  // ── Month quick-filter ────────────────────────────────────────────────────
-  const nowISO = () => {
-    const n = new Date();
-    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
-  };
-  const [selectedMonth, setSelectedMonth] = useState(nowISO());
+  // ── Year / Month quick-filter (kept separate so the picker stays short
+  // and readable as the site accumulates more years of order history) ───────
+  const now = new Date();
+  const [selectedYear, setSelectedYear]   = useState(String(now.getFullYear()));
+  const [selectedMonthNum, setSelectedMonthNum] = useState(String(now.getMonth() + 1));
 
-  // Generate last 18 months + "All Time"
-  const monthOptions = (() => {
-    const opts = [{ value: "", label: "All Time" }];
-    const now = new Date();
-    for (let i = 0; i < 18; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const lbl = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-      opts.push({ value: val, label: lbl });
-    }
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  const yearOptions = (() => {
+    const opts = [{ value: "", label: "All Years" }];
+    const nowY = now.getFullYear();
+    for (let y = nowY; y >= nowY - 5; y--) opts.push({ value: String(y), label: String(y) });
     return opts;
   })();
+
+  const monthNumOptions = [
+    { value: "", label: "All Months" },
+    ...MONTH_NAMES.map((label, i) => ({ value: String(i + 1), label })),
+  ];
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -82,17 +82,24 @@ export default function OrdersListPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Sync month picker → dateFrom / dateTo
+  // Sync year/month picker → dateFrom / dateTo
   useEffect(() => {
-    if (!selectedMonth) {
+    if (!selectedYear) {
       setDateFrom(""); setDateTo(""); setPage(1);
       return;
     }
-    const [y, m] = selectedMonth.split("-").map(Number);
-    setDateFrom(new Date(y, m - 1, 1).toISOString().slice(0, 10));
-    setDateTo(new Date(y, m, 0).toISOString().slice(0, 10));
+    const y = Number(selectedYear);
+    if (!selectedMonthNum) {
+      // Whole year
+      setDateFrom(new Date(y, 0, 1).toISOString().slice(0, 10));
+      setDateTo(new Date(y, 11, 31).toISOString().slice(0, 10));
+    } else {
+      const m = Number(selectedMonthNum);
+      setDateFrom(new Date(y, m - 1, 1).toISOString().slice(0, 10));
+      setDateTo(new Date(y, m, 0).toISOString().slice(0, 10));
+    }
     setPage(1);
-  }, [selectedMonth]);
+  }, [selectedYear, selectedMonthNum]);
 
   useEffect(() => {
     const fetchMeta = async () => {
@@ -160,7 +167,7 @@ export default function OrdersListPage() {
   const clearFilters = () => {
     setSearchInput(""); setSearch("");
     setProductFilter(""); setCategoryFilter("");
-    setParentFilter(""); setSelectedMonth(""); setDateFrom(""); setDateTo("");
+    setParentFilter(""); setSelectedYear(""); setSelectedMonthNum(""); setDateFrom(""); setDateTo("");
     setPage(1);
   };
 
@@ -203,19 +210,34 @@ export default function OrdersListPage() {
               <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, color: "#111", letterSpacing: "-0.5px" }}>My Orders</h1>
             </div>
 
-            {/* Month picker */}
+            {/* Year / Month picker — kept as two separate dropdowns so the list
+                stays short and readable no matter how many years of order
+                history the site accumulates. */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>Period</span>
               <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
+                value={selectedYear}
+                onChange={e => setSelectedYear(e.target.value)}
                 style={{
                   padding: "8px 14px", border: "1.5px solid #e5e5e5", borderRadius: 10,
                   fontSize: 13, fontWeight: 600, color: "#111", background: "#fff",
-                  outline: "none", cursor: "pointer", minWidth: 160,
+                  outline: "none", cursor: "pointer", minWidth: 110,
                 }}
               >
-                {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {yearOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <select
+                value={selectedMonthNum}
+                onChange={e => setSelectedMonthNum(e.target.value)}
+                disabled={!selectedYear}
+                style={{
+                  padding: "8px 14px", border: "1.5px solid #e5e5e5", borderRadius: 10,
+                  fontSize: 13, fontWeight: 600, color: selectedYear ? "#111" : "#c1c5cb",
+                  background: selectedYear ? "#fff" : "#f7f7f5",
+                  outline: "none", cursor: selectedYear ? "pointer" : "not-allowed", minWidth: 140,
+                }}
+              >
+                {monthNumOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
           </div>
@@ -236,9 +258,11 @@ export default function OrdersListPage() {
                 ₹{totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
-                {selectedMonth
-                  ? monthOptions.find(o => o.value === selectedMonth)?.label || selectedMonth
-                  : "All time"}
+                {!selectedYear
+                  ? "All time"
+                  : selectedMonthNum
+                    ? `${MONTH_NAMES[Number(selectedMonthNum) - 1]} ${selectedYear}`
+                    : selectedYear}
               </p>
             </div>
             <div style={{

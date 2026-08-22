@@ -343,16 +343,10 @@ export default function InvoiceViewAdmin() {
               </div>
             </div>
 
-            {/* Footer: signatory only — no bank details */}
+            {/* Footer */}
             <div style={{ height: 1, background: bwc("#f0f0f0"), margin: "28px 0 20px" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <p style={{ margin: 0, fontSize: 12, color: bwc("#9ca3af") }}>This is a computer-generated invoice.</p>
-              <div style={{ textAlign: "right" }}>
-                <p style={{ margin: "0 0 36px", fontSize: 12, color: bwc("#6b7280") }}>For: One Prime Studios</p>
-                <div style={{ borderTop: isHighValue ? "1.5px solid #000" : "1.5px solid #374151", paddingTop: 6, display: "inline-block", minWidth: 180 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: bwc("#374151"), fontWeight: 700 }}>Authorized Signatory</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>

@@ -38,6 +38,8 @@ export default function AdminInvoiceList() {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter]   = useState("");
+  const [fromDate, setFromDate]       = useState("");
+  const [toDate, setToDate]           = useState("");
   const [page, setPage]               = useState(1);
   const [totalPages, setTotalPages]   = useState(1);
   const [total, setTotal]             = useState(0);
@@ -51,7 +53,10 @@ export default function AdminInvoiceList() {
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get("/api/admin/invoices?summary=true", { withCredentials: true });
+      const params = new URLSearchParams({ summary: "true" });
+      if (fromDate) params.append("fromDate", fromDate);
+      if (toDate)   params.append("toDate",   toDate);
+      const res = await axios.get(`/api/admin/invoices?${params}`, { withCredentials: true });
       setStats(res.data.stats);
       setPartySummary(res.data.partySummary || []);
     } catch {}
@@ -64,6 +69,8 @@ export default function AdminInvoiceList() {
       if (statusFilter) params.append("status",      statusFilter);
       if (typeFilter)   params.append("partnerType",  typeFilter);
       if (search)       params.append("search",       search);
+      if (fromDate)     params.append("fromDate",     fromDate);
+      if (toDate)       params.append("toDate",       toDate);
 
       const res = await axios.get(`/api/admin/invoices?${params}`, { withCredentials: true });
       setInvoices(res.data.invoices || []);
@@ -73,8 +80,8 @@ export default function AdminInvoiceList() {
     finally  { setLoading(false); }
   };
 
-  useEffect(() => { fetchStats(); }, []);
-  useEffect(() => { fetchInvoices(); }, [statusFilter, typeFilter, page, search]);
+  useEffect(() => { fetchStats(); }, [fromDate, toDate]);
+  useEffect(() => { fetchInvoices(); }, [statusFilter, typeFilter, page, search, fromDate, toDate]);
 
  const sendInvoice = async (invoiceId) => {
   if (!confirm("Send this invoice? It will be locked and emailed to the partner.")) return;
@@ -122,6 +129,8 @@ export default function AdminInvoiceList() {
       if (statusFilter) params.append("status",     statusFilter);
       if (typeFilter)   params.append("partnerType", typeFilter);
       if (search)       params.append("search",      search);
+      if (fromDate)     params.append("fromDate",    fromDate);
+      if (toDate)       params.append("toDate",      toDate);
 
       const res = await axios.get(`/api/admin/invoices?${params}`, { withCredentials: true });
       const all = res.data.invoices || [];
@@ -194,7 +203,8 @@ export default function AdminInvoiceList() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invoiceRows), "Invoices");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(itemRows), "Items");
-      XLSX.writeFile(wb, `invoices-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const rangeSuffix = fromDate || toDate ? `_${fromDate || "start"}_to_${toDate || "today"}` : "";
+      XLSX.writeFile(wb, `invoices-export${rangeSuffix}-${new Date().toISOString().slice(0, 10)}.xlsx`);
 
       toast.success(`Exported ${all.length} invoice${all.length !== 1 ? "s" : ""}`, { id: toastId });
     } catch (err) {
@@ -287,6 +297,22 @@ export default function AdminInvoiceList() {
                   <option value="B2C">B2C</option>
                   <option value="UNREGISTERED">Unregistered</option>
                 </select>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>From</label>
+                  <input type="date" value={fromDate} max={toDate || undefined}
+                    onChange={e => { setFromDate(e.target.value); setPage(1); }}
+                    style={{ height: 38, border: "1.5px solid #e5e5e5", borderRadius: 8, padding: "0 10px", fontSize: 13, background: "#fff" }} />
+                  <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>To</label>
+                  <input type="date" value={toDate} min={fromDate || undefined}
+                    onChange={e => { setToDate(e.target.value); setPage(1); }}
+                    style={{ height: 38, border: "1.5px solid #e5e5e5", borderRadius: 8, padding: "0 10px", fontSize: 13, background: "#fff" }} />
+                  {(fromDate || toDate) && (
+                    <button onClick={() => { setFromDate(""); setToDate(""); setPage(1); }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 38, border: "1px solid #e5e5e5", borderRadius: 8, padding: "0 10px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#fff", cursor: "pointer" }}>
+                      <FiX size={12} /> Clear dates
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Table */}

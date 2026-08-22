@@ -358,11 +358,6 @@ export default async function handler(req, res) {
 <!-- Footer: Signature only -->
 <div class="footer-row" style="border-top:1px solid ${lineGray};padding-top:12px;margin-top:8px">
   <div style="font-size:10px;color:${label}">This is a computer-generated invoice.</div>
-  <div class="sign-box">
-    For: ${OPS.name}<br/>
-    <br/><br/><br/>
-    <div class="sign-line">Authorized Signatory</div>
-  </div>
 </div>
 
 </body>

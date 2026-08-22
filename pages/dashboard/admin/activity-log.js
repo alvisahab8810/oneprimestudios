@@ -72,10 +72,15 @@ export default function ActivityLogPage() {
     setLoading(true);
     try {
       const params = { page, limit: LIMIT };
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo)   params.dateTo   = dateTo;
+      // Searching by Order ID should work on its own, across all dates — the date
+      // range is only applied when there's no Order ID typed in.
+      if (orderIdDebounced) {
+        params.orderId = orderIdDebounced;
+      } else {
+        if (dateFrom) params.dateFrom = dateFrom;
+        if (dateTo)   params.dateTo   = dateTo;
+      }
       if (action)   params.action   = action;
-      if (orderIdDebounced) params.orderId = orderIdDebounced;
       const { data } = await axios.get("/api/admin/activity-log", { params, withCredentials: true });
       setLogs(data.logs || []);
       setTotal(data.total || 0);
@@ -131,10 +136,13 @@ export default function ActivityLogPage() {
               <input
                 type="date"
                 value={dateFrom}
+                disabled={!!orderIdDebounced}
                 onChange={e => { setDateFrom(e.target.value); setPage(1); }}
                 style={{
                   padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8,
                   fontSize: 14, outline: "none",
+                  background: orderIdDebounced ? "#f1f5f9" : "#fff",
+                  color: orderIdDebounced ? "#94a3b8" : "inherit",
                 }}
               />
             </div>
@@ -145,10 +153,13 @@ export default function ActivityLogPage() {
               <input
                 type="date"
                 value={dateTo}
+                disabled={!!orderIdDebounced}
                 onChange={e => { setDateTo(e.target.value); setPage(1); }}
                 style={{
                   padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8,
                   fontSize: 14, outline: "none",
+                  background: orderIdDebounced ? "#f1f5f9" : "#fff",
+                  color: orderIdDebounced ? "#94a3b8" : "inherit",
                 }}
               />
             </div>
@@ -166,6 +177,11 @@ export default function ActivityLogPage() {
                   fontSize: 14, outline: "none", minWidth: 200,
                 }}
               />
+              {orderIdDebounced && (
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+                  Searching all dates for this Order ID
+                </div>
+              )}
             </div>
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>
