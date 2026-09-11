@@ -5,7 +5,7 @@ export default function Features() {
     <>
       <div className="features-container mobile-none">
         <div className="feature-box">
-          <img src="/assets/images/icons/features/google.png" alt="Google" className="feature-icon" />
+          <img src="/assets/images/icons/features/1.svg" alt="Google" className="feature-icon" />
           <div>
             <h4 className="feature-title">4.8</h4>
             <p className="feature-text">Google reviews</p>
@@ -14,7 +14,7 @@ export default function Features() {
 
         <div className="feature-box">
           <img
-            src="/assets/images/icons/features/quality.png"
+            src="/assets/images/icons/features/2.svg"
             alt="Premium Quality"
             className="feature-icon"
           />
@@ -26,7 +26,7 @@ export default function Features() {
 
         <div className="feature-box">
           <img
-            src="/assets/images/icons/features/express.png"
+            src="/assets/images/icons/features/3.svg"
             alt="Express Services"
             className="feature-icon"
           />
@@ -38,7 +38,7 @@ export default function Features() {
 
         <div className="feature-box">
           <img
-            src="/assets/images/icons/features/bestprice.png"
+            src="/assets/images/icons/features/4.svg"
             alt="Best Price"
             className="feature-icon"
           />

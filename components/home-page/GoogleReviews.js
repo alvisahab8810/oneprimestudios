@@ -4,8 +4,8 @@ import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/pagination";
-import Link from "next/link";
-import { Pagination, Autoplay} from "swiper/modules";
+import { Pagination, Autoplay } from "swiper/modules";
+import { FaStar } from "react-icons/fa";
 
 const reviews = [
   {
@@ -161,90 +161,62 @@ const reviews = [
 
 export default function GoogleReviews() {
   return (
-    <>
-      <div className="container mobile-none">
-        <div className="categories-header">
-          <h3 className="categories-title">Google Reviews</h3>
-        </div>
-
-        <div className="underline"></div>
+    <section className="testimonials-section">
+      <div className="container">
+        <h2 className="testimonials-heading">
+          Client <span>Testimonials</span>
+        </h2>
+        <p className="testimonials-sub">
+          Trusted by brands that demand excellence.
+        </p>
       </div>
 
-      <div className="reviews-section">
-        {/* <h3 className="reviews-title mobile-none">Google Reviews</h3> */}
-
-        <div className="desktop-none">
-          <div className="categories-header mobile-products">
-            <h3 className="categories-title">Google Reviews</h3>
-            <Link href="#" className="view-all-link">
-              View All <img src="/assets/images/icons/arrow.svg"></img>
-            </Link>
-          </div>
-        </div>
-
+      <div className="testimonials-slider">
         <Swiper
-          slidesPerView={3.3}
-          spaceBetween={30}
+          slidesPerView={4}
+          spaceBetween={24}
           grabCursor={true}
-
-          
-          autoplay={{
-                      delay: 2500,
-                      disableOnInteraction: false,
-                    }}
+          autoplay={{ delay: 2500, disableOnInteraction: false }}
           loop={true}
-          // pagination={{ clickable: true }}
           modules={[Pagination, Autoplay]}
           breakpoints={{
-            320: {
-              slidesPerView: 1.3,
-
-              spaceBetween: 10,
-            },
-
-            768: { slidesPerView: 2 },
-            1024: { slidesPerView: 3.3 },
+            320: { slidesPerView: 1.15, spaceBetween: 14 },
+            768: { slidesPerView: 2.2, spaceBetween: 18 },
+            1024: { slidesPerView: 3.2, spaceBetween: 20 },
+            1280: { slidesPerView: 4, spaceBetween: 24 },
           }}
-          className="reviews-swiper"
+          className="testimonials-swiper"
         >
-          {reviews.map((review) => (
-            <SwiperSlide key={review.id}>
-              <div className="review-card">
-                <div className="review-header">
-                  <div className="review-user">
-                    <img
-                      src={review.avatar}
-                      alt={review.name}
-                      className="review-avatar"
-                    />
-                    <div className="info">
-                      <span className="review-name">{review.name}</span>
-                      <p className="review-date">{review.date}</p>
-                    </div>
+          {reviews.map((review, index) => (
+            <SwiperSlide key={review.name + index}>
+              <div className="testimonial-card">
+                <p className="testimonial-text">{review.text}</p>
+
+                <div className="testimonial-footer">
+                  <img
+                    src={review.avatar}
+                    alt={review.name}
+                    className="testimonial-avatar"
+                    loading="lazy"
+                  />
+                  <div className="testimonial-meta">
+                    <span className="testimonial-name">{review.name}</span>
+                    <span className="testimonial-stars">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <FaStar
+                          key={i}
+                          size={14}
+                          color={i < review.rating ? "#FFC300" : "#dcdce1"}
+                        />
+                      ))}
+                    </span>
                   </div>
-                  <img
-                    src="/assets/images/reviews/google.png"
-                    alt="Google"
-                    className="google-logo"
-                  />
                 </div>
-
-                {/* Rating */}
-                <div className="review-rating">
-                  <img
-                    src="/assets/images/reviews/rating.png"
-                    alt="Rating"
-                    className="google-logo"
-                  />
-                </div>
-
-                {/* Text */}
-                <p className="review-text">{review.text}</p>
               </div>
             </SwiperSlide>
           ))}
         </Swiper>
       </div>
-    </>
+    </section>
   );
 }

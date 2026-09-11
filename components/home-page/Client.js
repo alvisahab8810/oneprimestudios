@@ -1,5 +1,5 @@
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Autoplay} from "swiper/modules";
+import { Autoplay } from "swiper/modules";
 import "swiper/css";
 // import "swiper/css/navigation";
 
@@ -163,58 +163,39 @@ export default function Client() {
   ];
 
   return (
+    <section className="brands-section">
+      <div className="container">
+        <h2 className="brands-heading">
+          Trusted By <span>Leading Brands</span>
+        </h2>
+      </div>
 
-
-    <>
-
-    <div className="container ">
-      <div className="categories-header">
-          <h3 className="categories-title">Our Happy Clients</h3>
-
-          {/* <Link href="/categories" className="view-all-link">
-            View All <img src="/assets/images/icons/arrow.svg" />
-          </Link> */}
-        </div>
-
-        <div className="underline"></div>
-    </div>
-    <div className="client-slider">
-      
-      
-
-      <Swiper
-      className="happy-client"
-        modules={[Navigation, Autoplay]}
-        spaceBetween={20}
-
-          autoplay={{
-                      delay: 2500,
-                      disableOnInteraction: false,
-                    }}
-
-        slidesPerView={7}
-        // navigation
-        breakpoints={{
-          320: { slidesPerView: 4 ,
-             spaceBetween: 10,
-
-
-          },
-          640: { slidesPerView: 2 },
-          1024: { slidesPerView: 7 },
-        }}
-      >
-        {products.map((product) => (
-          <SwiperSlide key={product.id}>
-            <div className="client-card">
-              {/* <div className="price-tag">{product.price}</div> */}
-              <img src={product.img} alt={product.title} />
-              {/* <div className="title">{product.title}</div> */}
-            </div>
-          </SwiperSlide>
-        ))}
-      </Swiper>
-    </div>
-    </>
+      <div className="brands-slider">
+        <Swiper
+          className="brands-swiper"
+          modules={[Autoplay]}
+          spaceBetween={24}
+          slidesPerView={6}
+          loop
+          speed={3000}
+          allowTouchMove={false}
+          autoplay={{ delay: 0, disableOnInteraction: false }}
+          breakpoints={{
+            320: { slidesPerView: 3, spaceBetween: 16 },
+            576: { slidesPerView: 4, spaceBetween: 18 },
+            992: { slidesPerView: 5, spaceBetween: 20 },
+            1200: { slidesPerView: 6, spaceBetween: 24 },
+          }}
+        >
+          {products.map((product) => (
+            <SwiperSlide key={product.id}>
+              <div className="brand-logo">
+                <img src={product.img} alt="Client logo" loading="lazy" />
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </div>
+    </section>
   );
 }

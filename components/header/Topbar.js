@@ -239,6 +239,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import axios from "axios";
+import CategoryNav from "./CategoryNav";
 
 export default function Topbar() {
   const [user, setUser] = useState(null);
@@ -346,6 +347,7 @@ export default function Topbar() {
   };
 
   return (
+    <>
     <nav className="main-nav navbar navbar-expand-lg bg-white">
       <div className="container">
         <div className="mobile-header-row">
@@ -376,12 +378,12 @@ export default function Topbar() {
 
             {/* LOGO */}
             <Link href="/" className="navbar-brand logo-area">
-              <img src="/assets/images/logo.png" alt="Logo" />
+              <img src="/assets/images/logo.svg" alt="Logo" />
             </Link>
           </div>
 
           {/* SEARCH BAR */}
-          <div className="top-search-bar mobile-none">
+          {/* <div className="top-search-bar mobile-none">
             <form action="/products" method="GET" className="search-form">
               <input
                 type="text"
@@ -393,11 +395,12 @@ export default function Topbar() {
                 <img src="/assets/images/icons/serarch.png" />
               </button>
             </form>
-          </div>
+          </div> */}
 
-          {/* DESKTOP NAVIGATION */}
-          <div className="right-side mobile-none">
-            <ul className="navbar-nav gap-3">
+
+          {/* DESKTOP MENU — phone par offcanvas menu use hota hai */}
+          <div className="mobile-none">
+             <ul className="navbar-nav gap-3">
               <li className="nav-item">
                 <Link className="nav-link" href="/">
                   Home
@@ -410,10 +413,21 @@ export default function Topbar() {
               </li>
               <li className="nav-item">
                 <Link className="nav-link" href="/contact-us">
-                  Contact Us
+                  Contact 
+                </Link>
+              </li>
+
+              <li className="nav-item">
+                <Link className="nav-link" href="/contact-us">
+                  Blog 
                 </Link>
               </li>
             </ul>
+          </div>
+
+          {/* DESKTOP NAVIGATION */}
+          <div className="right-side mobile-none">
+           
 
             <div className="d-flex align-items-center gap-3">
               {/* CART */}
@@ -698,5 +712,9 @@ export default function Topbar() {
         }
       `}</style>
     </nav>
+
+    {/* DYNAMIC CATEGORY MENU */}
+    <CategoryNav />
+    </>
   );
 }

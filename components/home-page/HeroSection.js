@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation  } from "swiper/modules";
 import "swiper/css";
@@ -58,14 +59,24 @@ export default function HeroSection() {
             <div
               className="hero-slide"
               style={{
-                backgroundImage: "url('/assets/images/hero/hero-img.png')",
+                backgroundImage: "url('/assets/images/hero/banner.webp')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
-                height: "100%",
-                width: "100%"
+                height: "629px",
+                width: "100%",
+                borderRadius: "33px"
               }}
             >
-              <div className="hero-text">
+              {/* Sirf "Explore Corporate Gifts" button ka area clickable —
+                  poora banner nahi. Coords % me hain to banner resize hone pe
+                  hotspot bhi usi jagah rahega. */}
+              <Link
+                href="/products"
+                className="hero-cta-hotspot"
+                aria-label="Explore Corporate Gifts"
+              />
+
+              {/* <div className="hero-text">
                 <p className="welcome">Welcome to</p>
                 <h2>Premium Printing Services</h2>
                 <h3>
@@ -78,13 +89,13 @@ export default function HeroSection() {
                   <a href="/products" className="btn primary">Explore</a>
                   <a href="/contact-us" className="btn secondary">Know More</a>
                 </div>
-              </div>
+              </div> */}
             </div>
           </SwiperSlide>
 
 
               {/* SLIDE 3*/}
-          <SwiperSlide>
+          {/* <SwiperSlide>
             <div
               className="hero-slide"
               style={{
@@ -111,11 +122,11 @@ export default function HeroSection() {
                 </div>
               </div>
             </div>
-          </SwiperSlide>
+          </SwiperSlide> */}
 
           {/* Slider Navigation Buttons */}
-  <div className="hero-nav-btn hero-prev-btn">❮</div>
-  <div className="hero-nav-btn hero-next-btn">❯</div>
+  {/* <div className="hero-nav-btn hero-prev-btn">❮</div>
+  <div className="hero-nav-btn hero-next-btn">❯</div> */}
 
         </Swiper>
 

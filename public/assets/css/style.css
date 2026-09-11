@@ -5,6 +5,7 @@ a{
 
 .main-nav {
     padding:30px 0px;
+    padding-bottom:50px;
 }
 
 .main-nav .navbar-brand span {
@@ -13,8 +14,9 @@ a{
 }
 
 .main-nav .nav-link {
-  font-size: 16px;
-    color:#424255;
+    font-size: 19px;
+    color: #000000;
+    font-family: 'Outfit';
 }
 
 .main-nav .nav-link.active {
@@ -50,39 +52,70 @@ a{
     color:#333333;
 }
 
-.right-side .top-btn {
-    height: 50px;
-    width: 50px;
+.right-side .top-btn,
+.right-side .cart-btn {
+    position: relative;
+    height: 48px;
     display: flex;
-    justify-content: center;
-    border-radius: 8px;
-    border: 1px solid #bbbbbb;
     align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid #e2e2e6;
+    background: #fff;
+    color: #111;
+    text-decoration: none;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.right-side .top-btn {
+    width: 48px;
 }
 
 .right-side .cart-btn {
-    height: 50px;
-    width: 136px;
-    display: flex;
-    justify-content: center;
-    border-radius: 8px;
-    border: 1px solid #bbbbbb;
-    align-items: center;
-    justify-content: space-evenly;
-    text-decoration: none;
-    color:#000;
+    gap: 10px;
+    padding: 0 20px;
+    font-size: 16px;
+    font-weight: 500;
 }
 
-.right-side .items-count{
-  height:20px;
-  width:20px;
+.right-side .cart-btn .cart-text {
+    line-height: 1;
+}
+
+.right-side .top-btn img,
+.right-side .cart-btn img {
+    height: 20px;
+    width: 20px;
+    object-fit: contain;
+}
+
+.right-side .top-btn:hover,
+.right-side .cart-btn:hover {
+    border-color: #111;
+    background: #fafafa;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+}
+
+.right-side .items-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  height: 20px;
+  min-width: 20px;
+  /* border-box ke bina padding+border width ko 20px se aage kheench dete the
+     aur badge oval ban jata tha */
+  box-sizing: border-box;
+  padding: 0 4px;
   border-radius: 50px;
-  background: #333 !important;
-  color:white;
+  background: #111 !important;
+  color: #fff;
+  border: 2px solid #fff;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 
@@ -96,7 +129,6 @@ a{
 .hero {
   display: flex;
   /* align-items: center; */
-  height: 477px;;
   justify-content: space-between;
   /* background: #f5f3ff; */
   position: relative;
@@ -234,46 +266,48 @@ a{
 
 
 
-
 .features-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #FCFCFD;
-  border-radius: 10px;
-  margin-top: 50px;
-  border: 1px solid #F1F1F3;
-  padding: 35px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
+    /* background: #FCFCFD; */
+    border-radius: 10px;
+    margin-top: 30px;
+    /* border: 1px solid #F1F1F3; */
+    padding: 19px 40px;
 }
 
 .feature-box {
   display: flex;
   align-items: center;
   gap: 15px;
-  flex: 1;
+  /* content jitni width — taki chaaron ke beech gap barabar dikhe */
+  flex: 0 1 auto;
   text-align: left;
 }
 
 .feature-icon {
-  width: 62px;
-  height: 62px;
-  border-radius: 50px;
-  object-fit: contain;
-  border: 1px solid #DCE2EE;
-  padding: 7px;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    /* object-fit: contain; */
+    /* border: 1px solid #DCE2EE; */
+    /* padding: 7px; */
 }
 
 .feature-title {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 5px;
-  color: #333; /* blue like in your design */
+    font-size: 25px;
+    font-weight: 600;
+    margin-bottom: 0px;
+    font-family: 'Outfit';
+    color: #E90C0C;
 }
 
 .feature-text {
-  font-size: 16px;
-  margin: 0;
-  color: #3A3A3A;
+    font-size: 17px;
+    margin: 0;
+    color: #000000;
 }
 
 
@@ -737,14 +771,32 @@ margin-top: 50px;
    
 }
 
-.custom-accrodion-bx > h2{
-  color:#262626;
-  font-size: 30px;
-  margin-bottom: 50px;
+/* baaki sections jaisi heading: 64px, centered, red accent */
+.custom-accrodion-bx > h2 {
+  font-family: 'Outfit', sans-serif;
+  color: #111;
+  font-size: 64px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 44px;
+}
+
+.custom-accrodion-bx > h2 .text-gradient {
+  color: #E10600;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+@media (max-width: 991px) {
+  .custom-accrodion-bx > h2 {
+    font-size: 34px;
+    margin-bottom: 28px;
+  }
 }
 
 .custom-accrodion-bx {
-  margin: 100px 0px;
+  margin: 60px 0px 100px;
 }
 
 .custom-accrodion-bx .accordion-item:first-of-type{
@@ -759,7 +811,7 @@ margin-top: 50px;
   background-color: #0f0f18;
   color: #f1f1f1;
   padding: 3rem 2rem;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
 }
 
 .footer-top {
@@ -1063,7 +1115,7 @@ margin-top: 50px;
 .add-product-page {
   /* max-width: 1200px;
   margin: 2rem auto;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
   color: #2d3748;
   background: #f5f7fa;
   padding: 2rem;
@@ -2199,7 +2251,7 @@ ease;
 
 /* ops-file-uploader - unique parent */
 .ops-file-uploader {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+  font-family: 'Outfit', system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
@@ -4048,4 +4100,1251 @@ ease;
 
 .contact-section a{
   color: black!important;
+}
+
+/* Laptop & desktop: keep container width at 1280px */
+@media (min-width: 1200px) {
+  .container,
+  .container-sm,
+  .container-md,
+  .container-lg,
+  .container-xl,
+  .container-xxl {
+    max-width: 1280px;
+  }
+}
+
+/* ================= Dynamic category menu (header ke neeche) ================= */
+.category-nav {
+  /* border-top: 1px solid #ececef; */
+  /* border-bottom: 1px solid #ececef; */
+  background: #fff;
+  position: relative;
+  z-index: 900;
+}
+
+.category-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 26px;
+}
+
+.category-nav-item {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.category-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom:30px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+  background: none;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .2s ease;
+}
+
+.category-nav-link:hover,
+.category-nav-item.is-open > .category-nav-link {
+  color: #e11d1d;
+}
+
+.category-nav-caret {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform .2s ease;
+}
+
+.category-nav-item.is-open .category-nav-caret {
+  transform: rotate(-135deg) translateY(-2px);
+}
+
+.category-dropdown {
+  position: absolute;
+  top: 100%;
+  left: -14px;
+  min-width: 230px;
+  background: #fff;
+  border: 1px solid #ececef;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .1);
+  padding: 8px 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+
+.category-nav-item.is-open .category-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.category-dropdown ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.category-dropdown a {
+  display: block;
+  padding: 9px 18px;
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+
+.category-dropdown a:hover {
+  background: #f6f6f8;
+  color: #e11d1d;
+}
+
+.category-dropdown-all {
+  font-weight: 600;
+  border-bottom: 1px solid #f0f0f2;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 991px) {
+  .category-nav-list {
+    gap: 18px;
+  }
+
+  .category-nav-link {
+    font-size: 14px;
+    padding: 12px 0;
+  }
+
+  .category-dropdown {
+    left: 0;
+  }
+}
+
+/* ============================ Impact Stats Section ============================ */
+.impact-section {
+  padding: 100px 0 0px;
+  background: #fff;
+}
+
+.impact-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 80px;
+  line-height: 93.6px;
+  font-weight: 700;
+  color: #0d0d0d;
+  margin: 0 0 33px;
+}
+
+.impact-heading span {
+  color: #E10600;
+}
+
+.impact-desc {
+    /* max-width: 760px; */
+    font-size: 24px;
+    line-height: 33px;
+    color: #000000;
+    margin: 0 0 55px;
+}
+
+.impact-stats {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.impact-stat {
+  flex: 1 1 180px;
+  text-align: center;
+}
+
+.impact-stat-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 48px;
+    line-height: 94px;
+    font-weight: 500;
+    color: #E10600;
+    margin: 0 0 8px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+}
+
+.impact-stat-label {
+    font-size: 24px;
+    font-weight: 400;
+    color: #000000;
+    font-family: 'Outfit';
+    margin: 0;
+}
+
+@media (max-width: 991px) {
+  .impact-section {
+    padding: 55px 0 45px;
+  }
+
+  .impact-heading {
+    font-size: 32px;
+  }
+
+  .impact-desc {
+    font-size: 15px;
+    margin-bottom: 38px;
+  }
+
+  .impact-stats {
+    gap: 30px 20px;
+  }
+
+  .impact-stat {
+    flex: 0 0 calc(50% - 10px);
+  }
+
+  .impact-stat-value {
+    font-size: 30px;
+  }
+
+  .impact-stat-label {
+    font-size: 14px;
+  }
+}
+
+/* ==================== Shared section heading / description ==================== */
+.section-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 80px;
+  line-height: 93.6px;
+  font-weight: 700;
+  color: #0d0d0d;
+  margin: 0 0 15px;
+}
+
+.section-heading span {
+  color: #E10600;
+}
+
+.section-desc {
+    font-size: 23px;
+    line-height: 24px;
+    color: #000000;
+    margin: 0 0 80px;
+}
+
+@media (max-width: 1199px) {
+  .section-heading {
+    font-size: 56px;
+    line-height: 1.15;
+  }
+
+  .section-desc {
+    font-size: 20px;
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 767px) {
+  .section-heading {
+    font-size: 34px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .section-desc {
+    font-size: 17px;
+    line-height: 1.6;
+    margin-bottom: 35px;
+  }
+}
+
+/* ============================== Our Services ============================== */
+.services-section {
+  padding: 100px 0;
+  background: #fff;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+.service-card {
+  color: inherit;
+  text-decoration: none;
+  background: #fff;
+  border: 1px solid #ececef;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-4px);
+  border-color: #dedee2;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .1);
+}
+
+.service-img-wrap {
+  /* image na mile tab bhi card ka shape bana rahe */
+  background: linear-gradient(135deg, #f2f2f5, #e6e6ea);
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.service-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .35s ease;
+}
+
+.service-card:hover .service-img {
+  transform: scale(1.04);
+}
+
+.service-body {
+  padding: 18px 20px 24px;
+}
+
+.service-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18.17px;
+    line-height: 18.2px;
+    font-weight: 600;
+    color: #E10600;
+    margin: 0 0 8px;
+}
+
+.service-text {
+    font-size: 15px;
+    line-height: 20px;
+    color: #000000;
+    margin: 0;
+}
+
+@media (max-width: 991px) {
+  .services-section {
+    padding: 55px 0;
+  }
+
+  .services-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 575px) {
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================ Print On Demand ============================ */
+.pod-section {
+  padding: 0px 0;
+  background: #fff;
+}
+
+.pod-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.pod-card {
+  position: relative;
+  display: block;
+  /* Figma card ratio: 383.95 x 445.42 */
+  aspect-ratio: 384 / 445;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #eaeaee;
+  color: #fff;
+  text-decoration: none;
+}
+
+.pod-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+
+.pod-card:hover .pod-img {
+  transform: scale(1.05);
+}
+
+.pod-wishlist {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, .92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
+  z-index: 2;
+}
+
+.pod-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 45%;
+    padding: 20px 26px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(12px);
+    justify-content: space-between;
+    gap: 8px;
+    background-image: linear-gradient(rgb(61 61 61 / 53%), rgb(61 61 61 / 99%)), linear-gradient(rgba(46, 47, 52, .2), rgb(46 47 52 / 23%));
+}
+
+.pod-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.pod-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pod-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.pod-cart-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    border-radius: 50px;
+    background: #E10600;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    padding: 8px 37px;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+} 
+
+.pod-cart-btn:hover:not(:disabled) {
+  background: #c00500;
+  transform: translateY(-1px);
+}
+
+.pod-cart-btn:disabled {
+  opacity: .7;
+  cursor: default;
+}
+
+.pod-cart-arrow {
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.pod-skeleton {
+  background: linear-gradient(90deg, #f0f0f3 25%, #e6e6ea 50%, #f0f0f3 75%);
+  background-size: 200% 100%;
+  animation: podShimmer 1.3s infinite;
+}
+
+@keyframes podShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 991px) {
+  .pod-section {
+    padding: 55px 0;
+  }
+
+  .pod-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+
+  .pod-overlay {
+    padding: 20px 22px;
+  }
+
+  .pod-title {
+    font-size: 22px;
+  }
+
+  .pod-cart-btn {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+}
+
+@media (max-width: 575px) {
+  .pod-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* Hero banner ka CTA hotspot — sirf "Explore Corporate Gifts" button clickable.
+   Values banner ke % me hain (image 1920x945), to har screen pe align rahega. */
+.hero-slide {
+  position: relative;
+}
+
+.hero-cta-hotspot {
+  position: absolute;
+  left: 10%;
+  top: 69%;
+  width: 22%;
+  height: 8.5%;
+  border-radius: 50px;
+  z-index: 3;
+  /* debug ke liye: background: rgba(0,128,255,.35); */
+}
+
+/* ======================= Industrial Printing Power ======================= */
+.ipower-section {
+  padding: 100px 0;
+  background: #fff;
+}
+
+.ipower-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 60px;
+}
+
+.ipower-left {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ipower-heading {
+    font-family: 'Outfit', sans-serif;
+    font-size: 64px;
+    line-height: 64px;
+    font-weight: 700;
+    color: #0d0d0d;
+    margin: 0 0 22px;
+}
+
+.ipower-heading span {
+  color: #E10600;
+}
+
+.ipower-desc {
+    font-size: 24px;
+    line-height: 1.45;
+    color: #000000;
+    margin: 0 0 60px;
+    font-family: 'Outfit';
+}
+.ipower-points {
+  list-style: none;
+  margin: 0 0 60px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.ipower-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+/* Figma: 50x50, padding 13, fill #E10600 @10%, stroke #E10600 @30% */
+.ipower-icon {
+  flex: 0 0 50px;
+  height: 50px;
+  width: 50px;
+  padding: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(225, 6, 0, .1);
+  border: 1px solid rgba(225, 6, 0, .3);
+}
+
+.ipower-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ipower-point-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 600;
+    color: #0d0d0d;
+    margin: 0 0 0px;
+}
+
+.ipower-point-text {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #444444;
+  margin: 0;
+}
+
+.ipower-cta {
+  display: inline-block;
+  background: #E10600;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 15px 45px;
+  border-radius: 50px;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.ipower-cta:hover {
+  background: #c00500;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Right side: 2 columns, doosri column thoda neeche shifted (Figma jaisa) */
+.ipower-gallery {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 286.2px);
+  gap: 15px;
+}
+
+.ipower-gallery > :nth-child(even) {
+  transform: translateY(40px);
+}
+
+.ipower-shot {
+  width: 286.2px;
+  height: 315px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f0f0f3;
+}
+
+.ipower-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 1199px) {
+  .ipower-row {
+    gap: 36px;
+  }
+
+  .ipower-heading {
+    font-size: 46px;
+  }
+
+  .ipower-desc {
+    font-size: 19px;
+    margin-bottom: 30px;
+  }
+
+  .ipower-point-title {
+    font-size: 20px;
+  }
+
+  .ipower-gallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ipower-shot {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 286.2 / 315;
+  }
+}
+
+@media (max-width: 991px) {
+  .ipower-section {
+    padding: 55px 0;
+  }
+
+  .ipower-row {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .ipower-gallery {
+    width: 100%;
+  }
+
+  .ipower-gallery > :nth-child(even) {
+    transform: none;
+  }
+
+  .ipower-heading {
+    font-size: 34px;
+  }
+
+  .ipower-desc {
+    font-size: 17px;
+  }
+
+  .ipower-point-title {
+    font-size: 18px;
+  }
+
+  .ipower-point-text {
+    font-size: 15px;
+  }
+}
+
+/* ========================== Client Testimonials ========================== */
+.testimonials-section {
+  padding: 40px 0;
+  background: #fff;
+}
+
+.testimonials-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 64px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: #0d0d0d;
+  text-align: center;
+  margin: 0 0 10px;
+}
+
+.testimonials-heading span {
+  color: #E10600;
+}
+
+.testimonials-sub {
+  font-size: 18px;
+  line-height: 1.5;
+  color: #4a4a4a;
+  text-align: center;
+  margin: 0 0 64px;
+}
+
+.testimonials-slider {
+  padding: 0 40px;
+}
+
+.testimonial-card {
+  /* Figma: linear fill FFFFFF -> F3F3F3, radius 25.6, padding 19.2, inside stroke 0.8 */
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #F3F3F3 100%);
+  border: 0.8px solid rgba(20, 27, 52, 0.08);
+  border-radius: 25.6px;
+  padding: 19.2px;
+  height: 100%;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  /* Figma drop shadow: X0 Y2.4 blur6.4 #141B34 4% */
+  box-shadow: 0 2.4px 6.4px rgba(20, 27, 52, 0.04);
+}
+
+.testimonial-text {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #3d3d3d;
+  margin: 0;
+  /* sab cards ki height barabar rakhne ke liye 4 line pe clamp */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.testimonial-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* card me name section ke upar halki divider line */
+  border-top: 1px solid rgba(20, 27, 52, 0.08);
+  padding-top: 16px;
+}
+
+.testimonial-avatar {
+  height: 48px;
+  width: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e4e4e9;
+}
+
+.testimonial-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.testimonial-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.2;
+}
+
+.testimonial-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+@media (max-width: 991px) {
+  .testimonials-section {
+    padding: 45px 0;
+  }
+
+  .testimonials-heading {
+    font-size: 34px;
+  }
+
+  .testimonials-sub {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  .testimonials-slider {
+    padding: 0 16px;
+  }
+}
+
+/* swiper slides ki height barabar — warna card ka height:100% kaam nahi karta */
+.testimonials-swiper .swiper-slide {
+  height: auto;
+}
+
+/* ===== See it in Action slider ===== */
+.action-section {
+  padding: 70px 0 60px;
+  overflow: hidden;
+}
+
+.action-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 64px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+  margin: 0 0 34px;
+}
+
+.action-heading span {
+  color: #E10600;
+}
+
+.action-slider {
+  position: relative;
+}
+
+/* creative(stack) effect: swiper khud 800px ka, peeche wale cards bahar dikhne chahiye */
+.action-swiper {
+  /* poora stack = card ka 2.18x; 46vw se outer layers screen me fit rehti hain */
+  width: min(800px, 46vw);
+  margin: 0 auto;
+  overflow: visible !important;
+}
+
+/* active slide ka exact size: 800 x 400, radius 40 */
+.action-swiper .action-slide {
+  width: 100%;
+  /* 800 x 400 ka ratio, chhoti screen par proportionally chhota */
+  aspect-ratio: 2 / 1;
+  border-radius: 40px;
+  overflow: hidden;
+  transition: filter .5s ease, opacity .5s ease;
+  /* peeche wale cards opaque rehte hain, bas thode dabe hue (transparent honge to ek dusre me se dikhenge) */
+  filter: brightness(.82) saturate(.85);
+}
+
+.action-swiper .action-slide.swiper-slide-active {
+  opacity: 1;
+  filter: none;
+}
+
+.action-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 40px;
+  background: #e9e9ee;
+}
+
+.action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.action-nav {
+  background: transparent;
+  border: 0;
+  padding: 0 4px;
+  font-size: 20px;
+  line-height: 1;
+  color: #9a9aa2;
+  cursor: pointer;
+  transition: color .2s ease;
+}
+
+.action-nav:hover {
+  color: #E10600;
+}
+
+.action-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action-dot {
+  height: 8px;
+  width: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #d9d9de;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.action-dot.is-active {
+  background: #E10600;
+}
+
+@media (max-width: 991px) {
+  .action-section {
+    padding: 45px 0 40px;
+  }
+
+  .action-heading {
+    font-size: 34px;
+    margin-bottom: 24px;
+  }
+
+  .action-swiper {
+    width: 62vw;
+  }
+
+  .action-swiper .action-slide {
+    border-radius: 24px;
+  }
+
+  .action-img {
+    border-radius: 24px;
+  }
+}
+
+/* ===== Trusted by leading brands ===== */
+.brands-section {
+  padding: 70px 0 30px;
+  overflow: hidden;
+}
+
+.brands-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 64px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+  margin: 0 0 60px;
+}
+
+.brands-heading span {
+  color: #E10600;
+}
+
+/* logos ek line me, grey — Figma jaisa */
+.brands-swiper .swiper-wrapper {
+  /* marquee jaisi smooth chaal */
+  transition-timing-function: linear !important;
+  align-items: center;
+}
+
+.brand-logo {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  filter: grayscale(1);
+  opacity: .55;
+  transition: filter .25s ease, opacity .25s ease;
+}
+
+.brand-logo img:hover {
+  filter: grayscale(0);
+  opacity: 1;
+}
+
+@media (max-width: 991px) {
+  .brands-section {
+    padding: 45px 0 35px;
+  }
+
+  .brands-heading {
+    font-size: 34px;
+    margin-bottom: 28px;
+  }
+
+  .brand-logo {
+    height: 42px;
+  }
+}
+
+/* ===== Footer (Figma: get in touch) ===== */
+.site-footer {
+  background: #fff;
+  padding: 70px 0 40px;
+  font-family: 'Outfit', sans-serif;
+  color: #111;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 60px;
+  align-items: start;
+}
+
+.footer-heading {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin: 0 0 14px;
+}
+
+.footer-heading span {
+  color: #E10600;
+}
+
+.footer-intro-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #55555d;
+  margin: 0 0 26px;
+  max-width: 420px;
+}
+
+.footer-contacts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.footer-contact {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.footer-contact-icon {
+  flex: 0 0 34px;
+  height: 34px;
+  width: 34px;
+  border-radius: 8px;
+  background: rgba(225, 6, 0, .08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-contact-icon img {
+  height: 16px;
+  width: 16px;
+  object-fit: contain;
+}
+
+.footer-contact-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .8px;
+  color: #8a8a93;
+  margin-bottom: 3px;
+}
+
+.footer-contact a,
+.footer-contact-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #111;
+  text-decoration: none;
+  max-width: 340px;
+}
+
+.footer-contact a:hover {
+  color: #E10600;
+}
+
+.footer-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  padding-top: 8px;
+}
+
+.footer-col {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.footer-col a {
+  font-size: 14px;
+  color: #55555d;
+  text-decoration: none;
+  transition: color .2s ease;
+}
+
+.footer-col a:hover {
+  color: #E10600;
+}
+
+.footer-rule {
+  border: 0;
+  border-top: 1px solid #e6e6ea;
+  margin: 46px 0 22px;
+}
+
+.footer-bottom-links {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+.footer-bottom-links a {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  text-decoration: none;
+}
+
+.footer-bottom-links a:hover {
+  color: #E10600;
+}
+
+.footer-copy {
+  text-align: left;
+  font-size: 13px;
+  color: #55555d;
+  margin: 0 0 10px;
+}
+
+.footer-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #8a8a93;
+  margin: 0;
+  max-width: 760px;
+}
+
+@media (max-width: 991px) {
+  .site-footer {
+    padding: 45px 0 30px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .footer-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+}
+
+/* ===== Mobile hero: single banner + button hotspot ===== */
+.mobile-hero-banner {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.mobile-hero-banner__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* banner 537x320 hai; button ~ x12-152, y219-247 -> %'s me rakha hai
+   taaki banner chhota/bada hone par hotspot usi jagah rahe */
+.mobile-hero-cta-hotspot {
+  position: absolute;
+  left: 2%;
+  top: 67.5%;
+  width: 28%;
+  height: 10%;
+  border-radius: 50px;
+  z-index: 3;
+  /* debug ke liye: background: rgba(0,128,255,.35); */
 }

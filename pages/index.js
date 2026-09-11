@@ -5,6 +5,11 @@ import Client from "@/components/home-page/Client";
 import DealBanner from "@/components/home-page/Cta";
 import FaqAccordion from "@/components/home-page/Faq";
 import Features from "@/components/home-page/Features";
+import ImpactStats from "@/components/home-page/ImpactStats";
+import Services from "@/components/home-page/Services";
+import PrintOnDemand from "@/components/home-page/PrintOnDemand";
+import IndustrialPower from "@/components/home-page/IndustrialPower";
+import SeeItInAction from "@/components/home-page/SeeItInAction";
 import GoogleReviews from "@/components/home-page/GoogleReviews";
 import HeroSection from "@/components/home-page/HeroSection";
 import ProductSlider from "@/components/home-page/ProductSlider";
@@ -38,21 +43,32 @@ export default function Home() {
       <div className="main-page">
         <Topbar />
         <Offcanvas/>
-        <HeroSection />
         <div className="container">
+        <HeroSection />
+
           <HeroSectionMobile/>
           <Features />
           <MobileFeatures/>
         </div>
-        <Categories />
+        <ImpactStats />
+        <Services />
+        <PrintOnDemand />
+        <IndustrialPower />
+        {/* <Categories /> */}
+        <div className="container">
+          <SeeItInAction />
+
+        </div>
         <GoogleReviews />
-        <ProductSlider />
-        <PopularSlider />
-        <Client />
+        {/* <ProductSlider />
+        <PopularSlider /> */}
+         <div className="container">
+           <Client />
+         </div>
         {/* <ProductSlider /> */}
         <div className="container">
-          <DealBanner />
-          <FaqAccordion />
+          {/* <DealBanner /> */}
+          {/* <FaqAccordion /> */}
         </div>
         <Footer />
       </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import "swiper/css";
@@ -6,7 +7,7 @@ import "swiper/css";
 
 import { Pagination, Autoplay } from "swiper/modules"; // correct import for autoplay
 
-export default function HeroSectionMobile() {
+function MobileHeroSlider() {
   return (
     <div className="mobile-hero-area desktop-none" id="herosection-mobile">
 
@@ -126,6 +127,29 @@ export default function HeroSectionMobile() {
           </section>
         </SwiperSlide>
       </Swiper>
+    </div>
+  );
+}
+
+// Mobile par filhaal single banner dikhana hai. Purana slider MobileHeroSlider()
+// me waise ka waisa pada hai — wapas chahiye to neeche return swap kar dena.
+export default function HeroSectionMobile() {
+  return (
+    <div className="mobile-hero-area desktop-none" id="herosection-mobile">
+      <div className="mobile-hero-banner">
+        <img
+          src="/assets/images/hero/banner-mobile.png"
+          alt="Custom printing and corporate gifting solutions"
+          className="mobile-hero-banner__img"
+        />
+
+        {/* desktop jaisa hi: sirf button ka area clickable, poora banner nahi */}
+        <Link
+          href="/products"
+          className="mobile-hero-cta-hotspot"
+          aria-label="Explore Corporate Gifts"
+        />
+      </div>
     </div>
   );
 }

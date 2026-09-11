@@ -7,7 +7,7 @@ body {
 
 body {
 
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', Arial, Helvetica, sans-serif;
 
 }
 
@@ -24,3 +24,11 @@ a {
 
 
 
+
+/* Form controls don't inherit font by default */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
