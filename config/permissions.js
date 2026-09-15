@@ -4,6 +4,7 @@ export const PERMISSIONS = [
   { key: "customers", label: "Customers" },
   { key: "orders", label: "Orders" },
   { key: "reports.partner_sales", label: "Partner Sales Report" },
+  { key: "reports.product_sales", label: "Product Sales Report" },
    // ✅ NEW
   { key: "categories", label: "Categories" },
   { key: "leads", label: "Leads" },

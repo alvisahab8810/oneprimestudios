@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
   try {
     const categories = await Category.find({})
-      .select("_id name")
+      .select("_id name parent")
       .sort({ name: 1 });
 
     return res.status(200).json({

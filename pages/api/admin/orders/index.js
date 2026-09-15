@@ -1,4 +1,5 @@
 import Product from "@/models/Product";
+import Category from "@/models/Category";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import User from "@/models/User";
@@ -104,8 +105,10 @@ export default async function handler(req, res) {
       // Exact product match — most specific, takes precedence
       filters["items.product"] = new mongoose.Types.ObjectId(product);
     } else if (category && mongoose.Types.ObjectId.isValid(category)) {
-      // Find all products in this category then match orders
-      const productsInCat = await Product.find({ category }).select("_id").lean();
+      // A parent category also covers every product in its sub-categories
+      const subCats = await Category.find({ parent: category }).select("_id").lean();
+      const categoryIds = [category, ...subCats.map((c) => c._id)];
+      const productsInCat = await Product.find({ category: { $in: categoryIds } }).select("_id").lean();
       const productIds = productsInCat.map((p) => p._id);
       filters["items.product"] = { $in: productIds };
     }

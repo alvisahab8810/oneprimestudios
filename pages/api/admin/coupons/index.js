@@ -1,15 +1,12 @@
 import dbConnect from "@/lib/dbConnect";
 import Coupon from "@/models/Coupon";
-import { verifyAdmin } from "@/lib/verifyJWT";
+import { requireAdminPermission } from "@/lib/adminAuth";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  try {
-    await verifyAdmin(req);
-  } catch {
-    return res.status(401).json({ message: "Admin access only" });
-  }
+  const admin = await requireAdminPermission(req, res, "coupons");
+  if (!admin) return;
 
   if (req.method !== "GET") return res.status(405).end();
 

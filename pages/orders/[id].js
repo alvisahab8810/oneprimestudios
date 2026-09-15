@@ -6,6 +6,7 @@ import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
 import { toast } from "react-hot-toast";
 import Offcanvas from "@/components/header/Offcanvas";
+import { canUserCancelOrder } from "@/lib/orderRules";
 import {
   FiPackage, FiCalendar, FiTruck, FiUser, FiCreditCard,
   FiMapPin, FiFileText, FiArrowLeft, FiUpload, FiAlertCircle,
@@ -307,7 +308,7 @@ export default function OrderDetailPage() {
   if (!order) return null;
 
   const c = scfg(order.status);
-  const canCancel = order.status === "Order Received" || order.status === "Design Rejected";
+  const canCancel = canUserCancelOrder(order);
 
   return (
     <>

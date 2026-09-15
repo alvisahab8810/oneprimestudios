@@ -41,6 +41,7 @@ import Order from "@/models/Order";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import mongoose from "mongoose";
+import { canUserCancelOrder } from "@/lib/orderRules";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -67,27 +68,16 @@ export default async function handler(req, res) {
   if (String(order.user) !== String(user._id))
     return res.status(403).json({ message: "Forbidden" });
 
-  // ❌ Block late-stage cancellations
-const BLOCKED_STATUSES = [
-  "Design Approved",
-  "In Progress",
-  "Order Ready",
-  "Printing",
-  "Order Dispatched",
-  "Order Delivered",
-  "Delivered",
-];
-
-
-  if (BLOCKED_STATUSES.includes(order.status)) {
-    return res
-      .status(400)
-      .json({ message: "Order can no longer be cancelled" });
-  }
-
   // ❌ Already refunded
   if (order.paymentStatus === "REFUNDED") {
     return res.status(400).json({ message: "Order already refunded" });
+  }
+
+  // ❌ Only early-stage orders can be cancelled (never after dispatch)
+  if (!canUserCancelOrder(order)) {
+    return res
+      .status(400)
+      .json({ message: `Order can no longer be cancelled (current status: ${order.status})` });
   }
 
 

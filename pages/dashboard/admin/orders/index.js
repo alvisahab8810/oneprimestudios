@@ -15,7 +15,8 @@ export default function AdminOrdersPage() {
   const [loading, setLoading]             = useState(true);
   const [statusFilter, setStatusFilter]   = useState("");
   const [userTypeFilter, setUserTypeFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [parentFilter, setParentFilter]     = useState("");
+  const [subCategoryFilter, setSubCategoryFilter] = useState("");
   const [productFilter, setProductFilter]   = useState("");
   const [categories, setCategories]         = useState([]);
   const [products, setProducts]             = useState([]);
@@ -38,15 +39,27 @@ export default function AdminOrdersPage() {
       .catch(() => {});
   }, []);
 
+  // Parent categories have no parent; sub categories belong to the selected parent
+  const parentCategories = categories.filter(c => !c.parent);
+  const subCategories    = categories.filter(c => parentFilter && String(c.parent) === parentFilter);
+  // The most specific category chosen is what orders are filtered by
+  const categoryFilter   = subCategoryFilter || parentFilter;
+
   // ── Load products when category changes ───────────────────────────────────
   useEffect(() => {
     setProductFilter("");
     setProducts([]);
     if (!categoryFilter) return;
-    axios.get(`/api/products/admin/list?category=${categoryFilter}&limit=200`, { withCredentials: true })
-      .then(res => setProducts(res.data.products || []))
-      .catch(() => {});
-  }, [categoryFilter]);
+    // A parent on its own covers the products of all its sub categories
+    const ids = subCategoryFilter
+      ? [subCategoryFilter]
+      : [parentFilter, ...categories.filter(c => String(c.parent) === parentFilter).map(c => c._id)];
+    Promise.all(ids.map(id =>
+      axios.get(`/api/products/admin/list?category=${id}&limit=200`, { withCredentials: true })
+        .then(res => res.data.products || [])
+        .catch(() => [])
+    )).then(lists => setProducts(lists.flat().sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))));
+  }, [categoryFilter, categories]);
 
   // ── Fetch orders ──────────────────────────────────────────────────────────
   const loadOrders = async () => {
@@ -78,7 +91,7 @@ export default function AdminOrdersPage() {
   const clearFilters = () => {
     setSearchInput(""); setSearchQuery("");
     setStatusFilter(""); setUserTypeFilter("");
-    setCategoryFilter(""); setProductFilter("");
+    setParentFilter(""); setSubCategoryFilter(""); setProductFilter("");
     setPage(1);
   };
 
@@ -215,14 +228,27 @@ export default function AdminOrdersPage() {
               <option value="customer">B2C</option>
             </select>
 
-            {/* Category filter */}
+            {/* Parent category filter */}
             <select
-              value={categoryFilter}
-              onChange={e => { setPage(1); setCategoryFilter(e.target.value); }}
+              value={parentFilter}
+              onChange={e => { setPage(1); setParentFilter(e.target.value); setSubCategoryFilter(""); }}
               style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: "#fff", minWidth: 150 }}
             >
               <option value="">All Categories</option>
-              {categories.map(c => (
+              {parentCategories.map(c => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+
+            {/* Sub category filter (depends on parent category) */}
+            <select
+              value={subCategoryFilter}
+              onChange={e => { setPage(1); setSubCategoryFilter(e.target.value); }}
+              disabled={!parentFilter || !subCategories.length}
+              style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: parentFilter && subCategories.length ? "#fff" : "#f9fafb", minWidth: 160, cursor: parentFilter && subCategories.length ? "pointer" : "not-allowed" }}
+            >
+              <option value="">{!parentFilter ? "Select category first" : subCategories.length ? "All Sub Categories" : "No sub categories"}</option>
+              {subCategories.map(c => (
                 <option key={c._id} value={c._id}>{c.name}</option>
               ))}
             </select>
@@ -305,10 +331,16 @@ export default function AdminOrdersPage() {
                   <FaTimes style={{ cursor: "pointer" }} onClick={() => { setUserTypeFilter(""); setPage(1); }} />
                 </span>
               )}
-              {categoryFilter && (
+              {parentFilter && (
                 <span style={{ background: "#fef3c7", color: "#b45309", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                  {categories.find(c => c._id === categoryFilter)?.name || "Category"}
-                  <FaTimes style={{ cursor: "pointer" }} onClick={() => { setCategoryFilter(""); setProductFilter(""); setPage(1); }} />
+                  {categories.find(c => c._id === parentFilter)?.name || "Category"}
+                  <FaTimes style={{ cursor: "pointer" }} onClick={() => { setParentFilter(""); setSubCategoryFilter(""); setProductFilter(""); setPage(1); }} />
+                </span>
+              )}
+              {subCategoryFilter && (
+                <span style={{ background: "#ffedd5", color: "#c2410c", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  {categories.find(c => c._id === subCategoryFilter)?.name || "Sub category"}
+                  <FaTimes style={{ cursor: "pointer" }} onClick={() => { setSubCategoryFilter(""); setProductFilter(""); setPage(1); }} />
                 </span>
               )}
               {productFilter && (

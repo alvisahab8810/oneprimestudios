@@ -130,9 +130,9 @@ export default async function handler(req, res) {
       ? `<th class="r">CGST</th><th class="r">SGST</th>`
       : `<th class="r" colspan="2">IGST</th>`;
 
-    // Invoices above ₹50,000 print in a strict black & white layout —
-    // no rounded corners, no fills, no colors at all. Same data, plain look.
-    const isHighValue = Number(inv.grandTotal || 0) > 50000;
+    // ₹50,000+ ka alag B&W template hata diya — ab har invoice ek hi design me.
+    // E-way bills are a separate module: /dashboard/admin/eway-bills
+    const isHighValue = false;
     const bw  = isHighValue;
     const rad = (px) => (bw ? "0px" : `${px}px`);
     const ink        = "#000";

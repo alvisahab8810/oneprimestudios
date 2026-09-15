@@ -34,10 +34,15 @@ const CartItemSchema = new mongoose.Schema({
   orderName: { type: String, default: "" },
 });
 
-const CartSchema = new mongoose.Schema({
-  user:  { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  items: [CartItemSchema],
-});
+// timestamps: updatedAt tells the admin abandoned-cart report when the cart was last touched.
+// Older carts have no timestamps; the report falls back to the item ids' creation time.
+const CartSchema = new mongoose.Schema(
+  {
+    user:  { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    items: [CartItemSchema],
+  },
+  { timestamps: true }
+);
 
 export default mongoose.models.Cart || mongoose.model("Cart", CartSchema);
 

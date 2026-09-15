@@ -227,6 +227,18 @@ export default function Sidebar({ sidebarOpen }) {
           </Link>
         )}
 
+        {/* ================= PRODUCT SALES REPORT ================= */}
+        {canAccess(user, "reports.product_sales") && (
+          <Link
+            href="/dashboard/admin/reports/product-sales"
+            className={`ops-item ${
+              isActive("/dashboard/admin/reports/product-sales") ? "active" : ""
+            }`}
+          >
+            <FaChartLine className="me-2" /> Product Sales Report
+          </Link>
+        )}
+
         {/* ================= PARTNERS ================= */}
         {canAccess(user, "partners") && (
           <Link
@@ -297,7 +309,7 @@ export default function Sidebar({ sidebarOpen }) {
                 : ""
             }`}
           >
-            <FaChartLine className="me-2" /> Partner Sales Report
+            <FaChartLine className="me-2" /> Buyer Sales Report
           </Link>
         )}
 
@@ -313,6 +325,16 @@ export default function Sidebar({ sidebarOpen }) {
             }`}
           >
             <FaFileInvoice  className="me-2" /> Create Invoice
+          </Link>
+        )}
+
+        {/* ================= E-Way Bills (₹50,000+ invoices) ================= */}
+        {canAccess(user, "invoices") && (
+          <Link
+            href="/dashboard/admin/eway-bills"
+            className={`ops-item ${isActive("/dashboard/admin/eway-bills") ? "active" : ""}`}
+          >
+            <FaTruck className="me-2" /> E-Way Bills
           </Link>
         )}
 

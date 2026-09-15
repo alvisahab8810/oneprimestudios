@@ -74,9 +74,8 @@ export default function InvoiceViewAdmin() {
 
   const sc  = STATUS_CFG[invoice.status] || {};
   const inv = invoice;
-  // Invoices above ₹50,000 render in a strict black & white layout —
-  // no rounded corners, no fills, no colors at all. Same data, plain look.
-  const isHighValue = Number(inv.grandTotal || 0) > 50000;
+  // No separate ₹50,000+ template — e-way bills are created in /dashboard/admin/eway-bills.
+  const isHighValue = false;
   const radius = (n) => (isHighValue ? 0 : n);
   const bwc = (normal) => (isHighValue ? "#000" : normal);
   const bwBg = (normal) => (isHighValue ? "#fff" : normal);
