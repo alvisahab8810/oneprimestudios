@@ -18,6 +18,7 @@ import { toast } from "react-hot-toast";
 import { FaBell, FaBoxOpen, FaUser, FaTruck, FaCalendarAlt, FaCreditCard } from "react-icons/fa";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import DesignUploads from "@/components/admin-panel/DesignUploads";
+import { canAdminCancelOrder } from "@/lib/orderRules";
 
 export default function AdminOrderDetail() {
   const params = useParams();
@@ -359,7 +360,10 @@ export default function AdminOrderDetail() {
                   <option value="In Packaging">In Packaging</option>
                   <option value="Order Dispatched">Order Dispatched</option>
                   <option value="Order Delivered">Order Delivered</option>
-                  <option value="Cancelled">Cancelled</option>
+                  {/* Dispatched or delivered orders cannot be cancelled */}
+                  {(canAdminCancelOrder(order) || order.status === "Cancelled") && (
+                    <option value="Cancelled">Cancelled</option>
+                  )}
                 </select>
                 {newStatus === "Cancelled" && (
                   <div className="alert alert-warning py-1 px-2 mb-0" style={{ fontSize: 12 }}>

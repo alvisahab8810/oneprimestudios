@@ -16,6 +16,7 @@ import WalletTransaction from "@/models/WalletTransaction";
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission, canViewPayments } from "@/lib/hasPermission";
 import { logActivity } from "@/lib/logActivity";
+import { canAdminCancelOrder } from "@/lib/orderRules";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -107,6 +108,10 @@ export default async function handler(req, res) {
 
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (status === "Cancelled" && order.status !== "Cancelled" && !canAdminCancelOrder(order)) {
+        return res.status(400).json({ message: `This order is already "${order.status}" and can no longer be cancelled` });
       }
 
       /* ===== EXISTING STATUS LOGIC (UNCHANGED) ===== */
