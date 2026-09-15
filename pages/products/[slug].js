@@ -16,6 +16,7 @@ import ProductSlider from "@/components/home-page/ProductSlider";
 import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
 import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
+import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -238,19 +239,19 @@ export default function ProductDetails() {
   //   return true;
   // };
   // NEW: iterate ALL attributes so index matches the render loop
+  // Checks every attribute the admin marked "Required" (select, text, number, checkbox and upload)
   const validateUploadAttrs = () => {
-    const allAttrs = product?.attributes || [];
-    for (let i = 0; i < allAttrs.length; i++) {
-      const a = allAttrs[i];
-      if (a.type !== "upload") continue;
-      const safeName = (a.name || "attr").trim();
-      const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
-      if (a.uploadRules?.required && !uploadedAttrFiles[attrKey]) {
-        toast.error(`Please upload file for "${a.name}"`);
-        return false;
-      }
-    }
-    return true;
+    const missing = findMissingRequiredAttr(
+      product?.attributes,
+      selectedAttrs,
+      (attr, index) => !!uploadedAttrFiles[attrUploadKey(attr, index)],
+      { uploadsOnly: !product?.b2bOptions?.enabled }
+    );
+    if (!missing) return true;
+    toast.error(missingAttrMessage(missing));
+    // On phones the options live in the slide-up panel; open it so the field is visible
+    setMobilePanelOpen(true);
+    return false;
   };
 
   // ── UPDATED: loader state + 401 redirect on expired token ───────────────
@@ -586,9 +587,10 @@ export default function ProductDetails() {
 
                   <div className="mt-3 d-flex gap-4 attributes-area">
                     {product.attributes?.length > 0 &&
-                      product.attributes.filter((a) => a.type === "upload").map((attr, i) => {
-                        const safeName = (attr.name || "attr").trim();
-                        const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
+                      product.attributes.map((attr, i) => {
+                        if (attr.type !== "upload") return null;
+                        // Key uses the position in the full attribute list, same as validation and cart upload
+                        const attrKey = attrUploadKey(attr, i);
                         return (
                           <div key={i} style={{ marginBottom: "15px" }}>
                             <ProductFileUpload

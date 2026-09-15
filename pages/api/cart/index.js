@@ -152,6 +152,7 @@ import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
 import Cart from "@/models/Cart";
 import Product from "@/models/Product";
+import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -190,6 +191,18 @@ export default async function handler(req, res) {
       // Ensure product exists
       const product = await Product.findById(productId);
       if (!product) return res.status(404).json({ message: "Product not found" });
+
+      // Attributes the admin marked "Required" must be filled before adding to cart
+      const missingAttr = findMissingRequiredAttr(
+        product.attributes,
+        selectedAttrs,
+        (attr, index) =>
+          (uploadedAttributeFiles || []).some(
+            (f) => f?.url && (f.attributeName === attr.name || f.attributeKey === attrUploadKey(attr, index))
+          ),
+        { uploadsOnly: !product.b2bOptions?.enabled }
+      );
+      if (missingAttr) return res.status(400).json({ message: missingAttrMessage(missingAttr) });
 
       // price coming from frontend may be total price for requested quantity.
       // We'll store unitPrice on the cart item for consistent recalculation.
