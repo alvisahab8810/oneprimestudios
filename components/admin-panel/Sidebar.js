@@ -148,15 +148,44 @@ import {
   FaFileInvoice,
   FaStar,
   FaHistory,
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
 
+// Role keys saved on the admin record, shown in a readable form
+const ROLE_LABELS = {
+  admin: "Admin",
+  manager: "Manager",
+  designer: "Designer",
+  product_manager: "Product Manager",
+  accountant: "Accountant",
+  support: "Support",
+};
+
 export default function Sidebar({ sidebarOpen }) {
   const pathname = usePathname();
   const [user, setUser] = useState(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const isActive = (route) => pathname === route;
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const res = await fetch("/api/admin/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Logout failed");
+      window.location.href = "/dashboard/admin/login";
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Could not log out. Please try again.");
+      setLoggingOut(false);
+    }
+  };
 
   // 🔐 Fetch logged-in user (role + permissions)
   useEffect(() => {
@@ -418,6 +447,22 @@ export default function Sidebar({ sidebarOpen }) {
             <FaHistory className="me-2" /> Activity Log
           </Link>
         )}
+
+        {/* ================= SIGNED-IN USER ================= */}
+        <div className="ops-sidebar-user mt-auto pt-3 border-top">
+          <div className="px-3 pb-2">
+            <div className="fw-semibold text-truncate">{user.name || user.email}</div>
+            <div className="small text-muted text-truncate">{ROLE_LABELS[user.role] || user.role}</div>
+          </div>
+          <button
+            type="button"
+            className="ops-item w-100 text-start border-0 bg-transparent"
+            onClick={handleLogout}
+            disabled={loggingOut}
+          >
+            <FaSignOutAlt className="me-2" /> {loggingOut ? "Logging out..." : "Logout"}
+          </button>
+        </div>
 
       </div>
     </aside>

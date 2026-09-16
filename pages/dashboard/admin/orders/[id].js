@@ -304,6 +304,12 @@ export default function AdminOrderDetail() {
                 {(order.gstAmount || 0) > 0 && (
                   <div className="text-muted">GST: ₹{order.gstAmount.toFixed(2)}</div>
                 )}
+                {(order.shippingCharge || 0) > 0 && (
+                  <div className="text-muted">
+                    Transport Charge: ₹{order.shippingCharge.toFixed(2)}
+                    {order.shippingQuote?.courierName ? ` (${order.shippingQuote.courierName})` : ""}
+                  </div>
+                )}
                 <h5 className="fw-bold mt-2">Total: ₹{order.total.toFixed(2)}</h5>
               </div>
             </div>

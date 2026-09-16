@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import { FaUser, FaChartPie, FaUsers, FaCogs, FaBell } from "react-icons/fa";
 import Sidebar from "@/components/admin-panel/Sidebar";
+import AdminTopbar from "@/components/admin-panel/AdminTopbar";
 import CategorySelect from "@/components/admin-panel/CategorySelect";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
@@ -309,43 +310,7 @@ export default function AddProduct() {
         
       >
         {/* Top navbar */}
-        <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 shadow-sm">
-          <button
-            className="btn btn-outline-primary me-3"
-            onClick={toggleSidebar}
-          >
-            ☰
-          </button>
-          <div className="ms-auto d-flex align-items-center">
-            <FaBell className="me-3" size={20} />
-            <div className="dropdown">
-              <button
-                className="btn btn-secondary dropdown-toggle"
-                type="button"
-                id="profileDropdown"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Admin
-              </button>
-              <ul
-                className="dropdown-menu dropdown-menu-end"
-                aria-labelledby="profileDropdown"
-              >
-                <li>
-                  <Link className="dropdown-item" href="#">
-                    Profile
-                  </Link>
-                </li>
-                <li>
-                  <Link className="dropdown-item" href="#">
-                    Logout
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </nav>
+        <AdminTopbar onToggleSidebar={toggleSidebar} />
 
         {/* Dashboard content */}
         <div className="container-fluid p-4">

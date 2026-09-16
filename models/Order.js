@@ -212,6 +212,15 @@ const OrderSchema = new mongoose.Schema(
     total: { type: Number, required: true },
     gstAmount: { type: Number, default: 0 }, // GST included in total
 
+    // What the courier quoted for this delivery, charged to the customer as "Transport Charge"
+    shippingCharge: { type: Number, default: 0 },
+    shippingQuote: {
+      courierName: { type: String, default: "" },
+      pincode: { type: String, default: "" },
+      weight: { type: Number, default: 0 },
+      quotedAt: { type: Date },
+    },
+
     status: {
       type: String,
       enum: [

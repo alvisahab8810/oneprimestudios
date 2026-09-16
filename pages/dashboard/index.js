@@ -150,6 +150,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Sidebar from "@/components/admin-panel/Sidebar";
+import AdminTopbar from "@/components/admin-panel/AdminTopbar";
 import { FaBell } from "react-icons/fa";
 import Link from "next/link";
 
@@ -177,22 +178,12 @@ export default function Dashboard() {
       >
        <div className="main-area-pad">
            {/* TOP BAR */}
-        <nav className="navbar navbar-light bg-light admin-topbar">
-          <button
-            className="btn btn-outline-primary me-3"
-            onClick={toggleSidebar}
-          >
-            <img src="/assets/images/admin/indent-decrease.svg" />
-          </button>
-          
-
-          <div className="ms-auto d-flex align-items-center">
-            {/* <FaBell className="me-3" size={20} /> */}
-            <div className="user-flow-icon">
-                <img src="/assets/images/admin/profile.svg"></img>
-            </div>
-          </div>
-        </nav>
+        <AdminTopbar
+          onToggleSidebar={toggleSidebar}
+          navClassName="navbar navbar-light bg-light admin-topbar"
+          toggleIcon={<img src="/assets/images/admin/indent-decrease.svg" />}
+          showBell={false}
+        />
 
         {/* CONTENT */}
         <div className="content-dashbord mt-2">

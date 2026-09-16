@@ -875,6 +875,9 @@ export default function CheckoutPage() {
   const [walletBalance, setWalletBalance] = useState(null);
 
   const [cartItems, setCartItems] = useState([]);
+  // Courier rate for the entered pincode: { serviceable, charge, courierName, etd, message }
+  const [shippingQuote, setShippingQuote] = useState(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   // const [paymentMethod, setPaymentMethod] = useState("cod");
@@ -1017,6 +1020,56 @@ useEffect(() => {
     loadCart();
   }, [router]);
 
+  // 🚚 Transport charge — the courier's own rate for this pincode
+  useEffect(() => {
+    const zip = String(formData.zip || "").trim();
+
+    if (!/^\d{6}$/.test(zip) || cartItems.length === 0) {
+      setShippingQuote(null);
+      return;
+    }
+
+    let cancelled = false;
+    setShippingLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/shipping/estimate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ zip }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        setShippingQuote(
+          res.ok
+            ? data
+            : { serviceable: false, charge: 0, message: data.message || "Delivery charges could not be calculated." }
+        );
+      } catch (err) {
+        console.error("Shipping estimate error:", err);
+        if (!cancelled) {
+          setShippingQuote({
+            serviceable: false,
+            charge: 0,
+            message: "Delivery charges could not be calculated. Please try again.",
+          });
+        }
+      } finally {
+        if (!cancelled) setShippingLoading(false);
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [formData.zip, cartItems]);
+
   const total = cartItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
     0,
@@ -1028,7 +1081,11 @@ useEffect(() => {
   }, 0);
 
   const discountedSubtotal = Math.max(total - discountAmount, 0);
-  const finalAmount = discountedSubtotal + gstAmount;
+  const transportCharge = shippingQuote?.serviceable ? Number(shippingQuote.charge) || 0 : 0;
+  const finalAmount = discountedSubtotal + gstAmount + transportCharge;
+
+  // Nothing can be ordered until the courier has priced this delivery
+  const shippingReady = !!shippingQuote?.serviceable && !shippingLoading;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1076,8 +1133,26 @@ useEffect(() => {
   };
 
   // 💳 Razorpay Payment
+  // Blocks checkout while the delivery charge is unknown, and says why
+  const checkShippingReady = () => {
+    if (shippingLoading) {
+      toast.error("Please wait, calculating delivery charges.");
+      return false;
+    }
+    if (!shippingQuote) {
+      toast.error("Please enter a valid 6-digit pincode to continue.");
+      return false;
+    }
+    if (!shippingQuote.serviceable) {
+      toast.error(shippingQuote.message || "Delivery is not available for this pincode.");
+      return false;
+    }
+    return true;
+  };
+
   const handleRazorpayPayment = async () => {
     if (!validateForm()) return;
+    if (!checkShippingReady()) return;
 
     try {
       setSubmitting(true);
@@ -1121,6 +1196,7 @@ useEffect(() => {
 const placeOrder = async (method) => {
   if (submitting) return; // 🔒 HARD STOP
   if (!validateForm()) return;
+  if (!checkShippingReady()) return;
 
   try {
     setSubmitting(true);
@@ -1617,6 +1693,32 @@ const placeOrder = async (method) => {
                   </div>
                 )}
 
+                {/* Transport charge — exactly what the courier charges for this pincode */}
+                <div className="d-flex justify-content-between" style={{ fontSize: 13, color: "#6b7280" }}>
+                  <span>
+                    Transport Charge
+                    {shippingQuote?.serviceable && shippingQuote.courierName ? (
+                      <span className="d-block" style={{ fontSize: 11 }}>
+                        via {shippingQuote.courierName}
+                        {shippingQuote.etd ? ` · ${shippingQuote.etd}` : ""}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span>
+                    {shippingLoading
+                      ? "Calculating..."
+                      : shippingQuote?.serviceable
+                        ? `₹${transportCharge.toFixed(2)}`
+                        : "—"}
+                  </span>
+                </div>
+
+                {!shippingLoading && shippingQuote && !shippingQuote.serviceable && (
+                  <div className="alert alert-warning py-2 px-3 mt-2 mb-0" style={{ fontSize: 13 }}>
+                    {shippingQuote.message || "Delivery is not available for this pincode."}
+                  </div>
+                )}
+
                 <div className="d-flex justify-content-between border-top pt-2 fw-bold">
                   <span>Amount Payable</span>
                   <span>₹{finalAmount.toFixed(2)}</span>
@@ -1685,7 +1787,7 @@ const placeOrder = async (method) => {
 
                 <button
   className="place-order-btn mt-4"
-  disabled={submitting}
+  disabled={submitting || !shippingReady}
   onClick={() => {
     if (submitting) return; // 🔒 double-click protection
     if (!validateForm()) return;
@@ -1694,6 +1796,8 @@ const placeOrder = async (method) => {
       toast.error("Your cart is empty.");
       return;
     }
+
+    if (!checkShippingReady()) return;
 
     // 🔐 PAYMENT ROUTING
     if (paymentMethod === "wallet") {
@@ -1707,6 +1811,8 @@ const placeOrder = async (method) => {
 >
   {submitting
     ? "Processing..."
+    : shippingLoading
+    ? "Calculating delivery..."
     : paymentMethod === "wallet"
     ? "Pay Using Wallet"
     : paymentMethod === "razorpay"

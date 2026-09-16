@@ -291,6 +291,12 @@ export default function TrackOrderPage() {
               <strong>₹{(item.price * item.quantity).toFixed(2)}</strong>
             </div>
           ))}
+          {(order.shippingCharge || 0) > 0 && (
+            <div className="d-flex justify-content-between text-muted small">
+              <span>Transport Charge</span>
+              <span>₹{order.shippingCharge.toFixed(2)}</span>
+            </div>
+          )}
           <hr />
           <div className="d-flex justify-content-between">
             <strong>Total</strong>

@@ -11,6 +11,7 @@ import Product from "@/models/Product";
 import Coupon from "@/models/Coupon";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
+import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -101,6 +102,34 @@ export default async function handler(req, res) {
       finalTotal = subtotal + Number(gstAmount || 0);
     }
 
+    // TRANSPORT CHARGE — worked out again here so the browser cannot change it.
+    // Product names are needed below anyway, so both come from one query.
+    const productIds = items.map((i) => i.product);
+    const productDocs = await Product.find({ _id: { $in: productIds } }, "name shipping").lean();
+    const productMap = {};
+    productDocs.forEach((p) => { productMap[String(p._id)] = p; });
+
+    const deliveryPincode = String(
+      req.body.shippingAddress?.zip || fullUser.pinCode || ""
+    ).trim();
+
+    const shippingQuote = await quoteShipping({
+      items: items.map((i) => ({
+        quantity: i.quantity,
+        product: productMap[String(i.product)] || null,
+      })),
+      deliveryPincode,
+      declaredValue: finalTotal,
+    });
+
+    // The order is blocked when we cannot deliver there or cannot price the delivery
+    if (!shippingQuote.available) {
+      return res.status(400).json({ message: shippingQuoteMessage(shippingQuote.reason) });
+    }
+
+    const shippingCharge = shippingQuote.charge;
+    finalTotal += shippingCharge;
+
     // ── UPDATED: generate orderNumber before session so it's available for wallet tx description
     // OLD: orderNumber generated inside Order.create, so wallet tx had no reference to it
     // NEW: pre-generate orderNumber, create Order first, then create WalletTransaction with referenceId + full description
@@ -113,8 +142,6 @@ export default async function handler(req, res) {
     try {
       // ── CREATE ORDER FIRST (so we have _id for wallet tx reference) ──────────
       // Snapshot product names so they survive product deletion
-      const productIds = items.map((i) => i.product);
-      const productDocs = await Product.find({ _id: { $in: productIds } }, "name").lean();
       const productNameMap = {};
       productDocs.forEach((p) => { productNameMap[String(p._id)] = p.name; });
 
@@ -141,6 +168,13 @@ export default async function handler(req, res) {
 
             subtotal,
             gstAmount: Number(gstAmount || 0),
+            shippingCharge,
+            shippingQuote: {
+              courierName: shippingQuote.courierName || "",
+              pincode: deliveryPincode,
+              weight: shippingQuote.weight,
+              quotedAt: new Date(),
+            },
             total: finalTotal,
             coupon: couponData,
             customerRemarks,
