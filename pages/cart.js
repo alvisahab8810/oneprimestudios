@@ -676,6 +676,7 @@ import ProductSlider from "@/components/home-page/ProductSlider";
 import DealBanner from "@/components/home-page/Cta";
 import FaqAccordion from "@/components/home-page/Faq";
 import Offcanvas from "@/components/header/Offcanvas";
+import { buildQuantityLadder, getMinOrderQty, isOutOfStock } from "@/lib/stockRules";
 
 export default function CartPage() {
 
@@ -704,23 +705,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Build quantity ladders based on product tiers & min qty
-  const buildQuantityLadder = (product) => {
-    if (!product) return [1];
-
-    const minQty = Number(product.minOrderQty || 1);
-
-    // collect tier quantities
-    const tierQtys = (product.pricingTiers || [])
-      .map((t) => Number(t.minQty))
-      .filter((n) => !isNaN(n) && n > 0);
-
-    const all = Array.from(new Set([minQty, ...tierQtys])).sort(
-      (a, b) => a - b,
-    );
-
-    return all;
-  };
+  // Quantity ladder comes from the shared rules so tiers below the MOQ are dropped
 
 
   
@@ -836,14 +821,10 @@ export default function CartPage() {
     let num = Number(raw);
     if (isNaN(num)) num = ladder[0];
 
-    // Snap to nearest tier
-    let nearest = ladder[0];
-    for (let i = 0; i < ladder.length; i++) {
-      if (num <= ladder[i]) {
-        nearest = ladder[i];
-        break;
-      }
-    }
+    // Snap up to the next tier; anything above the last tier keeps the typed quantity
+    let nearest = ladder.find((step) => num <= step);
+    if (nearest === undefined) nearest = num;
+    if (nearest < ladder[0]) nearest = ladder[0];
 
     setTempQty((p) => ({ ...p, [index]: String(nearest) }));
     updateQuantity(index, nearest);

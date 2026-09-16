@@ -12,6 +12,7 @@ import Coupon from "@/models/Coupon";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
+import { checkOrderable } from "@/lib/stockRules";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -105,9 +106,18 @@ export default async function handler(req, res) {
     // TRANSPORT CHARGE — worked out again here so the browser cannot change it.
     // Product names are needed below anyway, so both come from one query.
     const productIds = items.map((i) => i.product);
-    const productDocs = await Product.find({ _id: { $in: productIds } }, "name shipping").lean();
+    const productDocs = await Product.find(
+      { _id: { $in: productIds } },
+      "name shipping stockStatus minOrderQty"
+    ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });
+
+    // Stock and minimum order quantity are checked again here — the browser is never trusted
+    for (const item of items) {
+      const problem = checkOrderable(productMap[String(item.product)], item.quantity);
+      if (problem) return res.status(400).json({ message: problem });
+    }
 
     const deliveryPincode = String(
       req.body.shippingAddress?.zip || fullUser.pinCode || ""

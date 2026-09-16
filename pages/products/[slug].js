@@ -17,6 +17,7 @@ import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
 import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
+import { buildQuantityLadder, getMinOrderQty, isOutOfStock } from "@/lib/stockRules";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -65,7 +66,7 @@ export default function ProductDetails() {
 
   // File upload is optional — Add to Cart is available as soon as the product loads.
   // Attributes marked required (e.g. a mandatory upload) are still enforced in validateUploadAttrs().
-  const canAddToCart = !!product;
+  const canAddToCart = !!product && !isOutOfStock(product);
 
   useEffect(() => {
     if (!slug) return;
@@ -189,12 +190,10 @@ export default function ProductDetails() {
     return baseTierPrice + attrExtraPerBatch * batchCount + cityExtraCharge;
   }, [product, qty, selectedAttrs, userCity]);
 
-  const quantityLadder = useMemo(() => {
-    if (!product) return [];
-    const base = Number(product.minOrderQty || 1);
-    const tierQtys = (product.pricingTiers || []).map((t) => Number(t.minQty)).filter((n) => !isNaN(n) && n > 0);
-    return Array.from(new Set([base, ...tierQtys])).sort((a, b) => a - b);
-  }, [product]);
+  const quantityLadder = useMemo(() => (product ? buildQuantityLadder(product) : []), [product]);
+
+  // Out-of-stock products can be viewed but not ordered
+  const outOfStock = isOutOfStock(product);
 
   const increaseQty = () => {
     const list = quantityLadder;
@@ -279,6 +278,9 @@ export default function ProductDetails() {
   // NEW:
   const addToCart = async () => {
     if (!product) return toast.error("Product not loaded");
+    if (outOfStock) return toast.error("This product is out of stock");
+    if (qty < getMinOrderQty(product))
+      return toast.error(`Minimum order quantity is ${getMinOrderQty(product)}`);
     // NEW: validate orderName is filled for B2B products
     if (product.b2bOptions?.enabled && !orderName.trim()) {
       toast.error("Please enter an Order Name before adding to cart.");
@@ -391,8 +393,16 @@ export default function ProductDetails() {
           {/* ── Right: Details ── */}
           <aside className={styles.sidebar} id="side-bar">
             <h1 className={styles.title}>{product.name}</h1>
+            {/* Stock status comes straight from the admin product form */}
+            <div className="mb-2">
+              {outOfStock ? (
+                <span className="badge bg-danger">Out of Stock</span>
+              ) : (
+                <span className="badge bg-success">In Stock</span>
+              )}
+            </div>
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
-            <p className="product-min-order">Minimum Order: {product.minOrderQty}</p>
+            <p className="product-min-order">Minimum Order: {getMinOrderQty(product)}</p>
 
             {/* ── GST Breakdown (B2B only) ── */}
             {product.b2bOptions?.enabled && Number(product.gstPercent) > 0 && (() => {
@@ -563,7 +573,10 @@ export default function ProductDetails() {
                         {isUploading ? <><span className={styles.spinner} /> Uploading...</> : "Add to Cart"}
                       </button>
                     ) : (
-                      <p className="text-muted mt-2">Please upload your design before adding to cart.</p>
+                      <>
+                        <button className={styles.primaryBtn} disabled>Out of Stock</button>
+                        <p className="text-muted mt-2">This product is currently out of stock.</p>
+                      </>
                     )}
                   </div>
                 </div>
@@ -629,7 +642,10 @@ export default function ProductDetails() {
                       )}
                     </button>
                   ) : (
-                    <p className="text-muted mt-2">Please upload required files before adding to cart.</p>
+                    <>
+                      <button className={styles.primaryBtn} disabled>Out of Stock</button>
+                      <p className="text-muted mt-2">This product is currently out of stock.</p>
+                    </>
                   )}
 
                   {/* Description moved to below sidebar — visible on all screen sizes */}
@@ -817,7 +833,7 @@ export default function ProductDetails() {
                   )}
                 </button>
               ) : (
-                <button type="button" className="ops-mobile-main-btn" onClick={() => setMobilePanelOpen(false)}>Done</button>
+                <button type="button" className="ops-mobile-main-btn" disabled>Out of Stock</button>
               )}
             </div>
           </div>
@@ -840,8 +856,8 @@ export default function ProductDetails() {
                 )}
               </button>
             ) : (
-              <button type="button" className="ops-mobile-main-btn" onClick={() => setMobilePanelOpen(true)}>
-                Upload &amp; Customize
+              <button type="button" className="ops-mobile-main-btn" disabled>
+                Out of Stock
               </button>
             )}
           </div>

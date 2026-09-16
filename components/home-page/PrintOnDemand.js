@@ -9,6 +9,7 @@ import { useRouter } from "next/router";
 import axios from "axios";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+import { isOutOfStock } from "@/lib/stockRules";
 
 const MAX_ITEMS = 6;
 
@@ -175,6 +176,10 @@ export default function PrintOnDemand() {
                   alt={product.name}
                   loading="lazy"
                 />
+
+                {isOutOfStock(product) && (
+                  <span className="badge bg-danger position-absolute top-0 start-0 m-2">Out of Stock</span>
+                )}
 
                 <button
                   type="button"

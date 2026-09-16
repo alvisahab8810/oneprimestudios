@@ -178,6 +178,7 @@ import axios from "axios";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 // import { toast } from "sonner";
 import { toast } from "react-hot-toast"; // or "sonner" — whichever you finalized
+import { isOutOfStock } from "@/lib/stockRules";
 
 
 export default function ProductSlider() {
@@ -328,6 +329,9 @@ export default function ProductSlider() {
                 <div className="price-tag">{product.salePrice ? `₹${product.salePrice}` : `₹${product.basePrice}`}</div>
                 <img src={product.mainImage || "/assets/images/products/placeholder.png"} alt={product.name} />
                 <div className="title">{product.name}</div>
+                {isOutOfStock(product) && (
+                  <span className="badge bg-danger position-absolute top-0 start-0 m-2">Out of Stock</span>
+                )}
               </div>
             </Link>
           </SwiperSlide>
