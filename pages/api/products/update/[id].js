@@ -64,6 +64,7 @@ handler.put(async (req, res) => {
       isFeatured,
       gstPercent,
       hsnCode,      // NEW: HSN/SAC code
+      shipping,     // NEW: courier package details (JSON string)
       attributes,
       pricingTiers,
       cityPrices,
@@ -131,6 +132,7 @@ handler.put(async (req, res) => {
       isFeatured: isFeatured === "true" || isFeatured === true,
       gstPercent: gstPercent ? Number(gstPercent) : 0,
       hsnCode: hsnCode || "",  // NEW
+      shipping: safeParse(shipping, product.shipping || {}),  // NEW
       attributes: safeParse(attributes, []),
       pricingTiers: safeParse(pricingTiers, []),
       cityPrices: safeParse(cityPrices, []),

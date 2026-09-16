@@ -18,6 +18,7 @@ import { toast } from "react-hot-toast";
 import { FaBell, FaBoxOpen, FaUser, FaTruck, FaCalendarAlt, FaCreditCard } from "react-icons/fa";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import DesignUploads from "@/components/admin-panel/DesignUploads";
+import ShipmentPanel from "@/components/admin-panel/ShipmentPanel";
 import { canAdminCancelOrder } from "@/lib/orderRules";
 
 export default function AdminOrderDetail() {
@@ -315,6 +316,11 @@ export default function AdminOrderDetail() {
             )}
             {order.dispatchRequest === "approved" && (
               <div className="alert alert-success my-3">Dispatch request approved — Order is dispatched</div>
+            )}
+
+            {/* Courier shipment — book, track, label, cancel */}
+            {!["Cancelled", "Rejected"].includes(order.status) && (
+              <ShipmentPanel order={order} onOrderChange={(next) => { setOrder(next); setNewStatus(next.status); }} />
             )}
 
             {/* Delivery Challan — unchanged */}

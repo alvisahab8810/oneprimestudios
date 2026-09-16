@@ -203,6 +203,62 @@ export default function TrackOrderPage() {
           )}
         </div>
 
+        {/* Courier details, shown once the parcel is booked */}
+        {order.shipment?.awbCode && (
+          <div className="card p-4 mb-4">
+            <h6 className="fw-semibold primary-c mb-3">Courier Details</h6>
+            <div className="row g-3">
+              <div className="col-6 col-md-3">
+                <div className="text-muted small">Courier</div>
+                <div className="fw-semibold">{order.shipment.courierName || "—"}</div>
+              </div>
+              <div className="col-6 col-md-3">
+                <div className="text-muted small">Tracking number</div>
+                <div className="fw-semibold">{order.shipment.awbCode}</div>
+              </div>
+              <div className="col-6 col-md-3">
+                <div className="text-muted small">Current status</div>
+                <div className="fw-semibold">{order.shipment.status || "Booked"}</div>
+              </div>
+              <div className="col-6 col-md-3">
+                <div className="text-muted small">Expected delivery</div>
+                <div className="fw-semibold">
+                  {order.shipment.expectedDeliveryDate
+                    ? new Date(order.shipment.expectedDeliveryDate).toLocaleDateString("en-IN")
+                    : "—"}
+                </div>
+              </div>
+            </div>
+
+            {order.shipment.trackingUrl && (
+              <a
+                className="btn btn-outline-primary btn-sm mt-3 align-self-start"
+                href={order.shipment.trackingUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Track on courier website
+              </a>
+            )}
+
+            {order.shipment.trackingHistory?.length > 0 && (
+              <ul className="list-unstyled mt-4 mb-0">
+                {[...order.shipment.trackingHistory].reverse().map((t, i) => (
+                  <li key={i} className="d-flex justify-content-between border-bottom py-2" style={{ fontSize: 14 }}>
+                    <span>
+                      <strong>{t.status || "Update"}</strong>
+                      {t.location ? <span className="text-muted"> — {t.location}</span> : null}
+                    </span>
+                    <span className="text-muted" style={{ whiteSpace: "nowrap" }}>
+                      {t.date ? new Date(t.date).toLocaleString("en-IN") : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* Customer & Shipping */}
         <div className="row g-4 mb-4">
           <div className="col-md-6">

@@ -94,6 +94,7 @@ handler.post(
         isFeatured,
         gstPercent,
         hsnCode,         // NEW: HSN/SAC code
+        shipping,        // NEW: courier package details (JSON string)
          productFor,     // ⭐ ADD THIS
         b2bOptions,
         b2cOptions,
@@ -183,6 +184,7 @@ parsedAttributes.forEach(attr => {
         isFeatured: isFeatured === "true" || isFeatured === true,
         gstPercent: gstPercent ? Number(gstPercent) : 0,
         hsnCode: hsnCode || "",             // NEW
+        shipping: safeParse(shipping, {}),  // NEW
           productFor: productFor || "both", // ⭐ FINAL FIX ⭐
 
         attributes: parsedAttributes,

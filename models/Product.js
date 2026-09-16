@@ -239,6 +239,14 @@ const ProductSchema = new mongoose.Schema(
     gstPercent: { type: Number, default: 0 }, // GST % applicable on this product (0, 5, 12, 18, 28)
     hsnCode: { type: String, default: "" }, // NEW: HSN/SAC code for GST invoicing
 
+    // NEW: package details used to book a courier shipment (Shiprocket)
+    shipping: {
+      weight: { type: Number, default: 0 }, // kg, per unit
+      length: { type: Number, default: 0 }, // cm
+      breadth: { type: Number, default: 0 }, // cm
+      height: { type: Number, default: 0 }, // cm
+    },
+
     productFor: {
       type: String,
       enum: ["b2b", "b2c", "both"],

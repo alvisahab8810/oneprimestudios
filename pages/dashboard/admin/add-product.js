@@ -37,6 +37,11 @@ export default function AddProduct() {
     isFeatured: false,
     gstPercent: 0,
     hsnCode: "",      // NEW: HSN/SAC code for invoicing
+    // NEW: package details of one unit, used for courier booking
+    shippingWeight: "",
+    shippingLength: "",
+    shippingBreadth: "",
+    shippingHeight: "",
     productFor: "b2b",
     attributes: [],
     pricingTiers: [],
@@ -172,6 +177,12 @@ export default function AddProduct() {
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");  // NEW
+      fd.append("shipping", JSON.stringify({     // NEW: courier package details
+        weight: Number(form.shippingWeight) || 0,
+        length: Number(form.shippingLength) || 0,
+        breadth: Number(form.shippingBreadth) || 0,
+        height: Number(form.shippingHeight) || 0,
+      }));
       fd.append("productFor", form.productFor || "both");
       fd.append("attributes", JSON.stringify(transformedAttributes));
       fd.append("pricingTiers", JSON.stringify(transformedTiers));
@@ -201,7 +212,8 @@ export default function AddProduct() {
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
         stock: 0, stockStatus: "in_stock", minOrderQty: 1, isFeatured: false,
-        gstPercent: 0, hsnCode: "", productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
+        gstPercent: 0, hsnCode: "", shippingWeight: "", shippingLength: "", shippingBreadth: "", shippingHeight: "",
+        productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
         b2b_enabled: false, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
         b2c_enabled: true, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
       });
@@ -485,6 +497,32 @@ export default function AddProduct() {
                     <div className="min-order-row">
                       <label>Min Order Qty</label>
                       <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
+                    </div>
+                  </div>
+
+                  {/* Shipping package — used to book couriers */}
+                  <div className="pricing-section">
+                    <h4>Shipping Package</h4>
+                    <p className="text-muted" style={{ fontSize: 13, marginTop: -6 }}>
+                      Weight and size of one unit. Courier rates are calculated from these.
+                    </p>
+                    <div className="sku-stock-row">
+                      <div>
+                        <label>Weight (kg)</label>
+                        <input name="shippingWeight" value={form.shippingWeight} onChange={handleChange} type="number" step="0.01" min="0" className="input-primary" placeholder="e.g. 0.5" />
+                      </div>
+                      <div>
+                        <label>Length (cm)</label>
+                        <input name="shippingLength" value={form.shippingLength} onChange={handleChange} type="number" step="0.1" min="0" className="input-primary" />
+                      </div>
+                      <div>
+                        <label>Breadth (cm)</label>
+                        <input name="shippingBreadth" value={form.shippingBreadth} onChange={handleChange} type="number" step="0.1" min="0" className="input-primary" />
+                      </div>
+                      <div>
+                        <label>Height (cm)</label>
+                        <input name="shippingHeight" value={form.shippingHeight} onChange={handleChange} type="number" step="0.1" min="0" className="input-primary" />
+                      </div>
                     </div>
                   </div>
 

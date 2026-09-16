@@ -38,6 +38,11 @@ export default function EditProductPage() {
     isFeatured: false,
     gstPercent: 0,
     hsnCode: "",       // NEW: HSN/SAC code for invoicing
+    // NEW: package details of one unit, used for courier booking
+    shippingWeight: "",
+    shippingLength: "",
+    shippingBreadth: "",
+    shippingHeight: "",
     productFor: "both",
     status: "draft",
     attributes: [],
@@ -167,6 +172,10 @@ export default function EditProductPage() {
         isFeatured: !!p.isFeatured,
         gstPercent: p.gstPercent || 0,
         hsnCode: p.hsnCode || "",         // NEW
+        shippingWeight: p.shipping?.weight || "",    // NEW
+        shippingLength: p.shipping?.length || "",
+        shippingBreadth: p.shipping?.breadth || "",
+        shippingHeight: p.shipping?.height || "",
         productFor: p.productFor || "both",
         status: p.status || "draft",
         // attributes: p.attributes || [],
@@ -307,6 +316,12 @@ export default function EditProductPage() {
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");   // NEW
+      fd.append("shipping", JSON.stringify({      // NEW: courier package details
+        weight: Number(form.shippingWeight) || 0,
+        length: Number(form.shippingLength) || 0,
+        breadth: Number(form.shippingBreadth) || 0,
+        height: Number(form.shippingHeight) || 0,
+      }));
       fd.append("productFor", form.productFor || "both");
       fd.append("status", form.status || "draft");
 
@@ -522,6 +537,32 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     <label className="ms-3">
                       <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} /> Featured
                     </label>
+                  </div>
+                </div>
+
+                {/* Shipping package — used to book couriers */}
+                <div className="pricing-section">
+                  <h4>Shipping Package</h4>
+                  <p className="text-muted" style={{ fontSize: 13, marginTop: -6 }}>
+                    Weight and size of one unit. Courier rates are calculated from these.
+                  </p>
+                  <div className="sku-stock-row">
+                    <div>
+                      <label>Weight (kg)</label>
+                      <input name="shippingWeight" value={form.shippingWeight} onChange={handleChange} type="number" step="0.01" min="0" className="input-primary" placeholder="e.g. 0.5" />
+                    </div>
+                    <div>
+                      <label>Length (cm)</label>
+                      <input name="shippingLength" value={form.shippingLength} onChange={handleChange} type="number" step="0.1" min="0" className="input-primary" />
+                    </div>
+                    <div>
+                      <label>Breadth (cm)</label>
+                      <input name="shippingBreadth" value={form.shippingBreadth} onChange={handleChange} type="number" step="0.1" min="0" className="input-primary" />
+                    </div>
+                    <div>
+                      <label>Height (cm)</label>
+                      <input name="shippingHeight" value={form.shippingHeight} onChange={handleChange} type="number" step="0.1" min="0" className="input-primary" />
+                    </div>
                   </div>
                 </div>
 

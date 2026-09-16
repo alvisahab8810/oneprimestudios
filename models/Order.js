@@ -297,6 +297,40 @@ const OrderSchema = new mongoose.Schema(
     // NEW: order name entered by B2B customer on product page (mandatory)
     orderName: { type: String, default: "" },
 
+    // NEW: courier shipment booked through Shiprocket
+    shipment: {
+      provider: { type: String, default: "shiprocket" },
+      shiprocketOrderId: { type: String, default: "" },
+      shipmentId: { type: String, default: "" },
+      awbCode: { type: String, default: "" },
+      courierName: { type: String, default: "" },
+      courierId: { type: String, default: "" },
+      freightCharge: { type: Number, default: 0 },
+      appliedWeight: { type: Number, default: 0 },
+      pickupLocation: { type: String, default: "" },
+      pickupScheduledAt: { type: Date },
+      pickupTokenNumber: { type: String, default: "" },
+      labelUrl: { type: String, default: "" },
+      manifestUrl: { type: String, default: "" },
+      expectedDeliveryDate: { type: Date },
+      // Latest status reported by the courier
+      status: { type: String, default: "" },
+      statusCode: { type: Number },
+      trackingUrl: { type: String, default: "" },
+      lastTrackedAt: { type: Date },
+      // Full history of courier scans, newest last
+      trackingHistory: [
+        {
+          status: String,
+          activity: String,
+          location: String,
+          date: Date,
+        },
+      ],
+      cancelledAt: { type: Date },
+      createdAt: { type: Date },
+    },
+
     orderNumber: { type: String, unique: true },
   },
 
