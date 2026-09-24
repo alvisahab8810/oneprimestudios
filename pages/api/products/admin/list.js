@@ -11,16 +11,36 @@ export default async function handler(req, res) {
     status = "",
     category = "",
     stockStatus = "",
-     productFor = "", // ✅ add this
+    stock = "",
+    productFor = "",
   } = req.query;
 
   const filter = {};
+
+  // Availability, using the same rules as the summary below and lib/stockRules,
+  // so a card's number and the list it opens always agree.
+  const STOCK_FILTERS = {
+    out: {
+      $or: [{ stockStatus: "out_of_stock" }, { stock: { $lte: 0 } }, { stock: { $exists: false } }],
+    },
+    in: {
+      $and: [{ stockStatus: { $ne: "out_of_stock" } }, { stock: { $gt: 0 } }],
+    },
+    low: {
+      $and: [
+        { stockStatus: { $ne: "out_of_stock" } },
+        { stock: { $gt: 0 } },
+        { $expr: { $lt: [{ $ifNull: ["$stock", 0] }, { $ifNull: ["$minOrderQty", 1] }] } },
+      ],
+    },
+  };
 
   if (search) filter.name = { $regex: search, $options: "i" };
   if (status) filter.status = status;
   if (category) filter.category = category;
   if (stockStatus) filter.stockStatus = stockStatus;
-  if (productFor) filter.productFor = productFor; // ✅ add this line
+  if (productFor) filter.productFor = productFor;
+  if (STOCK_FILTERS[stock]) Object.assign(filter, STOCK_FILTERS[stock]);
 
   const products = await Product.find(filter)
     .populate("category", "name")
