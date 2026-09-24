@@ -5,6 +5,7 @@ import axios from "axios";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import AdminTopbar from "@/components/admin-panel/AdminTopbar";
 import { FaUser, FaChartPie, FaUsers, FaCogs, FaBell } from "react-icons/fa";
+import { getStock, isOutOfStock } from "@/lib/stockRules";
 
 export default function AdminProductList() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -19,6 +20,7 @@ export default function AdminProductList() {
     productFor: "",
   });
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
+  const [summary, setSummary] = useState(null);
 
   // Fetch products
   const fetchProducts = async (page = 1) => {
@@ -28,6 +30,7 @@ export default function AdminProductList() {
       });
       setProducts(data.data);
       setPagination(data.pagination);
+      setSummary(data.summary || null);
     } catch (err) {
       console.error(err);
     }
@@ -102,6 +105,28 @@ export default function AdminProductList() {
               + Add Product
             </Link>
           </div>
+
+          {/* Live stock summary for the products in the current filter */}
+          {summary && (
+            <div className="row g-3 mt-2">
+              {[
+                { label: "Products", value: summary.totalProducts, className: "text-dark" },
+                { label: "Units in stock", value: summary.totalUnits, className: "text-primary" },
+                { label: "In stock", value: summary.inStock, className: "text-success" },
+                { label: "Out of stock", value: summary.outOfStock, className: "text-danger" },
+                { label: "Below min order qty", value: summary.lowStock, className: "text-warning" },
+              ].map((card) => (
+                <div className="col-6 col-md" key={card.label}>
+                  <div className="card border shadow-sm h-100">
+                    <div className="card-body py-3">
+                      <div className="text-muted small">{card.label}</div>
+                      <div className={`fs-4 fw-bold ${card.className}`}>{card.value}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="products-list-area ">
             {/* Filters */}
@@ -212,15 +237,21 @@ export default function AdminProductList() {
                           </span>
                         </td>
                         <td>
+                          {/* Live count, so the badge and the real quantity never disagree */}
                           <span
                             className={`badge ${
-                              p.stockStatus === "in_stock"
-                                ? "bg-success"
-                                : "bg-danger"
+                              isOutOfStock(p) ? "bg-danger" : "bg-success"
                             }`}
                           >
-                            {p.stockStatus}
+                            {isOutOfStock(p)
+                              ? "out_of_stock"
+                              : `in_stock (${getStock(p)})`}
                           </span>
+                          {!isOutOfStock(p) && getStock(p) < (p.minOrderQty || 1) && (
+                            <div className="small text-warning mt-1">
+                              Below min order qty ({p.minOrderQty})
+                            </div>
+                          )}
                         </td>
                         <td className="d-flex">
                           <select

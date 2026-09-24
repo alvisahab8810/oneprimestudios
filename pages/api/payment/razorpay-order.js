@@ -1,11 +1,6 @@
-import Razorpay from "razorpay";
 import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+import { getRazorpay, isRazorpayConfigured, toPaise } from "@/lib/razorpay";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -15,6 +10,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!isRazorpayConfigured()) {
+      return res.status(500).json({ message: "Online payments are not configured" });
+    }
+
     // 🔐 Auth
     const user = await getUserFromToken(req);
     if (!user) {
@@ -28,15 +27,20 @@ export default async function handler(req, res) {
       });
     }
 
-    const { amount } = req.body;
-
-    if (!amount || amount <= 0) {
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
+    // Razorpay's own floor is ₹1; anything larger than this is not a real cart
+    if (amount < 1 || amount > 1000000) {
+      return res.status(400).json({ message: "Amount is out of the allowed range" });
+    }
 
-    // 🔐 CREATE RAZORPAY ORDER (SERVER SIDE)
-    const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100), // paise
+    // The amount is only what the customer is asked to pay. Before an order is
+    // created, /api/orders/create recomputes the total server-side and refuses
+    // (and refunds) any payment that does not match it.
+    const order = await getRazorpay().orders.create({
+      amount: toPaise(amount),
       currency: "INR",
       receipt: `rcpt_${Date.now()}`,
       notes: {

@@ -8,9 +8,17 @@ import { toast } from "react-hot-toast";
 import Offcanvas from "@/components/header/Offcanvas";
 import { canUserCancelOrder } from "@/lib/orderRules";
 import {
+  canRequestReturn,
+  checkReturnEligibility,
+  OPEN_RETURN_STATUSES,
+  RETURN_REASONS,
+  RETURN_STATUS_STYLES,
+  RETURN_WINDOW_DAYS,
+} from "@/lib/returnRules";
+import {
   FiPackage, FiCalendar, FiTruck, FiUser, FiCreditCard,
   FiMapPin, FiFileText, FiArrowLeft, FiUpload, FiAlertCircle,
-  FiCheckCircle, FiClock, FiXCircle,
+  FiCheckCircle, FiClock, FiXCircle, FiRotateCcw, FiCamera, FiTrash2,
 } from "react-icons/fi";
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -179,6 +187,15 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Return / refund (B2C only)
+  const [returnRequests, setReturnRequests] = useState([]);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnType, setReturnType] = useState("return");
+  const [returnReason, setReturnReason] = useState("");
+  const [returnDescription, setReturnDescription] = useState("");
+  const [returnPhotos, setReturnPhotos] = useState([]);
+  const [submittingReturn, setSubmittingReturn] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     const fetch = async () => {
@@ -198,6 +215,65 @@ export default function OrderDetailPage() {
     };
     fetch();
   }, [id]);
+
+  const loadReturnRequests = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`/api/returns?orderId=${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      setReturnRequests(res.data.data || []);
+    } catch {
+      // A failed lookup only hides the history — the form still works
+    }
+  };
+
+  useEffect(() => {
+    if (id) loadReturnRequests();
+  }, [id]);
+
+  const pickReturnPhotos = (fileList) => {
+    const picked = Array.from(fileList || []);
+    const images = picked.filter((f) => f.type.startsWith("image/"));
+    if (images.length !== picked.length) {
+      toast.error("Only photos can be attached");
+    }
+    setReturnPhotos((prev) => {
+      const next = [...prev, ...images].slice(0, 5);
+      if (prev.length + images.length > 5) toast.error("You can attach up to 5 photos");
+      return next;
+    });
+  };
+
+  const submitReturnRequest = async () => {
+    if (!returnReason) return toast.error("Please choose a reason");
+    if (returnPhotos.length === 0) return toast.error("Please attach at least one photo of the issue");
+
+    setSubmittingReturn(true);
+    try {
+      const token = localStorage.getItem("token");
+      const fd = new FormData();
+      fd.append("orderId", order._id);
+      fd.append("type", returnType);
+      fd.append("reason", returnReason);
+      fd.append("description", returnDescription);
+      returnPhotos.forEach((f) => fd.append("photos", f));
+
+      await axios.post("/api/returns", fd, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      toast.success("Request submitted. Our team will review it shortly.");
+      setShowReturnForm(false);
+      setReturnReason("");
+      setReturnDescription("");
+      setReturnPhotos([]);
+      await loadReturnRequests();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not submit the request");
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
 
   const sendDispatchRequest = async () => {
     try {
@@ -309,6 +385,13 @@ export default function OrderDetailPage() {
 
   const c = scfg(order.status);
   const canCancel = canUserCancelOrder(order);
+
+  // Returns are for retail (B2C) orders only — partners are handled by sales
+  const isRetailOrder = String(order.user?.userType || "customer").toLowerCase() === "customer";
+  const openReturn = returnRequests.find((r) => OPEN_RETURN_STATUSES.includes(r.status));
+  const latestReturn = returnRequests[0] || null;
+  const returnBlockReason = checkReturnEligibility(order, order.user);
+  const mayRaiseReturn = canRequestReturn(order, order.user) && !openReturn;
 
   return (
     <>
@@ -480,6 +563,165 @@ export default function OrderDetailPage() {
                 <p style={{ margin: "8px 0 0", fontSize: 12, color: "#166534" }}>
                   Delivered on {new Date(order.deliveredAt).toLocaleString("en-IN")}
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Return / refund (B2C only) ── */}
+          {isRetailOrder && (openReturn || latestReturn || order.status === "Order Delivered") && (
+            <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "20px 22px", marginBottom: 16 }}>
+              <p style={{ margin: "0 0 12px", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 7 }}>
+                <FiRotateCcw size={14} /> Return &amp; Refund
+              </p>
+
+              {latestReturn ? (
+                <div style={{ border: "1px solid #f0f0f0", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{latestReturn.requestNumber}</span>
+                    <span style={{ ...(RETURN_STATUS_STYLES[latestReturn.status] || {}), borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
+                      {latestReturn.status}
+                    </span>
+                    <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: "auto" }}>
+                      {new Date(latestReturn.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                    </span>
+                  </div>
+                  <p style={{ margin: "0 0 6px", fontSize: 13, color: "#374151" }}>{latestReturn.reason}</p>
+                  {latestReturn.adminRemarks && (
+                    <p style={{ margin: "0 0 6px", fontSize: 12, color: "#6b7280" }}>
+                      <strong>Our note:</strong> {latestReturn.adminRemarks}
+                    </p>
+                  )}
+                  {latestReturn.refund?.refundedAt && latestReturn.refund.status !== "failed" && (
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: latestReturn.refund.status === "pending" ? "#92400e" : "#15803d" }}>
+                      {latestReturn.refund.status === "pending"
+                        ? `₹${Number(latestReturn.refund.amount).toFixed(2)} refund is on its way to your ${latestReturn.refund.method === "Razorpay" ? "original payment method" : latestReturn.refund.method} — it usually takes 5-7 working days.`
+                        : `₹${Number(latestReturn.refund.amount).toFixed(2)} refunded via ${latestReturn.refund.method} on ${new Date(latestReturn.refund.refundedAt).toLocaleDateString("en-IN")}`}
+                      {latestReturn.refund.reference ? ` · Ref ${latestReturn.refund.reference}` : ""}
+                    </p>
+                  )}
+                  {latestReturn.images?.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                      {latestReturn.images.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                          <img src={url} alt="Reported issue" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid #eee" }} />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {mayRaiseReturn && !showReturnForm && (
+                <>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, color: "#6b7280" }}>
+                    Something wrong with the items? Raise a request within {RETURN_WINDOW_DAYS} days of delivery and attach photos of the issue.
+                  </p>
+                  <button
+                    onClick={() => setShowReturnForm(true)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 8, background: "#111827", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    <FiRotateCcw size={12} /> Request Return / Refund
+                  </button>
+                </>
+              )}
+
+              {openReturn && (
+                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+                  This request is being processed. We will update you as it moves forward.
+                </p>
+              )}
+
+              {!mayRaiseReturn && !openReturn && returnBlockReason && (
+                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>{returnBlockReason}</p>
+              )}
+
+              {showReturnForm && (
+                <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 14, paddingTop: 14 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
+                    What do you want
+                  </label>
+                  <select
+                    value={returnType}
+                    onChange={(e) => setReturnType(e.target.value)}
+                    style={{ width: "100%", height: 40, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "0 12px", fontSize: 13, marginBottom: 12, background: "#fff" }}
+                  >
+                    <option value="return">Return the item</option>
+                    <option value="refund">Refund only</option>
+                  </select>
+
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
+                    Reason
+                  </label>
+                  <select
+                    value={returnReason}
+                    onChange={(e) => setReturnReason(e.target.value)}
+                    style={{ width: "100%", height: 40, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "0 12px", fontSize: 13, marginBottom: 12, background: "#fff" }}
+                  >
+                    <option value="">Select a reason</option>
+                    {RETURN_REASONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
+                    Tell us more (optional)
+                  </label>
+                  <textarea
+                    value={returnDescription}
+                    onChange={(e) => setReturnDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Describe the fault so our team can check it quickly"
+                    style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: 10, fontSize: 13, marginBottom: 12, resize: "vertical", boxSizing: "border-box" }}
+                  />
+
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
+                    Photos of the issue (up to 5, required)
+                  </label>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 8, border: "1.5px dashed #d1d5db", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
+                    <FiCamera size={13} /> Add photos
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      hidden
+                      onChange={(e) => { pickReturnPhotos(e.target.files); e.target.value = ""; }}
+                    />
+                  </label>
+
+                  {returnPhotos.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                      {returnPhotos.map((f, i) => (
+                        <div key={i} style={{ position: "relative" }}>
+                          <img src={URL.createObjectURL(f)} alt={f.name} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 8, border: "1px solid #eee" }} />
+                          <button
+                            onClick={() => setReturnPhotos((prev) => prev.filter((_, j) => j !== i))}
+                            title="Remove photo"
+                            style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%", border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <FiTrash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                    <button
+                      onClick={submitReturnRequest}
+                      disabled={submittingReturn}
+                      style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "#111827", color: "#fff", fontSize: 12, fontWeight: 700, cursor: submittingReturn ? "not-allowed" : "pointer", opacity: submittingReturn ? 0.7 : 1 }}
+                    >
+                      {submittingReturn ? "Submitting..." : "Submit Request"}
+                    </button>
+                    <button
+                      onClick={() => setShowReturnForm(false)}
+                      disabled={submittingReturn}
+                      style={{ padding: "10px 20px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}

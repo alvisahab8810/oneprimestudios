@@ -17,7 +17,7 @@ import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
 import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
-import { buildQuantityLadder, getMinOrderQty, isOutOfStock } from "@/lib/stockRules";
+import { buildQuantityLadder, getMinOrderQty, getStock, isOutOfStock } from "@/lib/stockRules";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -194,6 +194,7 @@ export default function ProductDetails() {
 
   // Out-of-stock products can be viewed but not ordered
   const outOfStock = isOutOfStock(product);
+  const availableStock = getStock(product);
 
   const increaseQty = () => {
     const list = quantityLadder;
@@ -393,12 +394,12 @@ export default function ProductDetails() {
           {/* ── Right: Details ── */}
           <aside className={styles.sidebar} id="side-bar">
             <h1 className={styles.title}>{product.name}</h1>
-            {/* Stock status comes straight from the admin product form */}
+            {/* Live stock — the same number the admin sees in the dashboard */}
             <div className="mb-2">
               {outOfStock ? (
                 <span className="badge bg-danger">Out of Stock</span>
               ) : (
-                <span className="badge bg-success">In Stock</span>
+                <span className="badge bg-success">In Stock: {availableStock}</span>
               )}
             </div>
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>

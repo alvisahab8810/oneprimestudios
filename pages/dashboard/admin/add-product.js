@@ -484,6 +484,13 @@ export default function AddProduct() {
                     <div className="min-order-row">
                       <label>Min Order Qty</label>
                       <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
+                      {/* Nobody can order this product while stock is below the minimum */}
+                      {Number(form.stock) > 0 && Number(form.minOrderQty) > Number(form.stock) && (
+                        <div className="small text-warning mt-1">
+                          Stock ({form.stock}) is less than the minimum order quantity
+                          ({form.minOrderQty}), so customers cannot order this product.
+                        </div>
+                      )}
                     </div>
                   </div>
 

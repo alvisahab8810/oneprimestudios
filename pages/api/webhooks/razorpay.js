@@ -117,10 +117,46 @@ import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
+import Order from "@/models/Order";
+import ReturnRequest from "@/models/ReturnRequest";
 
 export const config = {
   api: { bodyParser: false },
 };
+
+// Razorpay settles a refund over the following days and tells us here whether it
+// landed. Until this fires, a gateway refund stays "pending" on our side.
+async function applyRefundEvent(refund, settled) {
+  const order = await Order.findOne({ "refunds.reference": refund.id });
+  if (order) {
+    const row = order.refunds.find((r) => r.reference === refund.id);
+    if (row && row.status !== (settled ? "processed" : "failed")) {
+      row.status = settled ? "processed" : "failed";
+      row.settledAt = settled ? new Date() : undefined;
+      if (!settled) {
+        // A failed refund still owes the customer money, so the order is not settled
+        row.note = [row.note, "Refund failed at Razorpay"].filter(Boolean).join(" · ");
+        if (order.paymentStatus === "REFUNDED") order.paymentStatus = "PAID";
+      }
+      await order.save();
+    }
+  }
+
+  const request = await ReturnRequest.findOne({ "refund.reference": refund.id });
+  if (request && request.refund.status !== (settled ? "processed" : "failed")) {
+    request.refund.status = settled ? "processed" : "failed";
+    request.refund.failureReason = settled ? "" : "Razorpay could not complete the refund";
+    request.history.push({
+      status: request.status,
+      remarks: settled
+        ? `Refund ${refund.id} completed at Razorpay`
+        : `Refund ${refund.id} failed at Razorpay — needs to be sent again`,
+      by: "system",
+      at: new Date(),
+    });
+    await request.save();
+  }
+}
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -139,6 +175,11 @@ export default async function handler(req, res) {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     const signature = req.headers["x-razorpay-signature"];
 
+    if (!secret) {
+      console.error("❌ RAZORPAY_WEBHOOK_SECRET is not set");
+      return res.status(500).json({ message: "Server misconfigured" });
+    }
+
     const expectedSignature = crypto
       .createHmac("sha256", secret)
       .update(rawBody)
@@ -150,6 +191,14 @@ export default async function handler(req, res) {
 
     const event = JSON.parse(rawBody);
 
+    // ── REFUND EVENTS — update the return request and the order ──────────────
+    if (event.event === "refund.processed" || event.event === "refund.failed") {
+      const refund = event.payload?.refund?.entity;
+      if (!refund?.id) return res.status(200).json({ ignored: true });
+      await applyRefundEvent(refund, event.event === "refund.processed");
+      return res.status(200).json({ success: true });
+    }
+
     // ✅ ONLY HANDLE PAYMENT CAPTURED
     if (event.event !== "payment.captured") {
       return res.status(200).json({ ignored: true });
@@ -160,6 +209,10 @@ export default async function handler(req, res) {
     // 🔥 MOST IMPORTANT LINE
     const walletTransactionId = payment.notes?.walletTransactionId;
     if (!walletTransactionId) {
+      // Customer order payments are verified at checkout, not here
+      if (payment.notes?.purpose === "customer_order_payment") {
+        return res.status(200).json({ ignored: true });
+      }
       console.error("❌ walletTransactionId missing in notes");
       return res.status(200).json({ ignored: true });
     }

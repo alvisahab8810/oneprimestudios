@@ -148,6 +148,7 @@ import {
   FaFileInvoice,
   FaStar,
   FaHistory,
+  FaUndo,
   FaSignOutAlt,
 } from "react-icons/fa";
 
@@ -435,6 +436,17 @@ export default function Sidebar({ sidebarOpen }) {
             }`}
           >
             <img src="/assets/images/admin/partner.svg" /> complaint Requests
+          </Link>
+        )}
+
+        {canAccess(user, "orders") && (
+          <Link
+            href="/dashboard/admin/returns"
+            className={`ops-item ${
+              isActive("/dashboard/admin/returns") ? "active" : ""
+            }`}
+          >
+            <FaUndo className="me-2" /> Return Requests
           </Link>
         )}
 

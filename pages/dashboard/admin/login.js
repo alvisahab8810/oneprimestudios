@@ -66,6 +66,7 @@
 
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -144,6 +145,11 @@ export default function AdminLogin() {
           </div>
           <button className="btn btn-primary w-100">Login</button>
         </form>
+        <div className="text-center mt-3">
+          <Link href="/dashboard/admin/forgot-password" className="small">
+            Forgot password?
+          </Link>
+        </div>
       </div>
     </div>
   );

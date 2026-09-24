@@ -30,9 +30,54 @@ export default async function handler(req, res) {
 
   const total = await Product.countDocuments(filter);
 
+  // Stock summary for the cards above the table — counted over the whole
+  // filtered list, not just the page being shown.
+  const [summaryRow] = await Product.aggregate([
+    { $match: filter },
+    {
+      $group: {
+        _id: null,
+        totalUnits: { $sum: { $ifNull: ["$stock", 0] } },
+        outOfStock: {
+          $sum: {
+            $cond: [
+              { $or: [{ $eq: ["$stockStatus", "out_of_stock"] }, { $lte: [{ $ifNull: ["$stock", 0] }, 0] }] },
+              1,
+              0,
+            ],
+          },
+        },
+        lowStock: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ["$stockStatus", "out_of_stock"] },
+                  { $gt: [{ $ifNull: ["$stock", 0] }, 0] },
+                  { $lt: [{ $ifNull: ["$stock", 0] }, { $ifNull: ["$minOrderQty", 1] }] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  const summary = {
+    totalProducts: total,
+    totalUnits: summaryRow?.totalUnits || 0,
+    outOfStock: summaryRow?.outOfStock || 0,
+    lowStock: summaryRow?.lowStock || 0,
+    inStock: total - (summaryRow?.outOfStock || 0),
+  };
+
   res.status(200).json({
     success: true,
     data: products,
+    summary,
     pagination: {
       total,
       page: Number(page),

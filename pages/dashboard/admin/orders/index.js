@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import { FaBell, FaSearch, FaFileExcel, FaTrash, FaTimes } from "react-icons/fa";
+import { RETURN_STATUSES, RETURN_STATUS_STYLES } from "@/lib/returnRules";
 
 export default function AdminOrdersPage() {
   const [searchInput, setSearchInput]     = useState("");
@@ -15,6 +16,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading]             = useState(true);
   const [statusFilter, setStatusFilter]   = useState("");
   const [userTypeFilter, setUserTypeFilter] = useState("");
+  const [returnFilter, setReturnFilter]     = useState("");
   const [parentFilter, setParentFilter]     = useState("");
   const [subCategoryFilter, setSubCategoryFilter] = useState("");
   const [productFilter, setProductFilter]   = useState("");
@@ -68,6 +70,7 @@ export default function AdminOrdersPage() {
       const params = new URLSearchParams({ page });
       if (statusFilter)   params.append("status",    statusFilter);
       if (userTypeFilter) params.append("userType",   userTypeFilter);
+      if (returnFilter)   params.append("returnStatus", returnFilter);
       if (searchQuery)    params.append("search",     searchQuery);
       if (categoryFilter) params.append("category",   categoryFilter);
       if (productFilter)  params.append("product",    productFilter);
@@ -84,13 +87,13 @@ export default function AdminOrdersPage() {
     }
   };
 
-  useEffect(() => { loadOrders(); }, [statusFilter, userTypeFilter, categoryFilter, productFilter, page, searchQuery]);
+  useEffect(() => { loadOrders(); }, [statusFilter, userTypeFilter, returnFilter, categoryFilter, productFilter, page, searchQuery]);
 
-  const hasFilters = searchQuery || statusFilter || userTypeFilter || categoryFilter || productFilter;
+  const hasFilters = searchQuery || statusFilter || userTypeFilter || returnFilter || categoryFilter || productFilter;
 
   const clearFilters = () => {
     setSearchInput(""); setSearchQuery("");
-    setStatusFilter(""); setUserTypeFilter("");
+    setStatusFilter(""); setUserTypeFilter(""); setReturnFilter("");
     setParentFilter(""); setSubCategoryFilter(""); setProductFilter("");
     setPage(1);
   };
@@ -228,6 +231,20 @@ export default function AdminOrdersPage() {
               <option value="customer">B2C</option>
             </select>
 
+            {/* Return / refund filter */}
+            <select
+              value={returnFilter}
+              onChange={e => { setPage(1); setReturnFilter(e.target.value); }}
+              style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: "#fff", minWidth: 170 }}
+            >
+              <option value="">All Orders</option>
+              <option value="any">With return / refund</option>
+              <option value="open">Return needs action</option>
+              {RETURN_STATUSES.map(s => (
+                <option key={s} value={s}>Return: {s}</option>
+              ))}
+            </select>
+
             {/* Parent category filter */}
             <select
               value={parentFilter}
@@ -331,6 +348,12 @@ export default function AdminOrdersPage() {
                   <FaTimes style={{ cursor: "pointer" }} onClick={() => { setUserTypeFilter(""); setPage(1); }} />
                 </span>
               )}
+              {returnFilter && (
+                <span style={{ background: "#ffe4e6", color: "#be123c", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  {returnFilter === "any" ? "With return / refund" : returnFilter === "open" ? "Return needs action" : `Return: ${returnFilter}`}
+                  <FaTimes style={{ cursor: "pointer" }} onClick={() => { setReturnFilter(""); setPage(1); }} />
+                </span>
+              )}
               {parentFilter && (
                 <span style={{ background: "#fef3c7", color: "#b45309", borderRadius: 20, padding: "4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
                   {categories.find(c => c._id === parentFilter)?.name || "Category"}
@@ -377,7 +400,7 @@ export default function AdminOrdersPage() {
                         <input type="checkbox" checked={allChecked}
                           onChange={e => setSelectedOrders(e.target.checked ? orders.map(o => o._id) : [])} />
                       </th>
-                      {["Order No", "Products", "Customer", "Type", "Total", "Status", ...(canViewPayments ? ["Payment"] : []), "Date", "Actions"].map(h => (
+                      {["Order No", "Products", "Customer", "Type", "Total", "Status", "Return", ...(canViewPayments ? ["Payment"] : []), "Date", "Actions"].map(h => (
                         <th key={h} style={thStyle}>{h}</th>
                       ))}
                     </tr>
@@ -425,6 +448,14 @@ export default function AdminOrdersPage() {
                           <span style={statusBadge(o.status)}>{o.status}</span>
                         </td>
 
+                        <td style={tdStyle}>
+                          {o.returnStatus && o.returnStatus !== "none" ? (
+                            <span style={{ ...(RETURN_STATUS_STYLES[o.returnStatus] || {}), borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+                              {o.returnStatus}
+                            </span>
+                          ) : <span style={{ color: "#ccc" }}>—</span>}
+                        </td>
+
                         {canViewPayments && <td style={tdStyle}>{o.paymentMethod || "—"}</td>}
 
                         <td style={{ ...tdStyle, whiteSpace: "nowrap", color: "#888" }}>
@@ -444,7 +475,7 @@ export default function AdminOrdersPage() {
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={10} style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
+                        <td colSpan={11} style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
                           <div style={{ fontSize: 40, marginBottom: 8 }}>📭</div>
                           {hasFilters ? "No orders match your filters." : "No orders found."}
                           {hasFilters && (

@@ -1020,11 +1020,12 @@ useEffect(() => {
     loadCart();
   }, [router]);
 
-  // 🚚 Transport charge — the courier's own rate for this pincode
+  // 🚚 Transport charge — the courier's own rate for this pincode.
+  // Partners (B2B) are not charged for transport, so no quote is fetched for them.
   useEffect(() => {
     const zip = String(formData.zip || "").trim();
 
-    if (!/^\d{6}$/.test(zip) || cartItems.length === 0) {
+    if (userType === "partner" || !/^\d{6}$/.test(zip) || cartItems.length === 0) {
       setShippingQuote(null);
       return;
     }
@@ -1068,7 +1069,7 @@ useEffect(() => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [formData.zip, cartItems]);
+  }, [formData.zip, cartItems, userType]);
 
   const total = cartItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
@@ -1081,11 +1082,14 @@ useEffect(() => {
   }, 0);
 
   const discountedSubtotal = Math.max(total - discountAmount, 0);
-  const transportCharge = shippingQuote?.serviceable ? Number(shippingQuote.charge) || 0 : 0;
+  // Transport is charged to customers (B2C) only — partner orders ship free
+  const transportApplies = userType !== "partner";
+  const transportCharge =
+    transportApplies && shippingQuote?.serviceable ? Number(shippingQuote.charge) || 0 : 0;
   const finalAmount = discountedSubtotal + gstAmount + transportCharge;
 
   // Nothing can be ordered until the courier has priced this delivery
-  const shippingReady = !!shippingQuote?.serviceable && !shippingLoading;
+  const shippingReady = !transportApplies || (!!shippingQuote?.serviceable && !shippingLoading);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1135,6 +1139,7 @@ useEffect(() => {
   // 💳 Razorpay Payment
   // Blocks checkout while the delivery charge is unknown, and says why
   const checkShippingReady = () => {
+    if (!transportApplies) return true;
     if (shippingLoading) {
       toast.error("Please wait, calculating delivery charges.");
       return false;
@@ -1156,14 +1161,18 @@ useEffect(() => {
 
     try {
       setSubmitting(true);
+      const token = localStorage.getItem("token");
       const res = await fetch("/api/payment/razorpay-order", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ amount: finalAmount }),
       });
 
       const data = await res.json();
-      if (!data?.id) throw new Error("Failed to create Razorpay order");
+      if (!data?.id) throw new Error(data?.message || "Failed to create Razorpay order");
 
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -1174,7 +1183,16 @@ useEffect(() => {
         description: "Order Payment",
         order_id: data.id,
         handler: async (response) => {
-          await placeOrder("Razorpay", response);
+          // These three are what the server verifies the payment against
+          await placeOrder("Razorpay", {
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+          });
+        },
+        modal: {
+          // The customer closed the modal without paying — let them try again
+          ondismiss: () => setSubmitting(false),
         },
         prefill: {
           name: formData.name,
@@ -1184,17 +1202,21 @@ useEffect(() => {
       };
 
       const razor = new window.Razorpay(options);
+      razor.on("payment.failed", (resp) => {
+        setSubmitting(false);
+        toast.error(resp?.error?.description || "Payment failed. Please try again.");
+      });
       razor.open();
     } catch (err) {
       console.error("Razorpay error:", err);
-      alert("Payment failed. Please try again.");
-    } finally {
       setSubmitting(false);
+      toast.error(err.message || "Payment could not be started. Please try again.");
     }
   };
 
-const placeOrder = async (method) => {
-  if (submitting) return; // 🔒 HARD STOP
+const placeOrder = async (method, payment = null) => {
+  // Razorpay lands here from inside the modal, where submitting is already true
+  if (submitting && method !== "Razorpay") return; // 🔒 HARD STOP
   if (!validateForm()) return;
   if (!checkShippingReady()) return;
 
@@ -1229,6 +1251,7 @@ const placeOrder = async (method) => {
       couponCode: appliedCoupon?.code || null,
       paymentMethod: method,
       orderName: cartItems[0]?.orderName || "",
+      ...(payment || {}),
       shippingAddress: {
         street: formData.street,
         city:   formData.city,
@@ -1693,7 +1716,9 @@ const placeOrder = async (method) => {
                   </div>
                 )}
 
-                {/* Transport charge — exactly what the courier charges for this pincode */}
+                {/* Transport charge — exactly what the courier charges for this pincode.
+                    Partner orders are not charged, so the row is hidden for them. */}
+                {transportApplies && (
                 <div className="d-flex justify-content-between" style={{ fontSize: 13, color: "#6b7280" }}>
                   <span>
                     Transport Charge
@@ -1712,8 +1737,9 @@ const placeOrder = async (method) => {
                         : "—"}
                   </span>
                 </div>
+                )}
 
-                {!shippingLoading && shippingQuote && !shippingQuote.serviceable && (
+                {transportApplies && !shippingLoading && shippingQuote && !shippingQuote.serviceable && (
                   <div className="alert alert-warning py-2 px-3 mt-2 mb-0" style={{ fontSize: 13 }}>
                     {shippingQuote.message || "Delivery is not available for this pincode."}
                   </div>
@@ -1811,7 +1837,7 @@ const placeOrder = async (method) => {
 >
   {submitting
     ? "Processing..."
-    : shippingLoading
+    : transportApplies && shippingLoading
     ? "Calculating delivery..."
     : paymentMethod === "wallet"
     ? "Pay Using Wallet"

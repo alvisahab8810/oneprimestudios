@@ -202,7 +202,33 @@ const OrderSchema = new mongoose.Schema(
       orderId: String,
       paymentId: String,
       signature: String,
+      // Captured amount in paise, exactly as Razorpay reported it
+      amountPaid: { type: Number },
+      capturedAt: { type: Date },
     },
+
+    // Every refund raised against this order, gateway or manual. Refunds at the
+    // gateway are asynchronous, so the webhook flips status to processed/failed.
+    refunds: [
+      {
+        returnRequest: { type: mongoose.Schema.Types.ObjectId, ref: "ReturnRequest" },
+        amount: { type: Number, required: true },
+        method: {
+          type: String,
+          enum: ["Razorpay", "Bank Transfer", "UPI", "Wallet", "Other"],
+          required: true,
+        },
+        reference: { type: String, default: "" }, // Razorpay refund id or bank UTR
+        status: {
+          type: String,
+          enum: ["pending", "processed", "failed"],
+          default: "processed",
+        },
+        note: { type: String, default: "" },
+        createdAt: { type: Date, default: Date.now },
+        settledAt: { type: Date },
+      },
+    ],
 
     cancelledBy: {
       type: String,
@@ -243,6 +269,23 @@ const OrderSchema = new mongoose.Schema(
         "Rejected",
       ],
       default: "Pending",
+    },
+
+    // Mirrors the latest return/refund request on this order, so the admin
+    // order list can be filtered without a second query. "none" = no request.
+    returnStatus: {
+      type: String,
+      enum: [
+        "none",
+        "Requested",
+        "Approved",
+        "Rejected",
+        "Pickup Scheduled",
+        "Item Received",
+        "Refunded",
+        "Closed",
+      ],
+      default: "none",
     },
 
     // NEW FIELD
@@ -344,6 +387,13 @@ const OrderSchema = new mongoose.Schema(
   },
 
   { timestamps: true },
+);
+
+// One Razorpay payment can back exactly one order. This is what stops the same
+// captured payment from being replayed into a second order.
+OrderSchema.index(
+  { "razorpay.paymentId": 1 },
+  { unique: true, sparse: true, partialFilterExpression: { "razorpay.paymentId": { $type: "string" } } }
 );
 
 export default mongoose.models.Order || mongoose.model("Order", OrderSchema);

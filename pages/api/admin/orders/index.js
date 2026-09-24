@@ -7,6 +7,7 @@ import Admin from "@/models/Admin";
 import mongoose from "mongoose";
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission, canViewPayments } from "@/lib/hasPermission";
+import { OPEN_RETURN_STATUSES } from "@/lib/returnRules";
 
 export default async function handler(req, res) {
   try {
@@ -33,7 +34,7 @@ export default async function handler(req, res) {
     }
 
     /* ── Query params ─────────────────────────────────────────────────────── */
-    const { status, userType, search, page = 1, limit = 10, category, product } = req.query;
+    const { status, userType, search, page = 1, limit = 10, category, product, returnStatus } = req.query;
 
     const pageNum  = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
@@ -44,6 +45,12 @@ export default async function handler(req, res) {
 
     // Status
     if (status) filters.status = status;
+
+    // Return / refund — "any" means every order that has a request on it,
+    // "open" means the ones still waiting on someone
+    if (returnStatus === "any") filters.returnStatus = { $ne: "none" };
+    else if (returnStatus === "open") filters.returnStatus = { $in: OPEN_RETURN_STATUSES };
+    else if (returnStatus) filters.returnStatus = returnStatus;
 
     // userType — must pre-fetch matching user IDs (populate match can't be used
     // for filtering before pagination — it runs AFTER and silently removes rows)

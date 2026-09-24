@@ -526,6 +526,13 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     <label className="ms-3">
                       <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} /> Featured
                     </label>
+                    {/* Nobody can order this product while stock is below the minimum */}
+                    {Number(form.stock) > 0 && Number(form.minOrderQty) > Number(form.stock) && (
+                      <div className="small text-warning mt-1 w-100">
+                        Stock ({form.stock}) is less than the minimum order quantity
+                        ({form.minOrderQty}), so customers cannot order this product.
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -149,6 +149,16 @@ export default function AdminOrderDetail() {
                     <strong>Reason for Rejection:</strong> {order.remarks}
                   </div>
                 )}
+                {order.returnStatus && order.returnStatus !== "none" && (
+                  <div className="alert alert-warning mt-3 py-2 px-3 d-flex flex-wrap align-items-center gap-2">
+                    <span>
+                      <strong>Return / Refund:</strong> {order.returnStatus}
+                    </span>
+                    <Link href="/dashboard/admin/returns" className="btn btn-sm btn-outline-dark ms-auto">
+                      Open request
+                    </Link>
+                  </div>
+                )}
                 {canViewPayments && order.status === "Cancelled" && order.paymentStatus === "REFUNDED" && (
                   <div className="alert alert-success mt-2 py-1 px-3" style={{ fontSize: 13 }}>
                     ✅ Wallet refund of <strong>₹{order.total}</strong> issued

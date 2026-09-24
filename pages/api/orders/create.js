@@ -13,6 +13,13 @@ import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
 import { checkOrderable } from "@/lib/stockRules";
+import {
+  checkPaymentMatchesOrder,
+  fetchPayment,
+  isRazorpayConfigured,
+  refundQuietly,
+  verifyCheckoutSignature,
+} from "@/lib/razorpay";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -30,6 +37,12 @@ export default async function handler(req, res) {
     // OLD: const { items, subtotal, gstAmount = 0, paymentMethod, couponCode } = req.body;
     // NEW: also extract orderName (B2B mandatory field)
     const { items, subtotal, gstAmount = 0, paymentMethod, couponCode, orderName = "" } = req.body;
+
+    // Razorpay Checkout hands these three back to the browser; we never trust
+    // them as proof of payment until the signature and the amount are verified.
+    const rzpOrderId = String(req.body.razorpayOrderId || "").trim();
+    const rzpPaymentId = String(req.body.razorpayPaymentId || "").trim();
+    const rzpSignature = String(req.body.razorpaySignature || "").trim();
 
     const normalizedPaymentMethod =
       typeof paymentMethod === "string" ? paymentMethod.toLowerCase() : null;
@@ -55,6 +68,24 @@ export default async function handler(req, res) {
     }
     if (fullUser.userType === "customer" && normalizedPaymentMethod !== "razorpay") {
       return res.status(403).json({ message: "Customers can pay only via Razorpay" });
+    }
+
+    // ── RAZORPAY: the payment must be real before an order exists ──────────
+    if (normalizedPaymentMethod === "razorpay") {
+      if (!isRazorpayConfigured()) {
+        return res.status(500).json({ message: "Online payments are not configured" });
+      }
+      if (!rzpOrderId || !rzpPaymentId || !rzpSignature) {
+        return res.status(400).json({ message: "Payment details are missing" });
+      }
+      if (!verifyCheckoutSignature({ orderId: rzpOrderId, paymentId: rzpPaymentId, signature: rzpSignature })) {
+        return res.status(400).json({ message: "Payment could not be verified" });
+      }
+      // The same captured payment must never create a second order
+      const alreadyUsed = await Order.exists({ "razorpay.paymentId": rzpPaymentId });
+      if (alreadyUsed) {
+        return res.status(409).json({ message: "This payment has already been used for an order" });
+      }
     }
 
     // CUSTOMER REMARKS
@@ -108,7 +139,7 @@ export default async function handler(req, res) {
     const productIds = items.map((i) => i.product);
     const productDocs = await Product.find(
       { _id: { $in: productIds } },
-      "name shipping stockStatus minOrderQty"
+      "name shipping stockStatus minOrderQty stock"
     ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });
@@ -119,26 +150,61 @@ export default async function handler(req, res) {
       if (problem) return res.status(400).json({ message: problem });
     }
 
+    // Partners (B2B) are not charged for transport, so no quote is needed for them
+    const chargeTransport = fullUser.userType !== "partner";
+    let shippingCharge = 0;
+    let shippingQuote = null;
+
     const deliveryPincode = String(
       req.body.shippingAddress?.zip || fullUser.pinCode || ""
     ).trim();
 
-    const shippingQuote = await quoteShipping({
-      items: items.map((i) => ({
-        quantity: i.quantity,
-        product: productMap[String(i.product)] || null,
-      })),
-      deliveryPincode,
-      declaredValue: finalTotal,
-    });
+    if (chargeTransport) {
+      shippingQuote = await quoteShipping({
+        items: items.map((i) => ({
+          quantity: i.quantity,
+          product: productMap[String(i.product)] || null,
+        })),
+        deliveryPincode,
+        declaredValue: finalTotal,
+      });
 
-    // The order is blocked when we cannot deliver there or cannot price the delivery
-    if (!shippingQuote.available) {
-      return res.status(400).json({ message: shippingQuoteMessage(shippingQuote.reason) });
+      // The order is blocked when we cannot deliver there or cannot price the delivery
+      if (!shippingQuote.available) {
+        return res.status(400).json({ message: shippingQuoteMessage(shippingQuote.reason) });
+      }
+
+      shippingCharge = shippingQuote.charge;
+      finalTotal += shippingCharge;
     }
 
-    const shippingCharge = shippingQuote.charge;
-    finalTotal += shippingCharge;
+    // ── RAZORPAY: the captured amount must equal the total we just computed ──
+    let rzpPayment = null;
+    if (normalizedPaymentMethod === "razorpay") {
+      try {
+        rzpPayment = await fetchPayment(rzpPaymentId);
+      } catch (err) {
+        return res.status(400).json({
+          message: "Could not confirm your payment with Razorpay. Please contact support before paying again.",
+        });
+      }
+
+      const mismatch = checkPaymentMatchesOrder(rzpPayment, {
+        orderId: rzpOrderId,
+        expectedRupees: finalTotal,
+      });
+      if (mismatch) {
+        // Money was taken for something we will not fulfil — send it straight back
+        await refundQuietly({
+          paymentId: rzpPaymentId,
+          amountRupees: Number(rzpPayment.amount) / 100,
+          reason: "amount_mismatch",
+        });
+        return res.status(400).json({
+          message: `${mismatch}. Your payment is being refunded — it will reach you in 5-7 working days.`,
+        });
+      }
+    }
 
     // ── UPDATED: generate orderNumber before session so it's available for wallet tx description
     // OLD: orderNumber generated inside Order.create, so wallet tx had no reference to it
@@ -180,9 +246,9 @@ export default async function handler(req, res) {
             gstAmount: Number(gstAmount || 0),
             shippingCharge,
             shippingQuote: {
-              courierName: shippingQuote.courierName || "",
+              courierName: shippingQuote?.courierName || "",
               pincode: deliveryPincode,
-              weight: shippingQuote.weight,
+              weight: shippingQuote?.weight || 0,
               quotedAt: new Date(),
             },
             total: finalTotal,
@@ -199,11 +265,19 @@ export default async function handler(req, res) {
             },
 
             paymentMethod: normalizedPaymentMethod === "wallet" ? "Wallet" : "Razorpay",
-            paymentStatus: normalizedPaymentMethod === "wallet" ? "PAID" : "UNPAID",
+            // Razorpay orders reach this point only after the payment was
+            // verified against the gateway, so they are genuinely paid.
+            paymentStatus: "PAID",
 
             razorpay:
               normalizedPaymentMethod === "razorpay"
-                ? { orderId: req.body.razorpayOrderId || null, paymentId: null, signature: null }
+                ? {
+                    orderId: rzpOrderId,
+                    paymentId: rzpPaymentId,
+                    signature: rzpSignature,
+                    amountPaid: Number(rzpPayment?.amount) || 0,
+                    capturedAt: new Date(),
+                  }
                 : undefined,
 
             orderNumber,
@@ -239,6 +313,29 @@ export default async function handler(req, res) {
         );
       }
 
+      // ── REDUCE STOCK — the condition makes two buyers racing for the last
+      // units safe: the second one finds no matching product and the whole
+      // order is rolled back.
+      for (const item of items) {
+        const qty = Number(item.quantity);
+        const result = await Product.updateOne(
+          { _id: item.product, stock: { $gte: qty } },
+          { $inc: { stock: -qty } },
+          { session }
+        );
+        if (!result.matchedCount) {
+          throw new Error(
+            `Not enough stock for "${productNameMap[String(item.product)] || "this product"}"`
+          );
+        }
+        // A product that just ran out is marked out of stock, so the storefront agrees
+        await Product.updateOne(
+          { _id: item.product, stock: { $lte: 0 } },
+          { $set: { stockStatus: "out_of_stock" } },
+          { session }
+        );
+      }
+
       // INCREMENT COUPON USAGE
       if (couponData) {
         await Coupon.updateOne(
@@ -256,6 +353,20 @@ export default async function handler(req, res) {
     } catch (error) {
       await session.abortTransaction();
       session.endSession();
+
+      // The payment already went through, so a rolled-back order means we are
+      // holding money for nothing — refund it before answering.
+      if (normalizedPaymentMethod === "razorpay" && rzpPaymentId) {
+        await refundQuietly({
+          paymentId: rzpPaymentId,
+          amountRupees: finalTotal,
+          reason: "order_rolled_back",
+        });
+        return res.status(400).json({
+          message: `${error.message || "Order failed"}. Your payment is being refunded — it will reach you in 5-7 working days.`,
+        });
+      }
+
       return res.status(400).json({ message: error.message || "Order failed" });
     }
 
