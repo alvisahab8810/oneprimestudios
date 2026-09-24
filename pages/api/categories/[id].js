@@ -47,7 +47,7 @@ handler.put(async (req, res) => {
   await dbConnect();
   const { id } = req.query;
   try {
-    const { name, parent } = req.body;
+    const { name, parent, categoryFor } = req.body;
     const category = await Category.findById(id);
     if (!category) return res.status(404).json({ message: "Category not found" });
 
@@ -64,6 +64,12 @@ handler.put(async (req, res) => {
     }
 
     category.parent = parent || null;
+
+    // Who the category is shown to. Only a real option is written, so a stray
+    // value cannot push the category out of its enum.
+    if (["b2b", "b2c", "both"].includes(categoryFor)) {
+      category.categoryFor = categoryFor;
+    }
 
     if (req.file) {
       category.image = `/uploads/categories/${req.file.filename}`;

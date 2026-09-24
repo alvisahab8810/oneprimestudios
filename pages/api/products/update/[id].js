@@ -70,8 +70,15 @@ handler.put(async (req, res) => {
       cityPrices,
       b2bOptions,
       b2cOptions,
+      productFor,
+      status,
       existingGallery,
     } = req.body;
+
+    // Audience and publish state are only written when the value is a real
+    // option, so a stray field can never push the product out of its enum.
+    const PRODUCT_FOR = ["b2b", "b2c", "both"];
+    const PRODUCT_STATUS = ["published", "draft"];
 
     // 🔥 SLUG VALIDATION
     if (slug) {
@@ -138,6 +145,8 @@ handler.put(async (req, res) => {
       cityPrices: safeParse(cityPrices, []),
       b2bOptions: safeParse(b2bOptions, {}),
       b2cOptions: safeParse(b2cOptions, {}),
+      productFor: PRODUCT_FOR.includes(productFor) ? productFor : product.productFor || "both",
+      status: PRODUCT_STATUS.includes(status) ? status : product.status || "draft",
     };
 
     const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {

@@ -40,16 +40,15 @@ handler.get(async (req, res) => {
     const { popular } = req.query;
     let filter = { status: "published" };
 
-  // 🔒 STRICT B2B / B2C VISIBILITY RULES
-if (!userType || userType === "customer" || userType === "b2c") {
-  // Non-login or customer → B2C ONLY
-  filter.productFor = "b2c";
-}
-
-if (userType === "partner" || userType === "b2b") {
-  // Partner → B2B ONLY
-  filter.productFor = "b2b";
-}
+    // Visibility by audience. A product marked "both" belongs to each side,
+    // so it has to be included alongside the side-specific one — matching only
+    // the exact value hides every "both" product from everybody.
+    if (userType === "partner" || userType === "b2b") {
+      filter.productFor = { $in: ["b2b", "both"] };
+    } else {
+      // Not logged in, or a retail customer → B2C
+      filter.productFor = { $in: ["b2c", "both"] };
+    }
 
     // Filter popular products only (for homepage slider)
     if (popular === "true") {
@@ -95,7 +94,8 @@ handler.post(
         gstPercent,
         hsnCode,         // NEW: HSN/SAC code
         shipping,        // NEW: courier package details (JSON string)
-         productFor,     // ⭐ ADD THIS
+        productFor,
+        status,
         b2bOptions,
         b2cOptions,
         attributes,
@@ -185,7 +185,9 @@ parsedAttributes.forEach(attr => {
         gstPercent: gstPercent ? Number(gstPercent) : 0,
         hsnCode: hsnCode || "",             // NEW
         shipping: safeParse(shipping, {}),  // NEW
-          productFor: productFor || "both", // ⭐ FINAL FIX ⭐
+        productFor: ["b2b", "b2c", "both"].includes(productFor) ? productFor : "both",
+        // Anything other than an explicit "published" stays a draft
+        status: status === "published" ? "published" : "draft",
 
         attributes: parsedAttributes,
         pricingTiers: parsedTiers,

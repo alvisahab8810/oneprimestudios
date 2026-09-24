@@ -44,6 +44,7 @@ export default function AddProduct() {
     shippingBreadth: "",
     shippingHeight: "",
     productFor: "b2b",
+    status: "published",
     attributes: [],
     pricingTiers: [],
     pricingTiersCSV: "",
@@ -74,10 +75,16 @@ export default function AddProduct() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
+      // Choosing the audience also switches the matching option block on, so a
+      // B2C product never ends up rendering with the B2B layout on the storefront.
+      if (name === "productFor") {
+        next.b2b_enabled = value === "b2b" || value === "both";
+        next.b2c_enabled = value === "b2c" || value === "both";
+      }
+      return next;
+    });
   };
 
   const handleMainImage = (e) => {
@@ -185,6 +192,7 @@ export default function AddProduct() {
         height: Number(form.shippingHeight) || 0,
       }));
       fd.append("productFor", form.productFor || "both");
+      fd.append("status", form.status || "draft");
       fd.append("attributes", JSON.stringify(transformedAttributes));
       fd.append("pricingTiers", JSON.stringify(transformedTiers));
       fd.append("cityPrices", JSON.stringify(transformedCityPrices));
@@ -214,9 +222,9 @@ export default function AddProduct() {
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
         stock: 0, stockStatus: "in_stock", minOrderQty: 1, isFeatured: false,
         gstPercent: 0, hsnCode: "", shippingWeight: "", shippingLength: "", shippingBreadth: "", shippingHeight: "",
-        productFor: "b2b", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
-        b2b_enabled: false, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
-        b2c_enabled: true, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
+        productFor: "b2b", status: "published", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
+        b2b_enabled: true, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
+        b2c_enabled: false, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
       });
       setMainImageFile(null);
       setGalleryFiles([]);
@@ -287,6 +295,13 @@ export default function AddProduct() {
                   <select name="productFor" value={form.productFor} onChange={handleChange} className="select-primary">
                     <option value="b2b">B2B only</option>
                     <option value="b2c">B2C only</option>
+                    <option value="both">Both (B2B &amp; B2C)</option>
+                  </select>
+
+                  {/* A draft stays hidden on the storefront until it is published */}
+                  <select name="status" value={form.status} onChange={handleChange} className="select-primary">
+                    <option value="published">Published — visible on the site</option>
+                    <option value="draft">Draft — hidden for now</option>
                   </select>
 
                   <input name="name" placeholder="Product Name" value={form.name} onChange={handleChange} className="input-primary" required />
