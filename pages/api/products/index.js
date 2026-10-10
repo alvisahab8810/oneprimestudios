@@ -7,6 +7,8 @@ import path from "path";
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
 import Category from "@/models/Category";
+import { resolveAudience, visibleFor } from "@/lib/audience";
+import { parseLowStockThreshold } from "@/lib/stockRules";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/products");
 
@@ -40,15 +42,10 @@ handler.get(async (req, res) => {
     const { popular } = req.query;
     let filter = { status: "published" };
 
-    // Visibility by audience. A product marked "both" belongs to each side,
-    // so it has to be included alongside the side-specific one — matching only
-    // the exact value hides every "both" product from everybody.
-    if (userType === "partner" || userType === "b2b") {
-      filter.productFor = { $in: ["b2b", "both"] };
-    } else {
-      // Not logged in, or a retail customer → B2C
-      filter.productFor = { $in: ["b2c", "both"] };
-    }
+    // Visibility by audience. A product marked "both" belongs to each side, so it
+    // is included alongside the side-specific one. The audience comes from the
+    // login cookie — ?userType= alone must not unlock the other side's catalogue.
+    filter.productFor = { $in: visibleFor(resolveAudience(req, userType)) };
 
     // Filter popular products only (for homepage slider)
     if (popular === "true") {
@@ -90,6 +87,7 @@ handler.post(
         stock,
         stockStatus,
         minOrderQty,
+        lowStockThreshold,
         isFeatured,
         gstPercent,
         hsnCode,         // NEW: HSN/SAC code
@@ -103,10 +101,11 @@ handler.post(
         cityPrices,
       } = req.body;
 
-      if (!name || !categoryId || basePrice === undefined) {
+      // Base price is optional — a product can be saved before its price is set
+      if (!name || !categoryId) {
         return res
           .status(400)
-          .json({ message: "name, categoryId, and basePrice are required" });
+          .json({ message: "name and categoryId are required" });
       }
 
       const category = await Category.findById(categoryId);
@@ -176,11 +175,14 @@ parsedAttributes.forEach(attr => {
         mainImage,
         gallery,
         category: category._id,
-        basePrice: Number(basePrice),
+        // Left blank means "no price set yet", stored as 0 rather than NaN
+        basePrice: basePrice ? Number(basePrice) : 0,
         salePrice: salePrice ? Number(salePrice) : undefined,
         stock: stock ? Number(stock) : 0,
         stockStatus: stockStatus || "in_stock",
         minOrderQty: minOrderQty ? Number(minOrderQty) : 1,
+        // Blank means "use the site default", so it is stored as null, not 0
+        lowStockThreshold: parseLowStockThreshold(lowStockThreshold),
         isFeatured: isFeatured === "true" || isFeatured === true,
         gstPercent: gstPercent ? Number(gstPercent) : 0,
         hsnCode: hsnCode || "",             // NEW

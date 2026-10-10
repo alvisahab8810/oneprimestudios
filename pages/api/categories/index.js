@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
+import { resolveAudience, visibleFor, isAdminRequest } from "@/lib/audience";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/categories");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -50,18 +51,27 @@ handler.get(async (req, res) => {
   try {
     const { parents, search, withChildren } = req.query;
 
+    // Who is asking. The login cookie decides; ?userType= only applies to
+    // logged-out visitors, so the other side's categories cannot be unlocked
+    // from the address bar. The admin panel fills its category pickers from
+    // here, so it keeps seeing both sides.
+    const audience = resolveAudience(req, req.query.userType);
+    const forAudience = isAdminRequest(req)
+      ? {}
+      : { categoryFor: { $in: visibleFor(audience) } };
+
     // ── withChildren: used by admin panel ─────────────────────────────────
     // BUG WAS HERE: old code did Category.find({}) → got ALL categories
     // (parents + children) as top-level, then also attached them as children.
     // FIX: always start from parent:null when withChildren=true.
     if (withChildren === "true") {
-      const topLevelParents = await Category.find({ parent: null })
+      const topLevelParents = await Category.find({ parent: null, ...forAudience })
         .sort({ name: 1 })
         .lean();
 
       const parentIds = topLevelParents.map((c) => c._id);
 
-      const children = await Category.find({ parent: { $in: parentIds } })
+      const children = await Category.find({ parent: { $in: parentIds }, ...forAudience })
         .sort({ name: 1 })
         .lean();
 
@@ -80,13 +90,9 @@ handler.get(async (req, res) => {
     if (parents === "true") filter.parent = null;
     if (search) filter.name = { $regex: search, $options: "i" };
 
-    // Filter by categoryFor based on userType:
-    // B2C users see only "b2c" or "both" categories.
-    // B2B/partner users see all categories.
-    const { userType } = req.query;
-    if (!userType || (userType !== "b2b" && userType !== "partner")) {
-      filter.categoryFor = { $in: ["b2c", "both"] };
-    }
+    // Each side sees its own categories plus the ones marked "both".
+    // B2B used to receive no filter at all, so partners also saw B2C categories.
+    Object.assign(filter, forAudience);
 
     const categories = await Category.find(filter).sort({ name: 1 }).lean();
     return res.status(200).json(categories);

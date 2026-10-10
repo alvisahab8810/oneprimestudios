@@ -5,6 +5,7 @@ import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { logActivity } from "@/lib/logActivity";
+import { parseLowStockThreshold } from "@/lib/stockRules";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/products");
 
@@ -61,6 +62,7 @@ handler.put(async (req, res) => {
       stock,
       stockStatus,
       minOrderQty,
+      lowStockThreshold,
       isFeatured,
       gstPercent,
       hsnCode,      // NEW: HSN/SAC code
@@ -131,11 +133,14 @@ handler.put(async (req, res) => {
       mainImage: finalMainImage,
       gallery: finalGallery,
       category: category._id,
-      basePrice: Number(basePrice),
+      // Left blank means "no price set yet", stored as 0 rather than NaN
+      basePrice: basePrice ? Number(basePrice) : 0,
       salePrice: salePrice ? Number(salePrice) : undefined,
       stock: stock ? Number(stock) : 0,
       stockStatus,
       minOrderQty: Number(minOrderQty),
+      // Blank means "use the site default", so it is stored as null, not 0
+      lowStockThreshold: parseLowStockThreshold(lowStockThreshold),
       isFeatured: isFeatured === "true" || isFeatured === true,
       gstPercent: gstPercent ? Number(gstPercent) : 0,
       hsnCode: hsnCode || "",  // NEW

@@ -36,6 +36,7 @@ export default function EditProductPage() {
     stock: 0,
     stockStatus: "in_stock",
     minOrderQty: 1,
+    lowStockThreshold: "",
     isFeatured: false,
     gstPercent: 0,
     hsnCode: "",       // NEW: HSN/SAC code for invoicing
@@ -92,7 +93,7 @@ export default function EditProductPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("/api/categories");
+      const res = await axios.get("/api/categories?scope=admin");
       setCategories(res.data || []);
     } catch (err) {
       console.error("fetchCategories:", err);
@@ -170,6 +171,7 @@ export default function EditProductPage() {
         stock: p.stock || 0,
         stockStatus: p.stockStatus || "in_stock",
         minOrderQty: p.minOrderQty || 1,
+        lowStockThreshold: p.lowStockThreshold === null || p.lowStockThreshold === undefined ? "" : String(p.lowStockThreshold),
         isFeatured: !!p.isFeatured,
         gstPercent: p.gstPercent || 0,
         hsnCode: p.hsnCode || "",         // NEW
@@ -188,6 +190,9 @@ export default function EditProductPage() {
         b2c_enabled: !!(p.b2cOptions && p.b2cOptions.enabled),
         b2c_designUpload: !!(p.b2cOptions && p.b2cOptions.designUpload),
         b2c_whatsapp: !!(p.b2cOptions && p.b2cOptions.whatsappSupport),
+        // Loaded back so saving the form again does not wipe the stored options
+        b2b_quantityOptionsCSV: (p.b2bOptions?.quantityOptions || []).join(","),
+        b2c_quantityOptionsCSV: (p.b2cOptions?.quantityOptions || []).join(","),
       }));
 
       setPreviewMain(p.mainImage || null);
@@ -204,10 +209,16 @@ export default function EditProductPage() {
   // basic change handler for inputs
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
+      // Choosing the audience also switches the matching option block on, so a
+      // B2C product never ends up rendering with the B2B layout on the storefront.
+      if (name === "productFor") {
+        next.b2b_enabled = value === "b2b" || value === "both";
+        next.b2c_enabled = value === "b2c" || value === "both";
+      }
+      return next;
+    });
   };
 
   // main image change
@@ -293,8 +304,9 @@ export default function EditProductPage() {
     e.preventDefault();
     if (submittingRef.current) return;
 
-    if (!form.name || !form.categoryId || form.basePrice === "" || form.basePrice === null) {
-      return toast.error("Please enter name, category and base price.");
+    // Base price is optional — a product can be saved before its price is set
+    if (!form.name || !form.categoryId) {
+      return toast.error("Please enter a name and pick a category.");
     }
 
     try {
@@ -314,6 +326,7 @@ export default function EditProductPage() {
       fd.append("stock", String(form.stock || 0));
       fd.append("stockStatus", form.stockStatus || "in_stock");
       fd.append("minOrderQty", String(form.minOrderQty || 1));
+      fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");   // NEW
@@ -458,8 +471,9 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                 <label className="mt-2">Slug (editable)</label>
                 <input name="slug" value={form.slug} onChange={handleChange} className="input-primary mb-2" />
 
-                {/* <label>Short Description</label> */}
-                {/* <input name="shortDescription" value={form.shortDescription} onChange={handleChange} className="input-primary" /> */}
+                {/* Short Description fills the DETAIL column on the partner rate list */}
+                <label>Short Description</label>
+                <input name="shortDescription" value={form.shortDescription} onChange={handleChange} className="input-primary" placeholder="e.g. 100 GSM bond paper, single colour" />
 
                 <label className="mt-3">Description</label>
                 <ReactQuill value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} theme="snow" />
@@ -476,7 +490,7 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                   <div className="pricing-row">
                     <div>
                       <label>Base Price</label>
-                      <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" required />
+                      <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" />
                     </div>
                     <div>
                       <label>Sale Price</label>
@@ -533,6 +547,24 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                         ({form.minOrderQty}), so customers cannot order this product.
                       </div>
                     )}
+                  </div>
+
+                  <div className="min-order-row">
+                    <label>Low Stock Alert Below</label>
+                    <input
+                      name="lowStockThreshold"
+                      value={form.lowStockThreshold}
+                      onChange={handleChange}
+                      type="number"
+                      min="0"
+                      placeholder="Default: 20"
+                      className="input-primary"
+                    />
+                    <div className="small text-muted mt-1 w-100">
+                      Retail buyers see &quot;Only N left&quot; once stock drops to this number
+                      or below. Leave blank for the site default (20), or enter 0 to always
+                      show just &quot;In Stock&quot;.
+                    </div>
                   </div>
                 </div>
 

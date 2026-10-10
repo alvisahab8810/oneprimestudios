@@ -222,7 +222,8 @@ const ProductSchema = new mongoose.Schema(
       required: true,
     },
 
-    basePrice: { type: Number, required: true },
+    // Optional: a product whose price is quoted on request is saved without one
+    basePrice: { type: Number, default: 0 },
     salePrice: { type: Number },
 
     sku: { type: String, unique: true, sparse: true },
@@ -233,6 +234,9 @@ const ProductSchema = new mongoose.Schema(
       default: "in_stock",
     },
     minOrderQty: { type: Number, default: 1 },
+    // At or below this many units the storefront shows "Only N left" instead of
+    // "In Stock". Empty falls back to LOW_STOCK_THRESHOLD, 0 turns it off.
+    lowStockThreshold: { type: Number, default: null },
     isFeatured: { type: Boolean, default: false },
     isPopular: { type: Boolean, default: false },
 
@@ -266,11 +270,17 @@ const ProductSchema = new mongoose.Schema(
     b2bOptions: {
       enabled: { type: Boolean, default: false },
       allowFileUpload: { type: Boolean, default: true },
+      // Fixed quantities the buyer may pick. The admin forms have always sent
+      // these; without the field here Mongoose dropped them silently.
+      quantityOptions: { type: [Number], default: [] },
     },
     b2cOptions: {
       enabled: { type: Boolean, default: false },
       designUpload: { type: Boolean, default: true },
       whatsappSupport: { type: Boolean, default: true },
+      quantityOptions: { type: [Number], default: [] },
+      // WhatsApp number used by the product page's chat and order buttons
+      whatsappNumber: { type: String, default: "" },
     },
   },
   { timestamps: true }

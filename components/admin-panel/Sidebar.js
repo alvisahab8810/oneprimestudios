@@ -150,6 +150,8 @@ import {
   FaHistory,
   FaUndo,
   FaSignOutAlt,
+  FaChartBar,
+  FaShippingFast,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
@@ -447,6 +449,26 @@ export default function Sidebar({ sidebarOpen }) {
             }`}
           >
             <FaUndo className="me-2" /> Return Requests
+          </Link>
+        )}
+
+        {/* ================= RATE LIST COURIERS ================= */}
+        {canAccess(user, "rate_couriers") && (
+          <Link
+            href="/dashboard/admin/rate-couriers"
+            className={`ops-item ${isActive("/dashboard/admin/rate-couriers") ? "active" : ""}`}
+          >
+            <FaShippingFast className="me-2" /> Rate List Couriers
+          </Link>
+        )}
+
+        {/* ================= SITE STATS ================= */}
+        {canAccess(user, "site_stats") && (
+          <Link
+            href="/dashboard/admin/site-stats"
+            className={`ops-item ${isActive("/dashboard/admin/site-stats") ? "active" : ""}`}
+          >
+            <FaChartBar className="me-2" /> Site Stats
           </Link>
         )}
 

@@ -35,6 +35,7 @@ export default function AddProduct() {
     stock: 0,
     stockStatus: "in_stock",
     minOrderQty: 1,
+    lowStockThreshold: "",
     isFeatured: false,
     gstPercent: 0,
     hsnCode: "",      // NEW: HSN/SAC code for invoicing
@@ -114,8 +115,9 @@ export default function AddProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submittingRef.current) return;
-    if (!form.name || !form.categoryId || form.basePrice === "" || form.basePrice === null) {
-      return toast.error("Please enter name, category and base price.");
+    // Base price is optional — a product can be saved before its price is set
+    if (!form.name || !form.categoryId) {
+      return toast.error("Please enter a name and pick a category.");
     }
 
     try {
@@ -182,6 +184,7 @@ export default function AddProduct() {
       fd.append("stock", String(form.stock || 0));
       fd.append("stockStatus", form.stockStatus || "in_stock");
       fd.append("minOrderQty", String(form.minOrderQty || 1));
+      fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");  // NEW
@@ -220,7 +223,7 @@ export default function AddProduct() {
       setForm({
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
-        stock: 0, stockStatus: "in_stock", minOrderQty: 1, isFeatured: false,
+        stock: 0, stockStatus: "in_stock", minOrderQty: 1, lowStockThreshold: "", isFeatured: false,
         gstPercent: 0, hsnCode: "", shippingWeight: "", shippingLength: "", shippingBreadth: "", shippingHeight: "",
         productFor: "b2b", status: "published", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
         b2b_enabled: true, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
@@ -438,6 +441,10 @@ export default function AddProduct() {
                     <button type="button" className="btn btn-primary mt-3" onClick={addAttribute}>+ Add Attribute</button>
                   </div>
 
+                  {/* Short Description fills the DETAIL column on the partner rate list */}
+                  <label>Short Description</label>
+                  <input name="shortDescription" value={form.shortDescription} onChange={handleChange} className="input-primary mb-2" placeholder="e.g. 100 GSM bond paper, single colour" />
+
                   {/* Description Editors — unchanged */}
                   <label>Description</label>
                   <ReactQuill value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} theme="snow" />
@@ -469,7 +476,7 @@ export default function AddProduct() {
                     <div className="pricing-row">
                       <div>
                         <label>Base Price</label>
-                        <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" required />
+                        <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="input-primary" />
                       </div>
                       <div>
                         <label>Sale Price</label>
@@ -506,6 +513,24 @@ export default function AddProduct() {
                           ({form.minOrderQty}), so customers cannot order this product.
                         </div>
                       )}
+                    </div>
+
+                    <div className="min-order-row">
+                      <label>Low Stock Alert Below</label>
+                      <input
+                        name="lowStockThreshold"
+                        value={form.lowStockThreshold}
+                        onChange={handleChange}
+                        type="number"
+                        min="0"
+                        placeholder="Default: 20"
+                        className="input-primary"
+                      />
+                      <div className="small text-muted mt-1 w-100">
+                        Retail buyers see &quot;Only N left&quot; once stock drops to this number
+                        or below. Leave blank for the site default (20), or enter 0 to always
+                        show just &quot;In Stock&quot;.
+                      </div>
                     </div>
                   </div>
 

@@ -1,19 +1,18 @@
 // pages/api/public-categories/menu.js
-// Header ka dynamic category menu: top-level parents + unke direct children.
-// B2B/B2C visibility wahi rule follow karta hai jo /api/public-categories me hai.
+// The header's dynamic category menu: top-level parents plus their direct
+// children. B2B/B2C visibility follows the same rule as /api/public-categories.
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
+import { resolveAudience, visibleFor } from "@/lib/audience";
 
 export default async function handler(req, res) {
   try {
     await dbConnect();
 
-    const { userType } = req.query;
+    // The login cookie decides; ?userType= only applies to logged-out visitors
+    const audience = resolveAudience(req, req.query.userType);
 
-    const isB2B = userType === "b2b" || userType === "partner";
-    const visibleFor = isB2B ? ["b2b", "both"] : ["b2c", "both"];
-
-    const categories = await Category.find({ categoryFor: { $in: visibleFor } })
+    const categories = await Category.find({ categoryFor: { $in: visibleFor(audience) } })
       .select("_id name slug parent image")
       .sort({ name: 1 })
       .lean();
@@ -35,7 +34,9 @@ export default async function handler(req, res) {
         })),
     }));
 
-    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+    // The menu differs per visitor, so a shared cache must never hold it —
+    // otherwise a partner can be served the retail menu, or the other way round
+    res.setHeader("Cache-Control", "private, no-store");
     return res.status(200).json(menu);
   } catch (err) {
     console.error("public category menu error:", err);

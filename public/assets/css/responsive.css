@@ -1542,6 +1542,18 @@
 .ops-mobile-bottom-row .ops-mobile-main-btn {
   flex: 1;
 }
+/* Opens the options / upload panel from the sticky bar */
+.ops-mobile-bottom-row .ops-mobile-options-btn {
+  flex: 0 0 auto;
+  background: #fff;
+  color: #6c5ce7;
+  border: 1px solid #6c5ce7;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 
 /* ── hide attributes area & add-to-cart in main content on mobile (panel handles them) ── */
 @media(max-width: 760px) {

@@ -8,6 +8,7 @@ import React from "react";
 import Link from "next/link";
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
+import { resolveAudience, visibleFor } from "@/lib/audience";
 import Head from "next/head";
 import Topbar from "@/components/header/Topbar";
 import Offcanvas from "@/components/header/Offcanvas";
@@ -32,21 +33,27 @@ export async function getServerSideProps(context) {
   const { slug } = context.params || {};
   await dbConnect();
 
-  // 1. Find the category by slug
+  // 1. Which side the visitor belongs to. The login cookie decides; ?userType=
+  //    only applies to logged-out visitors, so the address bar cannot be used
+  //    to reach the other side's catalogue.
+  const userType = resolveAudience(context.req, context.query.userType);
+  const allowedFor = visibleFor(userType);
+
+  // 2. Find the category by slug. A category belonging to the other side is
+  //    treated as missing rather than shown empty.
   const category = await Category.findOne({ slug }).lean();
   if (!category) return { notFound: true };
+  if (!allowedFor.includes(category.categoryFor || "both")) return { notFound: true };
 
-  // 2. Find direct children (subcategories)
-  const childCategories = await Category.find({ parent: category._id })
+  // 3. Find direct children (subcategories) this side is allowed to see
+  const childCategories = await Category.find({
+    parent: category._id,
+    categoryFor: { $in: allowedFor },
+  })
     .sort({ name: 1 })
     .lean();
 
   const hasChildren = childCategories.length > 0;
-
-  // 3. Determine userType (B2B / B2C) — same logic as before, fully preserved
-  const rawUserType = context.query.userType;
-  const userType =
-    rawUserType === "b2b" || rawUserType === "partner" ? "b2b" : "b2c";
 
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
   const host = context.req.headers.host;

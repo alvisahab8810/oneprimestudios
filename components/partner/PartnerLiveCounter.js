@@ -1,33 +1,43 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
+// The stats strip above the product listing. The figures are managed from
+// Dashboard → Site Stats; nothing is shown until an admin adds one.
 const PartnerStatsBanner = () => {
-  const BASE_COUNT = 60;
-  const START_DATE = new Date("2025-01-01"); // set any past date
+  const [stats, setStats] = useState([]);
 
-  const today = new Date();
-  const diffInDays = Math.floor(
-    (today - START_DATE) / (4000 * 60 * 60 * 24)
-  );
+  useEffect(() => {
+    let active = true;
+    axios
+      .get("/api/site-stats")
+      .then((res) => {
+        if (active) setStats(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => {
+        // The strip is decorative — a failed load just leaves it out
+        if (active) setStats([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  // 1 or 2 growth per day (deterministic, not random every render)
-  const dailyGrowth = diffInDays % 2 === 0 ? 1 : 2;
-
-  const totalCount = BASE_COUNT + diffInDays * dailyGrowth;
+  if (stats.length === 0) return null;
 
   return (
     <div className="partner-stats-banner">
-      <div className="stats-content d-flex">
-        <span className="stats-label">
-          Partners  Registered with Us (India)
-        </span>
-        <span className="stats-value">
-          {totalCount.toLocaleString()}
-        </span>
-        <span className="stats-label">
-          Growing steadily across India
-        </span>
-      </div>
+      {stats.map((stat) => (
+        <div className="stats-content d-flex" key={stat._id}>
+          {stat.label && <span className="stats-label">{stat.label}</span>}
+          <span className="stats-value">
+            {stat.prefix}
+            {Number(stat.value || 0).toLocaleString("en-IN")}
+            {stat.suffix}
+          </span>
+          {stat.note && <span className="stats-label">{stat.note}</span>}
+        </div>
+      ))}
     </div>
   );
 };

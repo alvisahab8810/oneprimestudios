@@ -15,7 +15,7 @@ export default function CategorySelect({ value, onChange, className = "form-sele
     const load = async () => {
       try {
         // withChildren=true → returns [ { ...parent, children: [...] }, ... ]
-        const res = await axios.get("/api/categories?withChildren=true");
+        const res = await axios.get("/api/categories?withChildren=true&scope=admin");
         setGrouped(res.data || []);
       } catch (err) {
         console.error("CategorySelect fetch error:", err);

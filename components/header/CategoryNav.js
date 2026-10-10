@@ -17,12 +17,15 @@ const getUserTypeForLink = () => {
 export default function CategoryNav() {
   const [menu, setMenu] = useState([]);
   const [openId, setOpenId] = useState(null);
+  // The rate list is a partner-only tool, so the link is only put up for them
+  const [isPartner, setIsPartner] = useState(false);
   const navRef = useRef(null);
 
   useEffect(() => {
     const fetchMenu = async () => {
       try {
         const userType = localStorage.getItem("userType") || "b2c";
+        setIsPartner(userType === "partner" || userType === "b2b");
         const res = await axios.get(`/api/public-categories/menu?userType=${userType}`);
         setMenu(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
@@ -51,7 +54,7 @@ export default function CategoryNav() {
     };
   }, []);
 
-  if (!menu.length) return null;
+  if (!menu.length && !isPartner) return null;
 
   const categoryLink = (slug) => ({
     pathname: `/category/${slug}`,
@@ -121,6 +124,14 @@ export default function CategoryNav() {
               </li>
             );
           })}
+
+          {isPartner && (
+            <li className="category-nav-item">
+              <Link href="/rate-list" className="category-nav-link">
+                Rate List
+              </Link>
+            </li>
+          )}
         </ul>
       </div>
     </div>

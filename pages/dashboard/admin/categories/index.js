@@ -37,7 +37,7 @@ export default function CategoriesAdmin() {
     try {
       setLoading(true);
       // withChildren=true → API returns parent categories each with a `children` array
-      const res = await axios.get("/api/categories?withChildren=true");
+      const res = await axios.get("/api/categories?withChildren=true&scope=admin");
       // The API returns top-level cats with children attached.
       // We also need all flat for the parent dropdown → store both.
       // Build a flat list for the dropdown and a nested list for the table.

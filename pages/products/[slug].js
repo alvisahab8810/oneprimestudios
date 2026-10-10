@@ -17,7 +17,7 @@ import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
 import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
-import { buildQuantityLadder, getMinOrderQty, getStock, isOutOfStock } from "@/lib/stockRules";
+import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -67,6 +67,11 @@ export default function ProductDetails() {
   // File upload is optional — Add to Cart is available as soon as the product loads.
   // Attributes marked required (e.g. a mandatory upload) are still enforced in validateUploadAttrs().
   const canAddToCart = !!product && !isOutOfStock(product);
+
+  // Which form the buyer sees. A product the admin marked "B2C only" must never
+  // render the B2B form, even when a stale b2bOptions.enabled is still true on
+  // the record — otherwise a retail buyer gets the B2B layout and Order Name.
+  const showB2BForm = !!product?.b2bOptions?.enabled && product?.productFor !== "b2c";
 
   useEffect(() => {
     if (!slug) return;
@@ -190,11 +195,22 @@ export default function ProductDetails() {
     return baseTierPrice + attrExtraPerBatch * batchCount + cityExtraCharge;
   }, [product, qty, selectedAttrs, userCity]);
 
-  const quantityLadder = useMemo(() => (product ? buildQuantityLadder(product) : []), [product]);
+  const quantityLadder = useMemo(
+    () => (product ? buildQuantityLadder(product, showB2BForm ? "b2b" : "b2c") : []),
+    [product, showB2BForm]
+  );
 
   // Out-of-stock products can be viewed but not ordered
   const outOfStock = isOutOfStock(product);
   const availableStock = getStock(product);
+  const lowStock = isLowStock(product);
+
+  // A B2B partner is shown nothing about stock, so a product that cannot be
+  // ordered is simply marked unavailable rather than naming the stock level
+  const unavailableLabel = showB2BForm ? "Currently Unavailable" : "Out of Stock";
+  const unavailableNote = showB2BForm
+    ? "This product is currently unavailable."
+    : "This product is currently out of stock.";
 
   const increaseQty = () => {
     const list = quantityLadder;
@@ -217,7 +233,8 @@ export default function ProductDetails() {
   const placeOrder = () => {
     if (!product) return;
     const msg = `Hi, I want to place an order for ${product.name}. Quantity: ${qty}`;
-    window.open(`https://wa.me/${product.b2cOptions?.whatsappNumber || "8081815141"}?text=${encodeURIComponent(msg)}`, "_blank");
+    // wa.me needs the country code, so the fallback carries it
+    window.open(`https://wa.me/${product.b2cOptions?.whatsappNumber || "918081815141"}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   // ── UPDATED: fix attrKey index mismatch ─────────────────────────────────
@@ -244,8 +261,7 @@ export default function ProductDetails() {
     const missing = findMissingRequiredAttr(
       product?.attributes,
       selectedAttrs,
-      (attr, index) => !!uploadedAttrFiles[attrUploadKey(attr, index)],
-      { uploadsOnly: !product?.b2bOptions?.enabled }
+      (attr, index) => !!uploadedAttrFiles[attrUploadKey(attr, index)]
     );
     if (!missing) return true;
     toast.error(missingAttrMessage(missing));
@@ -279,11 +295,11 @@ export default function ProductDetails() {
   // NEW:
   const addToCart = async () => {
     if (!product) return toast.error("Product not loaded");
-    if (outOfStock) return toast.error("This product is out of stock");
+    if (outOfStock) return toast.error(unavailableNote);
     if (qty < getMinOrderQty(product))
       return toast.error(`Minimum order quantity is ${getMinOrderQty(product)}`);
     // NEW: validate orderName is filled for B2B products
-    if (product.b2bOptions?.enabled && !orderName.trim()) {
+    if (showB2BForm && !orderName.trim()) {
       toast.error("Please enter an Order Name before adding to cart.");
       return;
     }
@@ -377,7 +393,7 @@ export default function ProductDetails() {
       <Offcanvas />
 
       <div className="container padding-top-40">
-        <div className={`product-page ${product.b2bOptions?.enabled ? "b2b" : "b2c"} ${styles.page}`}>
+        <div className={`product-page ${showB2BForm ? "b2b" : "b2c"} ${styles.page}`}>
 
           {/* ── Left: Images ── */}
           <div className={styles.left}>
@@ -394,19 +410,28 @@ export default function ProductDetails() {
           {/* ── Right: Details ── */}
           <aside className={styles.sidebar} id="side-bar">
             <h1 className={styles.title}>{product.name}</h1>
-            {/* Live stock — the same number the admin sees in the dashboard */}
-            <div className="mb-2">
-              {outOfStock ? (
-                <span className="badge bg-danger">Out of Stock</span>
-              ) : (
-                <span className="badge bg-success">In Stock: {availableStock}</span>
-              )}
-            </div>
+            {/* Live stock — the same number the admin sees in the dashboard.
+                B2B partners are shown nothing about stock at all. */}
+            {!showB2BForm && (
+              <div className="mb-2">
+                {outOfStock ? (
+                  <span className="badge bg-danger">Out of Stock</span>
+                ) : lowStock ? (
+                  // Running low — the exact count nudges the buyer
+                  <span className="badge bg-warning text-dark">
+                    Only {availableStock} left
+                  </span>
+                ) : (
+                  // Plenty in hand — no need to publish the exact number
+                  <span className="badge bg-success">In Stock</span>
+                )}
+              </div>
+            )}
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
             <p className="product-min-order">Minimum Order: {getMinOrderQty(product)}</p>
 
             {/* ── GST Breakdown (B2B only) ── */}
-            {product.b2bOptions?.enabled && Number(product.gstPercent) > 0 && (() => {
+            {showB2BForm && Number(product.gstPercent) > 0 && (() => {
               const gstPct = Number(product.gstPercent);
               const gstAmt = finalPrice * gstPct / 100;
               const totalWithGst = finalPrice + gstAmt;
@@ -443,7 +468,7 @@ export default function ProductDetails() {
             })()}
 
             {/* ── B2B Section ── */}
-            {product.b2bOptions?.enabled ? (
+            {showB2BForm ? (
               <div className={styles.b2bForm}>
                 <div className={styles.b2bOrderSection} id="b2border-section">
 
@@ -575,8 +600,8 @@ export default function ProductDetails() {
                       </button>
                     ) : (
                       <>
-                        <button className={styles.primaryBtn} disabled>Out of Stock</button>
-                        <p className="text-muted mt-2">This product is currently out of stock.</p>
+                        <button className={styles.primaryBtn} disabled>{unavailableLabel}</button>
+                        <p className="text-muted mt-2">{unavailableNote}</p>
                       </>
                     )}
                   </div>
@@ -599,34 +624,92 @@ export default function ProductDetails() {
                     )}
                   </div>
 
+                  {/* Retail buyers need this too — without it the quantity stays
+                      stuck at the minimum, so the admin's fixed quantity options
+                      and the quantity-based pricing tiers never apply. */}
+                  <div className={styles.inputGroup} style={{ marginTop: 16 }}>
+                    <label className={styles.inputLabel}>Quantity</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button type="button" onClick={decreaseQty} className="quantity-btns">-</button>
+                      <input type="text" value={qty} readOnly className={styles.inputField} style={{ width: "100px", textAlign: "center" }} />
+                      <button type="button" onClick={increaseQty} className="quantity-btns">+</button>
+                    </div>
+                  </div>
+
+                  {/* Every attribute type is shown here, same as the B2B block —
+                      a retail buyer has to be able to pick the options the admin
+                      added, otherwise nothing reaches the cart or the order. */}
                   <div className="mt-3 d-flex gap-4 attributes-area">
                     {product.attributes?.length > 0 &&
                       product.attributes.map((attr, i) => {
-                        if (attr.type !== "upload") return null;
                         // Key uses the position in the full attribute list, same as validation and cart upload
                         const attrKey = attrUploadKey(attr, i);
                         return (
                           <div key={i} style={{ marginBottom: "15px" }}>
-                            <ProductFileUpload
-                              attributeName={attr.name}
-                              attributeKey={attrKey}
-                              uploadedAttrFiles={uploadedAttrFiles}
-                              setUploadedAttrFiles={setUploadedAttrFiles}
-                              acceptTypes={attr.uploadRules?.acceptTypes}
-                              maxSizeMB={attr.uploadRules?.maxSizeMB}
-                              imageDimensions={attr.uploadRules?.imageDimensions}
-                              singleFile={true}
-                            />
-                            {/* FIX: formatImageDimensions shows correct unit */}
-                            {attr.uploadRules?.imageDimensions && (
-                              <p style={{ fontSize: "13px", color: "#777" }}>
-                                Allowed Size: {formatImageDimensions(attr.uploadRules.imageDimensions)}
-                              </p>
-                            )}
-                            <p style={{ fontSize: "13px", color: "#777" }}>
-                              Accept: {attr.uploadRules?.acceptTypes?.join(", ") || "Any"}
-                              {attr.uploadRules?.maxSizeMB && <> • Max {attr.uploadRules.maxSizeMB}MB</>}
-                            </p>
+                            <div className={styles.inputGroup}>
+                              <label className={styles.inputLabel}>
+                                {attr.name} {attr.required && <span className={styles.required}>*</span>}
+                              </label>
+
+                              {attr.type === "text" && (
+                                <input type="text" placeholder={`Enter ${attr.name}`} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                              )}
+                              {attr.type === "number" && (
+                                <input type="number" placeholder={`Enter ${attr.name}`} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                              )}
+                              {attr.type === "select" && (
+                                <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
+                                  <option value="">Select {attr.name}</option>
+                                  {(attr.values || []).map((val, idx) => (
+                                    <option key={idx} value={val.label}>{val.label}</option>
+                                  ))}
+                                </select>
+                              )}
+                              {attr.type === "checkbox" && (
+                                <div className={styles.checkboxGroup}>
+                                  {(attr.values || []).map((val, idx) => (
+                                    <label key={idx} className={styles.checkboxLabel}>
+                                      <input type="checkbox" value={val.label} className={styles.checkboxInput}
+                                        checked={(selectedAttrs[attr.name] || []).includes(val.label)}
+                                        onChange={(e) => {
+                                          const checked = e.target.checked;
+                                          setSelectedAttrs((prev) => {
+                                            const current = prev[attr.name] || [];
+                                            return { ...prev, [attr.name]: checked ? [...current, val.label] : current.filter((v) => v !== val.label) };
+                                          });
+                                        }}
+                                      />
+                                      {val.label}
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+
+                              {attr.type === "upload" && (
+                                <>
+                                  <ProductFileUpload
+                                    attributeName={attr.name}
+                                    attributeKey={attrKey}
+                                    uploadedAttrFiles={uploadedAttrFiles}
+                                    setUploadedAttrFiles={setUploadedAttrFiles}
+                                    acceptTypes={attr.uploadRules?.acceptTypes}
+                                    maxSizeMB={attr.uploadRules?.maxSizeMB}
+                                    imageDimensions={attr.uploadRules?.imageDimensions}
+                                    singleFile={true}
+                                  />
+                                  {/* FIX: formatImageDimensions shows correct unit */}
+                                  {attr.uploadRules?.imageDimensions && (
+                                    <p style={{ fontSize: "13px", color: "#777" }}>
+                                      Allowed Size: {formatImageDimensions(attr.uploadRules.imageDimensions)}
+                                    </p>
+                                  )}
+                                  <p style={{ fontSize: "13px", color: "#777" }}>
+                                    Accept: {attr.uploadRules?.acceptTypes?.join(", ") || "Any"}
+                                    {attr.uploadRules?.maxSizeMB && <> • Max {attr.uploadRules.maxSizeMB}MB</>}
+                                  </p>
+                                </>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -739,7 +822,7 @@ export default function ProductDetails() {
             </div>
             <div className="ops-mobile-panel-body">
               {/* NEW: Order Name field — first in panel, mandatory for B2B */}
-              {product.b2bOptions?.enabled && (
+              {showB2BForm && (
                 <div className="ops-mobile-attr-item" style={{ borderColor: "#e0d0ff", background: "#faf8ff" }}>
                   <label className="ops-mobile-attr-label">
                     Order Name <span style={{ color: "red", marginLeft: 2 }}>*</span>
@@ -756,19 +839,33 @@ export default function ProductDetails() {
                 </div>
               )}
 
+              {/* On phones the whole B2C block is hidden, so the quantity control
+                  for a retail buyer has to live in this panel */}
+              {!showB2BForm && (
+                <div className="ops-mobile-attr-item">
+                  <label className="ops-mobile-attr-label">Quantity</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button type="button" onClick={decreaseQty} className="quantity-btns">-</button>
+                    <input type="text" value={qty} readOnly className={styles.inputField} style={{ width: "90px", textAlign: "center" }} />
+                    <button type="button" onClick={increaseQty} className="quantity-btns">+</button>
+                  </div>
+                </div>
+              )}
+
               {product.attributes?.map((attr, i) => {
-                const safeName = (attr.name || "attr").trim();
-                const attrKey = `${safeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}__${i}`;
+                // Same key helper the validation and the upload use, so the panel
+                // and the desktop block always write to the same place
+                const attrKey = attrUploadKey(attr, i);
                 return (
                   <div key={i} className="ops-mobile-attr-item">
                     <label className="ops-mobile-attr-label">
                       {attr.name}{attr.required && <span style={{ color: "red", marginLeft: 2 }}>*</span>}
                     </label>
                     {attr.type === "text" && (
-                      <input type="text" placeholder={`Enter ${attr.name}`} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                      <input type="text" placeholder={`Enter ${attr.name}`} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
                     )}
                     {attr.type === "number" && (
-                      <input type="number" placeholder={`Enter ${attr.name}`} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                      <input type="number" placeholder={`Enter ${attr.name}`} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
                     )}
                     {attr.type === "select" && (
                       <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
@@ -783,6 +880,7 @@ export default function ProductDetails() {
                         {(attr.values || []).map((val, idx) => (
                           <label key={idx} className={styles.checkboxLabel}>
                             <input type="checkbox" value={val.label} className={styles.checkboxInput}
+                              checked={(selectedAttrs[attr.name] || []).includes(val.label)}
                               onChange={(e) => {
                                 const checked = e.target.checked;
                                 setSelectedAttrs((prev) => {
@@ -834,7 +932,7 @@ export default function ProductDetails() {
                   )}
                 </button>
               ) : (
-                <button type="button" className="ops-mobile-main-btn" disabled>Out of Stock</button>
+                <button type="button" className="ops-mobile-main-btn" disabled>{unavailableLabel}</button>
               )}
             </div>
           </div>
@@ -843,6 +941,17 @@ export default function ProductDetails() {
         {/* Bottom action row */}
         {!mobilePanelOpen && (
           <div className="ops-mobile-bottom-row">
+            {/* Without this the slide-up panel only ever opened on a failed
+                validation, so a buyer could never reach optional attributes */}
+            {(product.attributes?.length > 0 || (!showB2BForm && quantityLadder.length > 1)) && (
+              <button
+                type="button"
+                className="ops-mobile-options-btn"
+                onClick={() => setMobilePanelOpen(true)}
+              >
+                Options
+              </button>
+            )}
             {product.b2cOptions?.whatsappSupport && (
               <button className={styles.whatsappBtn} onClick={handleWhatsapp}>
                 <img src="/assets/images/icons/whatsapp.svg" alt="whatsapp" /> WhatsApp
@@ -858,7 +967,7 @@ export default function ProductDetails() {
               </button>
             ) : (
               <button type="button" className="ops-mobile-main-btn" disabled>
-                Out of Stock
+                {unavailableLabel}
               </button>
             )}
           </div>

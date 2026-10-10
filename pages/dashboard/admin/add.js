@@ -67,7 +67,7 @@ export default function AddProduct() {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("/api/categories");
+      const res = await axios.get("/api/categories?scope=admin");
       setCategories(res.data || []);
     } catch (err) {
       console.error("fetchCategories:", err);

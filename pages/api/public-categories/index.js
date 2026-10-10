@@ -1,24 +1,16 @@
 // pages/api/public-categories/index.js
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
+import { resolveAudience, visibleFor } from "@/lib/audience";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    const { userType } = req.query;
-
-    let filter = {};
-
-    // 🔒 Guest / B2C users → ONLY B2C + BOTH
-    if (!userType || userType === "b2c" || userType === "customer") {
-      filter.categoryFor = { $in: ["b2c", "both"] };
-    }
-
-    // 🔐 B2B users → B2B + BOTH
-    if (userType === "b2b" || userType === "partner") {
-      filter.categoryFor = { $in: ["b2b", "both"] };
-    }
+    // Each side sees its own categories plus the ones marked "both".
+    // The login cookie decides; ?userType= only applies to logged-out visitors.
+    const audience = resolveAudience(req, req.query.userType);
+    const filter = { categoryFor: { $in: visibleFor(audience) } };
 
     const categories = await Category.find(filter)
       .sort({ name: 1 })

@@ -205,8 +205,7 @@ export default async function handler(req, res) {
         (attr, index) =>
           (uploadedAttributeFiles || []).some(
             (f) => f?.url && (f.attributeName === attr.name || f.attributeKey === attrUploadKey(attr, index))
-          ),
-        { uploadsOnly: !product.b2bOptions?.enabled }
+          )
       );
       if (missingAttr) return res.status(400).json({ message: missingAttrMessage(missingAttr) });
 
