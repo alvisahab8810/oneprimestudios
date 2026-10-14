@@ -417,6 +417,7 @@ export default function Topbar() {
                 </Link>
               </li>
 
+
               <li className="nav-item">
                 <Link className="nav-link" href="/contact-us">
                   Blog 
@@ -518,6 +519,15 @@ export default function Topbar() {
                             </li>
 
                             )}
+
+                          {/* The rate list is a partner-only tool, so the link is only put up for them */}
+                          {isPartner && (
+                            <li>
+                              <Link href="/rate-list" className="gap-2">
+                                <i className="ri-file-list-3-line"></i> Rate List
+                              </Link>
+                            </li>
+                          )}
 
                           <li>
                             <Link href="/orders">
@@ -660,6 +670,15 @@ export default function Topbar() {
                               Profile
                             </Link>
                           </li>
+
+                          {/* The rate list is a partner-only tool, so the link is only put up for them */}
+                          {isPartner && (
+                            <li>
+                              <Link href="/rate-list" className="gap-2">
+                                <i className="ri-file-list-3-line"></i> Rate List
+                              </Link>
+                            </li>
+                          )}
 
                           <li>
                             <Link href="/orders">

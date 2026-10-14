@@ -57,6 +57,13 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
               <Link href="/contact-us">Contact Us</Link>
             </li>
 
+            {/* Partner-only tool, so the link is only put up for them */}
+            {user?.userType === "partner" && (
+              <li>
+                <Link href="/rate-list">Rate List</Link>
+              </li>
+            )}
+
             
              <li>
               <Link href="/orders">My Orders</Link>
