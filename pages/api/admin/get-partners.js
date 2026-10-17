@@ -10,7 +10,10 @@ export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    const partners = await User.find({ userType: "partner" }).sort({
+    // The password hash and reset tokens never need to reach the browser
+    const partners = await User.find({ userType: "partner" })
+      .select("-password -resetPasswordToken -resetPasswordExpires")
+      .sort({
       createdAt: -1,
     });
     res.status(200).json(partners);

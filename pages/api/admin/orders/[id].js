@@ -98,6 +98,33 @@ export default async function handler(req, res) {
     try {
       const { status, remarks } = req.body;
 
+      // Cash on delivery money reaches us through the courier, so it is only
+      // the payment that changes here — the order status is untouched
+      if (req.body.markPaid) {
+        if (!canViewPayments(user)) {
+          return res.status(403).json({ message: "No permission to record payments" });
+        }
+        const codOrder = await Order.findById(id);
+        if (!codOrder) return res.status(404).json({ message: "Order not found" });
+        if (codOrder.paymentMethod !== "COD") {
+          return res.status(400).json({ message: "Only a cash on delivery order can be marked paid" });
+        }
+        if (codOrder.paymentStatus === "PAID") {
+          return res.status(400).json({ message: "This order is already marked paid" });
+        }
+
+        codOrder.paymentStatus = "PAID";
+        await codOrder.save();
+
+        res.status(200).json({ message: "Payment recorded", order: codOrder });
+
+        logActivity(req, "order_cod_collected",
+          `Cash on delivery of ₹${codOrder.total} recorded for order #${codOrder.orderNumber || id}`,
+          { entity: "order", entityId: id, meta: { orderNumber: codOrder.orderNumber, amount: codOrder.total } }
+        );
+        return;
+      }
+
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }

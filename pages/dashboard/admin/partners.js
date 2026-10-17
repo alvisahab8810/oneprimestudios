@@ -327,6 +327,22 @@ import Link from "next/link";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import AdminTopbar from "@/components/admin-panel/AdminTopbar";
 
+// Every detail the partner filled in at signup, in the order the edit form
+// shows it. The password and the approval flag are not here because they keep
+// their own buttons on the row.
+const EDIT_FIELDS = [
+  { name: "name", label: "Full Name", required: true },
+  { name: "companyName", label: "Company Name" },
+  { name: "memberId", label: "Member ID" },
+  { name: "email", label: "Email", type: "email", required: true },
+  { name: "phone", label: "Phone", required: true, maxLength: 10, hint: "10 digits" },
+  { name: "gstNumber", label: "GST Number", maxLength: 15, uppercase: true, hint: "15 characters" },
+  { name: "city", label: "City" },
+  { name: "state", label: "State" },
+  { name: "pinCode", label: "Pincode", maxLength: 6, hint: "6 digits" },
+  { name: "businessAddress", label: "Business Address", textarea: true, full: true },
+];
+
 export default function PartnerApprovalPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -382,6 +398,56 @@ export default function PartnerApprovalPage() {
     }
   };
 
+  // ── Edit partner modal ────────────────────────────────────────────────
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEditModal = (partner) => {
+    setEditTarget(partner);
+    setEditForm(
+      EDIT_FIELDS.reduce(
+        (acc, f) => ({ ...acc, [f.name]: partner[f.name] || "" }),
+        {}
+      )
+    );
+  };
+
+  const closeEditModal = () => {
+    setEditTarget(null);
+    setEditForm({});
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    const field = EDIT_FIELDS.find((f) => f.name === name);
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: field?.uppercase ? value.toUpperCase() : value,
+    }));
+  };
+
+  const submitEdit = async () => {
+    try {
+      setSavingEdit(true);
+      const res = await axios.put("/api/admin/update-partner", {
+        userId: editTarget._id,
+        ...editForm,
+      });
+      const saved = res.data.user;
+      // The saved record is merged in so the row updates without a refetch
+      setPartners((prev) =>
+        prev.map((x) => (x._id === saved._id ? { ...x, ...saved } : x))
+      );
+      toast.success(res.data.message || "Partner details updated");
+      closeEditModal();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update partner");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   // FILTER DATA
 const filteredPartners = partners.filter((p) => {
 const q = search.toLowerCase();
@@ -392,6 +458,8 @@ const matchSearch =
   (p.companyName || "").toLowerCase().includes(q) ||
   p.phone?.includes(search) ||
   p.city?.toLowerCase().includes(q) ||       // ✅ city search
+  (p.gstNumber || "").toLowerCase().includes(q) ||
+  (p.state || "").toLowerCase().includes(q) ||
   p.pinCode?.includes(search);                // ✅ pincode search
 
   const matchStatus =
@@ -472,7 +540,7 @@ const matchSearch =
       .map((w) => w[0]?.toUpperCase())
       .join("") || "?";
 
-  const AVATAR_COLORS = ["#111827", "#7c3aed", "#0891b2", "#b45309", "#be123c", "#15803d"];
+  const AVATAR_COLORS = ["#1A71F6", "#0d0d0d", "#7c3aed", "#0891b2", "#b45309", "#15803d"];
   const avatarColor = (id) => {
     let hash = 0;
     for (let i = 0; i < (id || "").length; i++) hash = (hash + id.charCodeAt(i)) % AVATAR_COLORS.length;
@@ -491,7 +559,7 @@ const matchSearch =
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#8a8a86",
+              color: "#6b7280",
               fontSize: 14,
             }}
           >
@@ -508,17 +576,17 @@ const matchSearch =
       <Sidebar sidebarOpen={sidebarOpen} />
 
       {/* Main content */}
-      <div className="main-area" style={{ background: "#f7f7f5", minHeight: "100vh" }}>
+      <div className="main-area" style={{ background: "#f8f9fc", minHeight: "100vh" }}>
         {/* Top navbar */}
         <AdminTopbar onToggleSidebar={toggleSidebar} />
 
         {/* Dashboard content */}
         <div style={{ fontFamily: "'DM Sans', sans-serif", padding: "28px 32px 48px" }}>
           <div style={{ marginBottom: 24 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0d0d0d", margin: "0 0 4px" }}>
               Partner Approvals
             </h1>
-            <p style={{ margin: 0, fontSize: 13.5, color: "#8a8a86" }}>
+            <p style={{ margin: 0, fontSize: 13.5, color: "#6b7280" }}>
               Review, approve, and manage login access for all registered partners.
             </p>
           </div>
@@ -534,13 +602,13 @@ const matchSearch =
           >
             <div
               style={{
-                background: "#111",
-                borderRadius: 14,
+                background: "#1A71F6",
+                borderRadius: 16,
                 padding: "18px 20px",
                 color: "#fff",
               }}
             >
-              <p style={{ margin: "0 0 6px", fontSize: 12.5, color: "#c9c9c9", fontWeight: 600 }}>
+              <p style={{ margin: "0 0 6px", fontSize: 12.5, color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>
                 Total Partners
               </p>
               <p style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>{totalCount}</p>
@@ -548,12 +616,12 @@ const matchSearch =
             <div
               style={{
                 background: "#fff",
-                border: "1.5px solid #f0f0f0",
-                borderRadius: 14,
+                border: "1px solid #E7E7E7",
+                borderRadius: 16,
                 padding: "18px 20px",
               }}
             >
-              <p style={{ margin: "0 0 6px", fontSize: 12.5, color: "#8a8a86", fontWeight: 600 }}>
+              <p style={{ margin: "0 0 6px", fontSize: 12.5, color: "#6b7280", fontWeight: 600 }}>
                 Approved
               </p>
               <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#15803d" }}>
@@ -563,12 +631,12 @@ const matchSearch =
             <div
               style={{
                 background: "#fff",
-                border: "1.5px solid #f0f0f0",
-                borderRadius: 14,
+                border: "1px solid #E7E7E7",
+                borderRadius: 16,
                 padding: "18px 20px",
               }}
             >
-              <p style={{ margin: "0 0 6px", fontSize: 12.5, color: "#8a8a86", fontWeight: 600 }}>
+              <p style={{ margin: "0 0 6px", fontSize: 12.5, color: "#6b7280", fontWeight: 600 }}>
                 Pending
               </p>
               <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#b45309" }}>
@@ -600,7 +668,7 @@ const matchSearch =
                 minWidth: 240,
                 padding: "10px 14px",
                 borderRadius: 10,
-                border: "1.5px solid #e5e5e2",
+                border: "1px solid #e5e7eb",
                 fontSize: 13.5,
                 fontFamily: "inherit",
                 outline: "none",
@@ -617,11 +685,11 @@ const matchSearch =
               style={{
                 padding: "10px 14px",
                 borderRadius: 10,
-                border: "1.5px solid #e5e5e2",
+                border: "1px solid #e5e7eb",
                 fontSize: 13.5,
                 fontFamily: "inherit",
                 background: "#fff",
-                color: "#111",
+                color: "#0d0d0d",
                 cursor: "pointer",
               }}
             >
@@ -644,11 +712,11 @@ const matchSearch =
               style={{
                 padding: "10px 14px",
                 borderRadius: 10,
-                border: "1.5px solid #e5e5e2",
+                border: "1px solid #e5e7eb",
                 fontSize: 13.5,
                 fontFamily: "inherit",
                 background: "#fff",
-                color: "#111",
+                color: "#0d0d0d",
                 cursor: "pointer",
               }}
             >
@@ -662,16 +730,33 @@ const matchSearch =
           <div
             style={{
               background: "#fff",
-              border: "1.5px solid #f0f0f0",
-              borderRadius: 14,
+              border: "1px solid #E7E7E7",
+              borderRadius: 16,
               overflow: "hidden",
             }}
           >
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <div className="partner-table-scroll">
+              <table
+                style={{
+                  width: "100%",
+                  minWidth: 1180,
+                  borderCollapse: "collapse",
+                  fontSize: 13,
+                }}
+              >
                 <thead>
-                  <tr style={{ background: "#fafaf9", borderBottom: "1.5px solid #f0f0f0" }}>
-                    {["Member ID", "Partner", "Company", "Email", "Phone", "City", "Status", "Action"].map(
+                  <tr style={{ background: "#f9fafb", borderBottom: "1px solid #E7E7E7" }}>
+                    {[
+                      "Member ID",
+                      "Partner",
+                      "Company",
+                      "GST Number",
+                      "Phone",
+                      "City",
+                      "Pincode",
+                      "Status",
+                      "Action",
+                    ].map(
                       (h) => (
                         <th
                           key={h}
@@ -680,7 +765,7 @@ const matchSearch =
                             padding: "12px 16px",
                             fontSize: 11.5,
                             fontWeight: 700,
-                            color: "#8a8a86",
+                            color: "#6b7280",
                             textTransform: "uppercase",
                             letterSpacing: 0.4,
                             whiteSpace: "nowrap",
@@ -695,13 +780,13 @@ const matchSearch =
                 <tbody>
                   {partners.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: "center", padding: "40px 16px", color: "#8a8a86" }}>
+                      <td colSpan="9" style={{ textAlign: "center", padding: "40px 16px", color: "#6b7280" }}>
                         No partners found.
                       </td>
                     </tr>
                   ) : currentPartners.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: "center", padding: "40px 16px", color: "#8a8a86" }}>
+                      <td colSpan="9" style={{ textAlign: "center", padding: "40px 16px", color: "#6b7280" }}>
                         No partners match your filters.
                       </td>
                     </tr>
@@ -712,9 +797,9 @@ const matchSearch =
                       return (
                         <tr
                           key={partner._id}
-                          style={{ borderBottom: "1px solid #f5f5f3" }}
+                          style={{ borderBottom: "1px solid #f1f2f4" }}
                         >
-                          <td style={{ padding: "12px 16px", color: "#555", whiteSpace: "nowrap" }}>
+                          <td style={{ padding: "12px 16px", color: "#4b5563", whiteSpace: "nowrap" }}>
                             {partner.memberId || "-"}
                           </td>
                           <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
@@ -736,14 +821,38 @@ const matchSearch =
                               >
                                 {getInitials(partner.name)}
                               </div>
-                              <span style={{ fontWeight: 600, color: "#111" }}>{partner.name}</span>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, color: "#0d0d0d" }}>
+                                  {partner.name}
+                                </div>
+                                <div style={{ fontSize: 11.5, color: "#6b7280" }}>
+                                  {partner.email}
+                                </div>
+                              </div>
                             </div>
                           </td>
-                          <td style={{ padding: "12px 16px", color: "#555" }}>{partner.companyName || "-"}</td>
-                          <td style={{ padding: "12px 16px", color: "#555" }}>{partner.email}</td>
-                          <td style={{ padding: "12px 16px", color: "#555", whiteSpace: "nowrap" }}>{partner.phone}</td>
-                          <td style={{ padding: "12px 16px", color: "#555" }}>{partner.city || "-"}</td>
-                          <td style={{ padding: "12px 16px" }}>
+                          <td style={{ padding: "12px 16px", color: "#4b5563", whiteSpace: "nowrap" }}>
+                            {partner.companyName || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: partner.gstNumber ? "#4b5563" : "#b45309",
+                              whiteSpace: "nowrap",
+                              fontSize: 12.5,
+                            }}
+                          >
+                            {partner.gstNumber || "Not provided"}
+                          </td>
+                          <td style={{ padding: "12px 16px", color: "#4b5563", whiteSpace: "nowrap" }}>{partner.phone}</td>
+                          <td style={{ padding: "12px 16px", color: "#4b5563", whiteSpace: "nowrap" }}>
+                            {partner.city || "-"}
+                            {partner.state ? (
+                              <div style={{ fontSize: 11.5, color: "#6b7280" }}>{partner.state}</div>
+                            ) : null}
+                          </td>
+                          <td style={{ padding: "12px 16px", color: "#4b5563", whiteSpace: "nowrap" }}>{partner.pinCode || "-"}</td>
+                          <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
                             <span
                               style={{
                                 display: "inline-block",
@@ -760,22 +869,38 @@ const matchSearch =
                               {partner.isApproved ? "Approved" : "Pending"}
                             </span>
                           </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                              <div style={{ display: "flex", gap: 8 }}>
+                          <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+                                <button
+                                  onClick={() => openEditModal(partner)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    borderRadius: 8,
+                                    border: "1px solid #e5e7eb",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: "#0d0d0d",
+                                    background: "#fff",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  Edit
+                                </button>
                                 <button
                                   onClick={() =>
                                     handleApproval(partner._id, partner.isApproved)
                                   }
                                   disabled={isUpdating}
                                   style={{
-                                    padding: "6px 14px",
+                                    padding: "6px 12px",
                                     borderRadius: 8,
-                                    border: "none",
+                                    border: partner.isApproved ? "1px solid #0d0d0d" : "1px solid #1A71F6",
                                     fontSize: 12,
                                     fontWeight: 700,
-                                    color: "#fff",
-                                    background: partner.isApproved ? "#dc2626" : "#111",
+                                    color: partner.isApproved ? "#0d0d0d" : "#fff",
+                                    background: partner.isApproved ? "#fff" : "#1A71F6",
                                     cursor: isUpdating ? "not-allowed" : "pointer",
                                     opacity: isUpdating ? 0.6 : 1,
                                     whiteSpace: "nowrap",
@@ -786,12 +911,12 @@ const matchSearch =
                                 <button
                                   onClick={() => openResetModal(partner)}
                                   style={{
-                                    padding: "6px 14px",
+                                    padding: "6px 12px",
                                     borderRadius: 8,
-                                    border: "1.5px solid #e5e5e2",
+                                    border: "1px solid #e5e7eb",
                                     fontSize: 12,
                                     fontWeight: 700,
-                                    color: "#111",
+                                    color: "#0d0d0d",
                                     background: "#fff",
                                     cursor: "pointer",
                                     whiteSpace: "nowrap",
@@ -841,7 +966,7 @@ const matchSearch =
                                     style={{
                                       border: "none",
                                       background: "none",
-                                      color: "#8a8a86",
+                                      color: "#6b7280",
                                       fontSize: 11.5,
                                       cursor: "pointer",
                                       padding: 0,
@@ -870,7 +995,7 @@ const matchSearch =
                   justifyContent: "center",
                   gap: 6,
                   padding: "14px 16px",
-                  borderTop: "1px solid #f0f0f0",
+                  borderTop: "1px solid #E7E7E7",
                   flexWrap: "wrap",
                 }}
               >
@@ -880,11 +1005,11 @@ const matchSearch =
                   style={{
                     padding: "6px 12px",
                     borderRadius: 8,
-                    border: "1.5px solid #e5e5e2",
+                    border: "1px solid #e5e7eb",
                     background: "#fff",
                     fontSize: 12,
                     fontWeight: 600,
-                    color: currentPage === 1 ? "#c9c9c9" : "#111",
+                    color: currentPage === 1 ? "#9ca3af" : "#0d0d0d",
                     cursor: currentPage === 1 ? "not-allowed" : "pointer",
                   }}
                 >
@@ -900,9 +1025,9 @@ const matchSearch =
                       height: 30,
                       borderRadius: 8,
                       border: "1.5px solid",
-                      borderColor: currentPage === index + 1 ? "#111" : "#e5e5e2",
-                      background: currentPage === index + 1 ? "#111" : "#fff",
-                      color: currentPage === index + 1 ? "#fff" : "#111",
+                      borderColor: currentPage === index + 1 ? "#1A71F6" : "#e5e7eb",
+                      background: currentPage === index + 1 ? "#1A71F6" : "#fff",
+                      color: currentPage === index + 1 ? "#fff" : "#0d0d0d",
                       fontSize: 12,
                       fontWeight: 700,
                       cursor: "pointer",
@@ -918,11 +1043,11 @@ const matchSearch =
                   style={{
                     padding: "6px 12px",
                     borderRadius: 8,
-                    border: "1.5px solid #e5e5e2",
+                    border: "1px solid #e5e7eb",
                     background: "#fff",
                     fontSize: 12,
                     fontWeight: 600,
-                    color: currentPage === totalPages ? "#c9c9c9" : "#111",
+                    color: currentPage === totalPages ? "#9ca3af" : "#0d0d0d",
                     cursor: currentPage === totalPages ? "not-allowed" : "pointer",
                   }}
                 >
@@ -946,13 +1071,13 @@ const matchSearch =
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: 14, padding: 26, width: 380, maxWidth: "90vw" }}
+            style={{ background: "#fff", borderRadius: 16, padding: 26, width: 380, maxWidth: "90vw" }}
           >
-            <h5 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800, color: "#111" }}>
+            <h5 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800, color: "#0d0d0d" }}>
               Reset Password
             </h5>
-            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#8a8a86" }}>
-              Set a new login password for <strong style={{ color: "#111" }}>{resetTarget.name}</strong> ({resetTarget.email})
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280" }}>
+              Set a new login password for <strong style={{ color: "#0d0d0d" }}>{resetTarget.name}</strong> ({resetTarget.email})
             </p>
 
             <div style={{ position: "relative", marginBottom: 16 }}>
@@ -966,7 +1091,7 @@ const matchSearch =
                   width: "100%",
                   padding: "10px 60px 10px 14px",
                   borderRadius: 10,
-                  border: "1.5px solid #e5e5e2",
+                  border: "1px solid #e5e7eb",
                   fontSize: 13.5,
                   fontFamily: "inherit",
                   outline: "none",
@@ -983,7 +1108,7 @@ const matchSearch =
                   transform: "translateY(-50%)",
                   border: "none",
                   background: "none",
-                  color: "#7c3aed",
+                  color: "#1A71F6",
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -1000,11 +1125,11 @@ const matchSearch =
                 style={{
                   padding: "8px 16px",
                   borderRadius: 8,
-                  border: "1.5px solid #e5e5e2",
+                  border: "1px solid #e5e7eb",
                   background: "#fff",
                   fontSize: 12.5,
                   fontWeight: 700,
-                  color: "#111",
+                  color: "#0d0d0d",
                   cursor: resetting ? "not-allowed" : "pointer",
                 }}
               >
@@ -1017,7 +1142,7 @@ const matchSearch =
                   padding: "8px 16px",
                   borderRadius: 8,
                   border: "none",
-                  background: "#111",
+                  background: "#1A71F6",
                   fontSize: 12.5,
                   fontWeight: 700,
                   color: "#fff",
@@ -1031,6 +1156,167 @@ const matchSearch =
           </div>
         </div>
       )}
+      {/* ── Edit Partner Modal ── */}
+      {editTarget && (
+        <div
+          onClick={closeEditModal}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1050,
+            padding: 16, fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 16, width: 680, maxWidth: "100%",
+              maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: "22px 26px 16px", borderBottom: "1px solid #E7E7E7" }}>
+              <h5 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800, color: "#0d0d0d" }}>
+                Edit Partner Details
+              </h5>
+              <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+                Every detail below is saved to the partner's account. Use Reset
+                Password to change their login password.
+              </p>
+            </div>
+
+            <div style={{ padding: "20px 26px", overflowY: "auto" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: 14,
+                }}
+              >
+                {EDIT_FIELDS.map((field) => (
+                  <div
+                    key={field.name}
+                    style={field.full ? { gridColumn: "1 / -1" } : undefined}
+                  >
+                    <label
+                      style={{
+                        display: "block", marginBottom: 6, fontSize: 11.5, fontWeight: 700,
+                        color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4,
+                      }}
+                    >
+                      {field.label}
+                      {field.required ? <span style={{ color: "#dc2626" }}> *</span> : null}
+                      {field.hint ? (
+                        <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
+                          {" "}
+                          ({field.hint})
+                        </span>
+                      ) : null}
+                    </label>
+                    {field.textarea ? (
+                      <textarea
+                        name={field.name}
+                        rows={3}
+                        value={editForm[field.name] || ""}
+                        onChange={handleEditChange}
+                        style={{
+                          width: "100%", padding: "10px 14px", borderRadius: 10,
+                          border: "1px solid #e5e7eb", fontSize: 13.5, fontFamily: "inherit",
+                          outline: "none", boxSizing: "border-box", resize: "vertical",
+                        }}
+                      />
+                    ) : (
+                      <input
+                        type={field.type || "text"}
+                        name={field.name}
+                        maxLength={field.maxLength}
+                        value={editForm[field.name] || ""}
+                        onChange={handleEditChange}
+                        style={{
+                          width: "100%", padding: "10px 14px", borderRadius: 10,
+                          border: "1px solid #e5e7eb", fontSize: 13.5, fontFamily: "inherit",
+                          outline: "none", boxSizing: "border-box",
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 18, padding: "12px 14px", background: "#f9fafb",
+                  border: "1px solid #E7E7E7", borderRadius: 10, fontSize: 12.5, color: "#6b7280",
+                }}
+              >
+                Approval status:{" "}
+                <strong style={{ color: editTarget.isApproved ? "#15803d" : "#b45309" }}>
+                  {editTarget.isApproved ? "Approved" : "Pending"}
+                </strong>
+                {" "}— change it with the Approve / Revoke button on the row.
+                {editTarget.createdAt ? (
+                  <> Registered on {new Date(editTarget.createdAt).toLocaleDateString("en-IN")}.</>
+                ) : null}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex", justifyContent: "flex-end", gap: 8,
+                padding: "16px 26px", borderTop: "1px solid #E7E7E7",
+              }}
+            >
+              <button
+                onClick={closeEditModal}
+                disabled={savingEdit}
+                style={{
+                  padding: "9px 18px", borderRadius: 8, border: "1px solid #e5e7eb",
+                  background: "#fff", fontSize: 12.5, fontWeight: 700, color: "#0d0d0d",
+                  cursor: savingEdit ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                disabled={savingEdit}
+                style={{
+                  padding: "9px 18px", borderRadius: 8, border: "none", background: "#1A71F6",
+                  fontSize: 12.5, fontWeight: 700, color: "#fff",
+                  cursor: savingEdit ? "not-allowed" : "pointer", opacity: savingEdit ? 0.7 : 1,
+                }}
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        /* A slim bar so a wide table can be scrolled without the columns
+           squeezing their text onto two lines */
+        .partner-table-scroll {
+          overflow-x: auto;
+          scrollbar-width: thin;
+          scrollbar-color: #d6d9e0 transparent;
+        }
+        .partner-table-scroll::-webkit-scrollbar {
+          height: 6px;
+        }
+        .partner-table-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .partner-table-scroll::-webkit-scrollbar-thumb {
+          background: #d6d9e0;
+          border-radius: 999px;
+        }
+        .partner-table-scroll::-webkit-scrollbar-thumb:hover {
+          background: #b9bdc7;
+        }
+        .partner-table-scroll tbody tr:hover {
+          background: #f8f9fc;
+        }
+      `}</style>
+
     </div>
   );
 }

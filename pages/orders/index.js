@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
 import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
@@ -10,8 +11,9 @@ import {
   FiSearch, FiSliders, FiX, FiChevronRight,
   FiPackage, FiCalendar, FiTag, FiLayers,
   FiChevronLeft, FiChevronRight as FiChevRight,
-  FiClock,
+  FiClock, FiDownload, FiRepeat,
 } from "react-icons/fi";
+import { downloadFile } from "@/lib/downloadDocument";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_TABS = [
@@ -54,9 +56,92 @@ export default function OrdersListPage() {
   const [total, setTotal]             = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [dispatchingId, setDispatchingId] = useState(null);
+  const router = useRouter();
+  const [exporting, setExporting] = useState(false);
+  const [invoiceOrderId, setInvoiceOrderId] = useState(null);
+  const [reorderingId, setReorderingId] = useState(null);
 
   // ── Year / Month quick-filter (kept separate so the picker stays short
   // and readable as the site accumulates more years of order history) ───────
+  // The export follows the filters on screen, so the file matches the list
+  const exportOrders = async () => {
+    try {
+      setExporting(true);
+      const params = new URLSearchParams();
+      if (activeTab !== "All") params.set("status", activeTab);
+      if (search) params.set("search", search);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
+
+      await downloadFile(`/api/orders/export?${params.toString()}`, "my-orders.csv");
+    } catch (err) {
+      toast.error(err.message || "Could not export your orders");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // An order can have more than one invoice, so the list is fetched first and
+  // the buyer is sent to the order page when there is a choice to make
+  const downloadInvoice = async (orderId) => {
+    try {
+      setInvoiceOrderId(orderId);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`/api/orders/documents/${orderId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        withCredentials: true,
+      });
+
+      const invoices = res.data.invoices || [];
+      if (invoices.length === 0) {
+        toast.error("The invoice for this order has not been raised yet");
+        return;
+      }
+      if (invoices.length > 1) {
+        router.push(`/orders/${orderId}`);
+        return;
+      }
+
+      await downloadFile(
+        `/api/orders/documents/download?type=invoice&id=${invoices[0].id}`,
+        `invoice-${invoices[0].invoiceNumber}.pdf`
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not download the invoice");
+    } finally {
+      setInvoiceOrderId(null);
+    }
+  };
+
+  // Quick Reorder — the server re-adds the items at today's prices and skips
+  // anything that is no longer orderable
+  const reorder = async (orderId) => {
+    try {
+      setReorderingId(orderId);
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `/api/orders/reorder/${orderId}`,
+        {},
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      const skipped = res.data.skipped || [];
+      if (skipped.length) {
+        toast.success(`${res.data.added} item(s) added to your cart`);
+        toast.error(`Not added: ${skipped.join("; ")}`, { duration: 7000 });
+      } else {
+        toast.success("Items added to your cart");
+      }
+      router.push("/cart");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not reorder this order");
+    } finally {
+      setReorderingId(null);
+    }
+  };
+
   const now = new Date();
   const [selectedYear, setSelectedYear]   = useState(String(now.getFullYear()));
   const [selectedMonthNum, setSelectedMonthNum] = useState(String(now.getMonth() + 1));
@@ -323,6 +408,20 @@ export default function OrdersListPage() {
                 </span>
               )}
             </button>
+
+            {/* Everything the buyer can see on this page, as a spreadsheet */}
+            <button onClick={exportOrders} disabled={exporting || total === 0}
+              style={{
+                height: 44, padding: "0 18px", borderRadius: 10,
+                border: "1.5px solid #e5e5e5", background: "#fff", color: "#555",
+                fontWeight: 600, fontSize: 13,
+                cursor: exporting || total === 0 ? "not-allowed" : "pointer",
+                opacity: exporting || total === 0 ? 0.6 : 1,
+                display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap",
+              }}>
+              <FiDownload size={14} />
+              {exporting ? "Preparing..." : "Export"}
+            </button>
           </div>
 
           {/* ── Filter Panel ── */}
@@ -542,21 +641,60 @@ export default function OrdersListPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: "1px solid #f5f5f3" }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                         <span style={{ fontSize: 20, fontWeight: 800, color: "#111", letterSpacing: "-0.5px" }}>₹{o.total}</span>
-                        <span style={{ fontSize: 12, color: "#9ca3af" }}>{o.paymentMethod}</span>
+                        <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                          {o.paymentMethod === "COD" ? "Cash on Delivery" : o.paymentMethod}
+                        </span>
                       </div>
-                      <Link href={`/orders/${o._id}`}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          background: "#111", color: "#fff",
-                          borderRadius: 8, padding: "9px 16px",
-                          fontSize: 13, fontWeight: 600, textDecoration: "none",
-                          transition: "background 0.15s",
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = "#333"}
-                        onMouseLeave={e => e.currentTarget.style.background = "#111"}
-                      >
-                        View Details <FiChevronRight size={13} />
-                      </Link>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadInvoice(o._id); }}
+                          disabled={invoiceOrderId === o._id}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: "#fff", color: "#111",
+                            border: "1.5px solid #e5e5e5", borderRadius: 8, padding: "8px 14px",
+                            fontSize: 13, fontWeight: 600,
+                            cursor: invoiceOrderId === o._id ? "not-allowed" : "pointer",
+                            opacity: invoiceOrderId === o._id ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <FiDownload size={13} />
+                          {invoiceOrderId === o._id ? "Preparing..." : "Invoice"}
+                        </button>
+
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); reorder(o._id); }}
+                          disabled={reorderingId === o._id}
+                          title="Add these items to your cart again"
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: "#fff", color: "#111",
+                            border: "1.5px solid #e5e5e5", borderRadius: 8, padding: "8px 14px",
+                            fontSize: 13, fontWeight: 600,
+                            cursor: reorderingId === o._id ? "not-allowed" : "pointer",
+                            opacity: reorderingId === o._id ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <FiRepeat size={13} />
+                          {reorderingId === o._id ? "Adding..." : "Reorder"}
+                        </button>
+
+                        <Link href={`/orders/${o._id}`}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: "#111", color: "#fff",
+                            borderRadius: 8, padding: "9px 16px",
+                            fontSize: 13, fontWeight: 600, textDecoration: "none",
+                            transition: "background 0.15s",
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#333"}
+                          onMouseLeave={e => e.currentTarget.style.background = "#111"}
+                        >
+                          View Details <FiChevronRight size={13} />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );

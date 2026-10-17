@@ -1,6 +1,8 @@
-// pages/complaints/index.js  — B2B user complaint submission + list
+// pages/complaints/index.js — any signed-in buyer, partner or retail, raises a
+// complaint here and follows the admin's reply on the same card.
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import Topbar from "@/components/header/Topbar";
@@ -19,7 +21,11 @@ export default function ComplaintsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm]     = useState(false);
 
+  const router = useRouter();
+
   const [orderId, setOrderId]   = useState("");
+  const [orders, setOrders]     = useState([]);   // the buyer's own orders
+  const [typeOwnId, setTypeOwnId] = useState(false);
   const [message, setMessage]   = useState("");
   const [images, setImages]     = useState([]);  // File[]
   const [video, setVideo]       = useState(null); // File
@@ -39,7 +45,31 @@ export default function ComplaintsPage() {
     finally  { setLoading(false); }
   };
 
-  useEffect(() => { fetchComplaints(); }, []);
+  // The order number is picked from the buyer's own orders instead of typed,
+  // so a complaint can never point at an order that is not theirs
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get("/api/orders?limit=50", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setOrders(res.data.orders || []);
+    } catch {
+      // The list is a convenience; the buyer can still type the number
+      setTypeOwnId(true);
+    }
+  };
+
+  useEffect(() => { fetchComplaints(); fetchOrders(); }, []);
+
+  // Arriving from an order page with "Raise a complaint" opens the form ready
+  useEffect(() => {
+    if (!router.isReady) return;
+    const prefill = String(router.query.orderId || "").trim();
+    if (prefill) {
+      setOrderId(prefill);
+      setShowForm(true);
+    }
+  }, [router.isReady, router.query.orderId]);
 
   const handleImages = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 5);
@@ -108,16 +138,53 @@ export default function ComplaintsPage() {
             <h3 style={{ margin: "0 0 20px", fontWeight: 600, fontSize: 17 }}>Submit a Complaint</h3>
             <form onSubmit={handleSubmit}>
 
-              {/* Order ID */}
+              {/* Order */}
               <div style={{ marginBottom: 16 }}>
-                <label style={labelStyle}>Order ID *</label>
-                <input
-                  value={orderId}
-                  onChange={e => setOrderId(e.target.value)}
-                  placeholder="e.g. ORD-20260318-1069"
-                  style={inputStyle}
-                  required
-                />
+                <label style={labelStyle}>Which order is this about? *</label>
+
+                {orders.length > 0 && !typeOwnId ? (
+                  <>
+                    <select
+                      value={orderId}
+                      onChange={e => setOrderId(e.target.value)}
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">Select an order</option>
+                      {orders.map(o => (
+                        <option key={o._id} value={o.orderNumber}>
+                          {o.orderNumber} — {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} ({o.status})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => { setTypeOwnId(true); setOrderId(""); }}
+                      style={linkBtnStyle}
+                    >
+                      My order is not in this list
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      value={orderId}
+                      onChange={e => setOrderId(e.target.value)}
+                      placeholder="e.g. ORD-20260318-1069"
+                      style={inputStyle}
+                      required
+                    />
+                    {orders.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setTypeOwnId(false); setOrderId(""); }}
+                        style={linkBtnStyle}
+                      >
+                        Pick from my orders instead
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Message */}
@@ -279,6 +346,10 @@ export default function ComplaintsPage() {
 }
 
 const labelStyle = { display: "block", fontWeight: 600, fontSize: 13, marginBottom: 6, color: "#374151" };
+const linkBtnStyle = {
+  background: "none", border: "none", padding: 0, marginTop: 8,
+  color: "#6366f1", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+};
 const inputStyle  = {
   width: "100%", padding: "10px 14px", border: "1px solid #e0e0e0",
   borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box",

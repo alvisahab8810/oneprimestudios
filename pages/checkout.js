@@ -869,6 +869,7 @@ import Footer from "@/components/footer/Footer";
 import DealBanner from "@/components/home-page/Cta";
 import Offcanvas from "@/components/header/Offcanvas";
 import { toast } from "react-hot-toast";
+import { cartAllowsCod } from "@/lib/codRules";
 export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -992,6 +993,19 @@ useEffect(() => {
   }
 }, [userType]);
 
+
+  // Retail buyers buying for a business can ask for the invoice in the firm's
+  // name; left off, nothing changes for an ordinary shopper
+  const [wantsGstInvoice, setWantsGstInvoice] = useState(false);
+
+  // Every retail product offers cash on delivery unless an admin turned it off
+  // for that product; the server checks this again before placing the order
+  const codAllowed = userType === "customer" && cartAllowsCod(cartItems);
+
+  // A cart that loses its last COD item must not keep COD selected
+  useEffect(() => {
+    if (paymentMethod === "cod" && !codAllowed) setPaymentMethod("razorpay");
+  }, [codAllowed, paymentMethod]);
 
   // 🛒 Load Cart
   useEffect(() => {
@@ -1120,6 +1134,18 @@ useEffect(() => {
 
     if (!zip.trim()) newErrors.zip = "ZIP Code is required.";
     else if (!/^\d{6}$/.test(zip)) newErrors.zip = "ZIP must be 6 digits.";
+
+    // Asked for only when the retail buyer ticks the GST invoice box
+    if (userType === "customer" && wantsGstInvoice) {
+      if (!companyName.trim()) {
+        newErrors.companyName = "Business name is required for a GST invoice.";
+      }
+      if (!gstNumber.trim()) {
+        newErrors.gstNumber = "GST number is required for a GST invoice.";
+      } else if (!/^[0-9A-Z]{15}$/.test(gstNumber.trim().toUpperCase())) {
+        newErrors.gstNumber = "Invalid GST number format.";
+      }
+    }
 
     if (userType === "partner") {
       if (!companyName.trim()) {
@@ -1251,6 +1277,14 @@ const placeOrder = async (method, payment = null) => {
       couponCode: appliedCoupon?.code || null,
       paymentMethod: method,
       orderName: cartItems[0]?.orderName || "",
+      // Sent only when the buyer asked for a GST invoice
+      gstDetails:
+        userType === "customer" && wantsGstInvoice
+          ? {
+              gstin: formData.gstNumber.trim().toUpperCase(),
+              businessName: formData.companyName.trim(),
+            }
+          : null,
       ...(payment || {}),
       shippingAddress: {
         street: formData.street,
@@ -1599,6 +1633,70 @@ const placeOrder = async (method, payment = null) => {
                   </div>
                 </div>
 
+                {/* Retail buyers who need the bill in a business name */}
+                {userType === "customer" && (
+                  <div className="gst-invoice-block mt-3">
+                    <label
+                      className="d-flex align-items-center gap-2 fw-semibold mb-0"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={wantsGstInvoice}
+                        onChange={(e) => setWantsGstInvoice(e.target.checked)}
+                      />
+                      I need a GST invoice (optional)
+                    </label>
+                    <p className="mb-0 mt-1" style={{ fontSize: 12.5, color: "#6b7280" }}>
+                      Tick this if you are buying for a business and want the bill in the
+                      company&apos;s name.
+                    </p>
+
+                    {wantsGstInvoice && (
+                      <div className="row mt-3">
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label fw-semibold">Business Name *</label>
+                          <input
+                            className={`form-control ${errors.companyName ? "is-invalid" : ""}`}
+                            name="companyName"
+                            value={formData.companyName}
+                            onChange={handleChange}
+                            placeholder="Registered business name"
+                          />
+                          {errors.companyName && (
+                            <div className="invalid-feedback">{errors.companyName}</div>
+                          )}
+                        </div>
+
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label fw-semibold">GST Number *</label>
+                          <input
+                            className={`form-control ${errors.gstNumber ? "is-invalid" : ""}`}
+                            name="gstNumber"
+                            value={formData.gstNumber}
+                            onChange={handleChange}
+                            placeholder="15-character GSTIN"
+                            maxLength={15}
+                            style={{ textTransform: "uppercase" }}
+                          />
+                          {errors.gstNumber && (
+                            <div className="invalid-feedback">{errors.gstNumber}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <style jsx global>{`
+                      .gst-invoice-block {
+                        border: 1px solid #e7e7e7;
+                        border-radius: 12px;
+                        padding: 14px 16px;
+                        background: #fafbfc;
+                      }
+                    `}</style>
+                  </div>
+                )}
+
                 {/* Partner-only fields */}
                 {userType === "partner" && (
                   <>
@@ -1732,9 +1830,11 @@ const placeOrder = async (method, payment = null) => {
                   <span>
                     {shippingLoading
                       ? "Calculating..."
-                      : shippingQuote?.serviceable
-                        ? `₹${transportCharge.toFixed(2)}`
-                        : "—"}
+                      : shippingQuote?.freeDelivery
+                        ? <span style={{ color: "#1d7044", fontWeight: 600 }}>FREE</span>
+                        : shippingQuote?.serviceable
+                          ? `₹${transportCharge.toFixed(2)}`
+                          : "—"}
                   </span>
                 </div>
                 )}
@@ -1811,6 +1911,25 @@ const placeOrder = async (method, payment = null) => {
 </select> */}
 
 
+                {userType === "customer" && codAllowed && (
+                  <div className="mt-3">
+                    <label className="form-label fw-semibold mb-2">Payment Method</label>
+                    <select
+                      className="form-select"
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    >
+                      <option value="razorpay">Pay Online</option>
+                      <option value="cod">Cash on Delivery</option>
+                    </select>
+                    {paymentMethod === "cod" && (
+                      <p className="mb-0 mt-2" style={{ fontSize: 12.5, color: "#6b7280" }}>
+                        Pay ₹{finalAmount.toFixed(2)} to the delivery agent when your order arrives.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <button
   className="place-order-btn mt-4"
   disabled={submitting || !shippingReady}
@@ -1828,6 +1947,8 @@ const placeOrder = async (method, payment = null) => {
     // 🔐 PAYMENT ROUTING
     if (paymentMethod === "wallet") {
       placeOrder("Wallet");
+    } else if (paymentMethod === "cod") {
+      placeOrder("COD");
     } else if (paymentMethod === "razorpay") {
       handleRazorpayPayment();
     } else {
@@ -1841,6 +1962,8 @@ const placeOrder = async (method, payment = null) => {
     ? "Calculating delivery..."
     : paymentMethod === "wallet"
     ? "Pay Using Wallet"
+    : paymentMethod === "cod"
+    ? "Place Order (Cash on Delivery)"
     : paymentMethod === "razorpay"
     ? "Pay Online"
     : "Select Payment Method"}

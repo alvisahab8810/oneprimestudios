@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import ContactLead from "@/models/ContactLead";
+import { requireAdminPermission } from "@/lib/adminAuth";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -7,6 +8,10 @@ export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
+
+  // Leads carry a customer name, email and phone, so only an admin reads them
+  const admin = await requireAdminPermission(req, res, "leads");
+  if (!admin) return;
 
   try {
     const leads = await ContactLead.find().sort({ createdAt: -1 });

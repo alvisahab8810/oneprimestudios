@@ -13,6 +13,7 @@ import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
 import { checkOrderable } from "@/lib/stockRules";
+import { isCodAvailable } from "@/lib/codRules";
 import {
   checkPaymentMatchesOrder,
   fetchPayment,
@@ -66,8 +67,15 @@ export default async function handler(req, res) {
     if (fullUser.userType === "partner" && normalizedPaymentMethod !== "wallet") {
       return res.status(403).json({ message: "Partners can pay only using Wallet" });
     }
-    if (fullUser.userType === "customer" && normalizedPaymentMethod !== "razorpay") {
-      return res.status(403).json({ message: "Customers can pay only via Razorpay" });
+    if (
+      fullUser.userType === "customer" &&
+      normalizedPaymentMethod !== "razorpay" &&
+      normalizedPaymentMethod !== "cod"
+    ) {
+      return res.status(403).json({ message: "Customers can pay online or on delivery only" });
+    }
+    if (fullUser.userType !== "customer" && normalizedPaymentMethod === "cod") {
+      return res.status(403).json({ message: "Cash on delivery is for retail orders only" });
     }
 
     // ── RAZORPAY: the payment must be real before an order exists ──────────
@@ -139,7 +147,7 @@ export default async function handler(req, res) {
     const productIds = items.map((i) => i.product);
     const productDocs = await Product.find(
       { _id: { $in: productIds } },
-      "name shipping stockStatus minOrderQty stock"
+      "name shipping freeDelivery stockStatus minOrderQty stock b2cOptions"
     ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });
@@ -148,6 +156,18 @@ export default async function handler(req, res) {
     for (const item of items) {
       const problem = checkOrderable(productMap[String(item.product)], item.quantity);
       if (problem) return res.status(400).json({ message: problem });
+    }
+
+    if (normalizedPaymentMethod === "cod") {
+      const blocked = items.find(
+        (i) => !isCodAvailable(productMap[String(i.product)])
+      );
+      if (blocked) {
+        const name = productMap[String(blocked.product)]?.name || "One of your items";
+        return res.status(400).json({
+          message: `${name} is not available for cash on delivery. Please pay online instead.`,
+        });
+      }
     }
 
     // Partners (B2B) are not charged for transport, so no quote is needed for them
@@ -209,6 +229,19 @@ export default async function handler(req, res) {
     // ── UPDATED: generate orderNumber before session so it's available for wallet tx description
     // OLD: orderNumber generated inside Order.create, so wallet tx had no reference to it
     // NEW: pre-generate orderNumber, create Order first, then create WalletTransaction with referenceId + full description
+    // GST details typed at checkout are re-validated here; a partner's details
+    // always come from their own profile instead
+    const typedGstin = String(req.body?.gstDetails?.gstin || "").trim().toUpperCase();
+    const gstDetails =
+      fullUser.userType === "customer" && /^[0-9A-Z]{15}$/.test(typedGstin)
+        ? {
+            gstin: typedGstin,
+            businessName: String(req.body?.gstDetails?.businessName || "")
+              .trim()
+              .slice(0, 120),
+          }
+        : { gstin: "", businessName: "" };
+
     const orderNumber = `ORD-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${Math.floor(Math.random() * 9000) + 1000}`;
 
     // CREATE ORDER + WALLET — atomic
@@ -244,6 +277,7 @@ export default async function handler(req, res) {
 
             subtotal,
             gstAmount: Number(gstAmount || 0),
+            gstDetails,
             shippingCharge,
             shippingQuote: {
               courierName: shippingQuote?.courierName || "",
@@ -264,10 +298,17 @@ export default async function handler(req, res) {
               zip:    req.body.shippingAddress?.zip    || fullUser.pinCode || "",
             },
 
-            paymentMethod: normalizedPaymentMethod === "wallet" ? "Wallet" : "Razorpay",
+            paymentMethod:
+              normalizedPaymentMethod === "wallet"
+                ? "Wallet"
+                : normalizedPaymentMethod === "cod"
+                ? "COD"
+                : "Razorpay",
             // Razorpay orders reach this point only after the payment was
-            // verified against the gateway, so they are genuinely paid.
-            paymentStatus: "PAID",
+            // verified against the gateway, so they are genuinely paid. A cash
+            // on delivery order is collected by the courier, so it stays unpaid
+            // until someone marks it paid.
+            paymentStatus: normalizedPaymentMethod === "cod" ? "UNPAID" : "PAID",
 
             razorpay:
               normalizedPaymentMethod === "razorpay"

@@ -37,6 +37,7 @@ export default function AddProduct() {
     minOrderQty: 1,
     lowStockThreshold: "",
     isFeatured: false,
+    freeDelivery: false,
     gstPercent: 0,
     hsnCode: "",      // NEW: HSN/SAC code for invoicing
     // NEW: package details of one unit, used for courier booking
@@ -56,6 +57,7 @@ export default function AddProduct() {
     b2c_enabled: false,
     b2c_designUpload: false,
     b2c_whatsapp: false,
+    b2c_codDisabled: false,
     b2c_quantityOptionsCSV: "",
   });
 
@@ -186,6 +188,7 @@ export default function AddProduct() {
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
+      fd.append("freeDelivery", String(form.freeDelivery));
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");  // NEW
       fd.append("shipping", JSON.stringify({     // NEW: courier package details
@@ -209,6 +212,7 @@ export default function AddProduct() {
         enabled: !!form.b2c_enabled,
         designUpload: !!form.b2c_designUpload,
         whatsappSupport: !!form.b2c_whatsapp,
+        codDisabled: !!form.b2c_codDisabled,
         quantityOptions: b2cQtyOptions,
       }));
 
@@ -223,11 +227,11 @@ export default function AddProduct() {
       setForm({
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
-        stock: 0, stockStatus: "in_stock", minOrderQty: 1, lowStockThreshold: "", isFeatured: false,
+        stock: 0, stockStatus: "in_stock", minOrderQty: 1, lowStockThreshold: "", isFeatured: false, freeDelivery: false,
         gstPercent: 0, hsnCode: "", shippingWeight: "", shippingLength: "", shippingBreadth: "", shippingHeight: "",
         productFor: "b2b", status: "published", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
         b2b_enabled: true, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
-        b2c_enabled: false, b2c_designUpload: true, b2c_whatsapp: true, b2c_quantityOptionsCSV: "",
+        b2c_enabled: false, b2c_designUpload: true, b2c_whatsapp: true, b2c_codDisabled: false, b2c_quantityOptionsCSV: "",
       });
       setMainImageFile(null);
       setGalleryFiles([]);
@@ -515,6 +519,15 @@ export default function AddProduct() {
                       )}
                     </div>
 
+                    {/* The buyer pays nothing for this product's delivery and the
+                        product page says so instead of quoting a charge */}
+                    <div className="min-order-row">
+                      <label>
+                        <input type="checkbox" name="freeDelivery" checked={form.freeDelivery} onChange={handleChange} />{" "}
+                        Free Delivery
+                      </label>
+                    </div>
+
                     <div className="min-order-row">
                       <label>Low Stock Alert Below</label>
                       <input
@@ -618,6 +631,8 @@ export default function AddProduct() {
                       <label><input type="checkbox" name="b2c_enabled" checked={form.b2c_enabled} onChange={handleChange} /> Enable B2C</label>
                       <label><input type="checkbox" name="b2c_designUpload" checked={form.b2c_designUpload} onChange={handleChange} /> Allow design upload</label>
                       <label><input type="checkbox" name="b2c_whatsapp" checked={form.b2c_whatsapp} onChange={handleChange} /> WhatsApp support</label>
+                      {/* COD is on for every retail product, so this is an opt-out */}
+                      <label><input type="checkbox" name="b2c_codDisabled" checked={form.b2c_codDisabled} onChange={handleChange} /> Turn off Cash on Delivery (COD)</label>
                     </div>
                   </div>
                 </div>

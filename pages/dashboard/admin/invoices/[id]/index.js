@@ -228,9 +228,16 @@ export default function InvoiceViewAdmin() {
               {canViewPayments && (
               <div>
                 <p style={secLbl(isHighValue)}>Payment</p>
-                <p style={infoTxt(isHighValue)}>Method: <strong>{inv.paymentSnapshot?.paymentMethod || "—"}</strong></p>
+                <p style={infoTxt(isHighValue)}>Method: <strong>{inv.paymentSnapshot?.paymentMethod === "COD" ? "Cash on Delivery" : inv.paymentSnapshot?.paymentMethod || "—"}</strong></p>
                 <p style={infoTxt(isHighValue)}>Status: <strong>{inv.paymentSnapshot?.paymentStatus || "—"}</strong></p>
                 <p style={infoTxt(isHighValue)}>Txn ID: <span style={{ fontFamily: "monospace", fontSize: 12 }}>{inv.paymentSnapshot?.transactionId || "—"}</span></p>
+                {/* Whoever delivers this order has to collect the money, so the
+                    amount due is stated on the invoice itself */}
+                {inv.paymentSnapshot?.paymentMethod === "COD" && inv.paymentSnapshot?.paymentStatus !== "PAID" && (
+                  <p style={{ ...infoTxt(isHighValue), fontWeight: 700, color: isHighValue ? "#000" : "#b45309" }}>
+                    Collect on delivery: ₹{Number(inv.grandTotal || 0).toFixed(2)}
+                  </p>
+                )}
                 {inv.sentAt && <p style={infoTxt(isHighValue)}>Sent: {new Date(inv.sentAt).toLocaleDateString("en-IN")}</p>}
               </div>
               )}

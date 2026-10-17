@@ -5,13 +5,17 @@ import dbConnect from "@/lib/dbConnect";
 import Invoice from "@/models/Invoice";
 import EwayBill from "@/models/EwayBill";
 import { renderEwayBillPdf } from "@/lib/ewayBillPdf";
+import { requireAdminPermission } from "@/lib/adminAuth";
 import fs from "fs";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
 
+  await dbConnect();
+  const admin = await requireAdminPermission(req, res, "invoices");
+  if (!admin) return;
+
   try {
-    await dbConnect();
     const { invoiceId, download } = req.body || {};
     const bill = await EwayBill.findOne({ invoiceId });
     if (!bill) return res.status(404).json({ message: "Please save the e-way bill first" });

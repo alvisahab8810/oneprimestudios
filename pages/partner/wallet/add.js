@@ -96,6 +96,33 @@ export default function AddMoney() {
       <p className="wallet-helper">
         You will be shown a UPI QR code to complete the payment.
       </p>
+
+      {/* Bank transfer is the slower route: it waits on our team to verify */}
+      <div className="wallet-manual-link">
+        <span>Paying by NEFT / RTGS / IMPS or cheque instead?</span>
+        <button
+          type="button"
+          className="wallet-btn secondary"
+          onClick={() => router.push("/partner/wallet/manual")}
+        >
+          Manual Payment
+        </button>
+      </div>
+
+      <style jsx global>{`
+        .wallet-manual-link {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 18px;
+          padding-top: 16px;
+          border-top: 1px solid #e7e7e7;
+          font-size: 13.5px;
+          color: #6b7280;
+        }
+      `}</style>
     </div>
   </div>
 

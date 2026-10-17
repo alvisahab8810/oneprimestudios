@@ -38,6 +38,7 @@ export default function EditProductPage() {
     minOrderQty: 1,
     lowStockThreshold: "",
     isFeatured: false,
+    freeDelivery: false,
     gstPercent: 0,
     hsnCode: "",       // NEW: HSN/SAC code for invoicing
     // NEW: package details of one unit, used for courier booking
@@ -57,6 +58,7 @@ export default function EditProductPage() {
     b2b_quantityOptionsCSV: "",
     b2c_enabled: false,
     b2c_designUpload: true,
+    b2c_codDisabled: false,
     b2c_whatsapp: true,
     b2c_quantityOptionsCSV: "",
   });
@@ -173,6 +175,7 @@ export default function EditProductPage() {
         minOrderQty: p.minOrderQty || 1,
         lowStockThreshold: p.lowStockThreshold === null || p.lowStockThreshold === undefined ? "" : String(p.lowStockThreshold),
         isFeatured: !!p.isFeatured,
+        freeDelivery: !!p.freeDelivery,
         gstPercent: p.gstPercent || 0,
         hsnCode: p.hsnCode || "",         // NEW
         shippingWeight: p.shipping?.weight || "",    // NEW
@@ -190,6 +193,7 @@ export default function EditProductPage() {
         b2c_enabled: !!(p.b2cOptions && p.b2cOptions.enabled),
         b2c_designUpload: !!(p.b2cOptions && p.b2cOptions.designUpload),
         b2c_whatsapp: !!(p.b2cOptions && p.b2cOptions.whatsappSupport),
+        b2c_codDisabled: !!(p.b2cOptions && p.b2cOptions.codDisabled),
         // Loaded back so saving the form again does not wipe the stored options
         b2b_quantityOptionsCSV: (p.b2bOptions?.quantityOptions || []).join(","),
         b2c_quantityOptionsCSV: (p.b2cOptions?.quantityOptions || []).join(","),
@@ -328,6 +332,7 @@ export default function EditProductPage() {
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
+      fd.append("freeDelivery", String(form.freeDelivery));
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");   // NEW
       fd.append("shipping", JSON.stringify({      // NEW: courier package details
@@ -400,6 +405,7 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
         enabled: !!form.b2c_enabled,
         designUpload: !!form.b2c_designUpload,
         whatsappSupport: !!form.b2c_whatsapp,
+        codDisabled: !!form.b2c_codDisabled,
         quantityOptions: form.b2c_quantityOptionsCSV ? form.b2c_quantityOptionsCSV.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n)) : [],
       };
       fd.append("b2cOptions", JSON.stringify(b2cOptions));
@@ -539,6 +545,11 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
                     <label className="ms-3">
                       <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} /> Featured
+                    </label>
+                    {/* The buyer pays nothing for this product's delivery and the
+                        product page says so instead of quoting a charge */}
+                    <label className="ms-3">
+                      <input type="checkbox" name="freeDelivery" checked={form.freeDelivery} onChange={handleChange} /> Free Delivery
                     </label>
                     {/* Nobody can order this product while stock is below the minimum */}
                     {Number(form.stock) > 0 && Number(form.minOrderQty) > Number(form.stock) && (
@@ -1007,6 +1018,8 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     {form.b2c_enabled && (
                       <>
                         <label><input type="checkbox" name="b2c_designUpload" checked={form.b2c_designUpload} onChange={handleChange} /> Allow design upload</label>
+                        {/* COD is on for every retail product, so this is an opt-out */}
+                        <label><input type="checkbox" name="b2c_codDisabled" checked={form.b2c_codDisabled} onChange={handleChange} /> Turn off Cash on Delivery (COD)</label>
                         <label><input type="checkbox" name="b2c_whatsapp" checked={form.b2c_whatsapp} onChange={handleChange} /> WhatsApp support</label>
                         <input placeholder="Fixed quantity options (comma separated)" value={form.b2c_quantityOptionsCSV} onChange={(e) => setForm(f => ({ ...f, b2c_quantityOptionsCSV: e.target.value }))} className="input-primary mt-2" />
                       </>

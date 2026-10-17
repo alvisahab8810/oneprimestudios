@@ -7,6 +7,7 @@ import EwayBill from "@/models/EwayBill";
 import { sendInvoiceEmail } from "@/lib/sendInvoiceEmail";
 import { renderEwayBillPdf } from "@/lib/ewayBillPdf";
 import { ewbDate, ewbDateTime, ewbNumberFmt } from "@/lib/ewayBill";
+import { requireAdminPermission } from "@/lib/adminAuth";
 
 const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ESC_MAP[c]);
@@ -15,8 +16,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
 
+  await dbConnect();
+  const admin = await requireAdminPermission(req, res, "invoices");
+  if (!admin) return;
+
   try {
-    await dbConnect();
     const { invoiceId, to } = req.body || {};
     if (!invoiceId) return res.status(400).json({ message: "invoiceId required" });
 

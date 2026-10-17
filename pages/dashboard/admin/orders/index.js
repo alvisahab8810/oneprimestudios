@@ -106,7 +106,9 @@ export default function AdminOrdersPage() {
       UserType:  o.user?.userType,
       Total:     o.total,
       Status:    o.status,
-      ...(canViewPayments ? { Payment: o.paymentMethod } : {}),
+      ...(canViewPayments
+        ? { Payment: o.paymentMethod === "COD" ? "Cash on Delivery" : o.paymentMethod }
+        : {}),
       Products:  o.items.map((i) => i.product?.name).join(", "),
       CreatedAt: new Date(o.createdAt).toLocaleString(),
     }));
@@ -456,7 +458,28 @@ export default function AdminOrdersPage() {
                           ) : <span style={{ color: "#ccc" }}>—</span>}
                         </td>
 
-                        {canViewPayments && <td style={tdStyle}>{o.paymentMethod || "—"}</td>}
+                        {canViewPayments && (
+                          <td style={tdStyle}>
+                            {o.paymentMethod === "COD" ? (
+                              <span
+                                style={{
+                                  background: "#fffbeb",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                  borderRadius: 20,
+                                  padding: "3px 10px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                COD
+                              </span>
+                            ) : (
+                              o.paymentMethod || "—"
+                            )}
+                          </td>
+                        )}
 
                         <td style={{ ...tdStyle, whiteSpace: "nowrap", color: "#888" }}>
                           {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}

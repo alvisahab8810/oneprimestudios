@@ -7,6 +7,8 @@ import { useRouter } from "next/router";
 
 import "react-quill/dist/quill.snow.css"; // if using react-quill
 
+import LoginPopup from "@/components/auth/LoginPopup";
+
 // NEW: checks /api/auth/me whenever the user is active (click, key, tab focus)
 // and also on a 5-second poll interval.
 // If server returns 401 (partner revoked), clears localStorage and
@@ -118,6 +120,8 @@ export default function App({ Component, pageProps }) {
       <Script src="/assets/js/bootstrap.bundle.min.js" defer></Script>
 
       <AppContent Component={Component} pageProps={pageProps} />
+      {/* Shown to a visitor who is not signed in yet */}
+      <LoginPopup />
       <Toaster
         position="top-right" // 👈 toast position
         reverseOrder={false}

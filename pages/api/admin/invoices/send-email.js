@@ -1,17 +1,20 @@
 import dbConnect from "@/lib/dbConnect";
 import Invoice from "@/models/Invoice";
 import { sendInvoiceEmail } from "@/lib/sendInvoiceEmail";
-import path from "path";
-import fs from "fs";
+import { requireAdminPermission } from "@/lib/adminAuth";
+import { renderInvoicePdf } from "@/pages/api/admin/invoices/generate-pdf";
+import { findStoredPdf, pdfFilename } from "@/lib/documentStorage";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  try {
-    await dbConnect();
+  await dbConnect();
+  const admin = await requireAdminPermission(req, res, "invoices");
+  if (!admin) return;
 
+  try {
     const { invoiceId } = req.body;
     if (!invoiceId) return res.status(400).json({ message: "invoiceId required" });
 
@@ -20,14 +23,17 @@ export default async function handler(req, res) {
 
     const inv = invoice.toObject ? invoice.toObject() : invoice;
 
-    // Attach PDF if it exists
-    const pdfPath = inv.pdfUrl
-      ? path.join(process.cwd(), "public", inv.pdfUrl)
-      : null;
+    // The PDF no longer sits in /public, so it is looked up on disk and
+    // rendered when it is not there, rather than the email going out bare
+    const name = pdfFilename(inv.invoiceNumber);
+    let pdfPath = findStoredPdf("invoice", name) || findStoredPdf("invoice", `${inv.invoiceNumber}.pdf`);
 
-    const attachments = pdfPath && fs.existsSync(pdfPath)
-      ? [{ filename: `${inv.invoiceNumber.replace(/\//g, "-")}.pdf`, path: pdfPath }]
-      : [];
+    if (!pdfPath) {
+      const built = await renderInvoicePdf(invoice._id);
+      pdfPath = built.filePath;
+    }
+
+    const attachments = [{ filename: name, path: pdfPath }];
 
     const html = `
       <p>Dear ${inv.partnerName || "Customer"},</p>

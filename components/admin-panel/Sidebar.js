@@ -152,6 +152,7 @@ import {
   FaSignOutAlt,
   FaChartBar,
   FaShippingFast,
+  FaWallet,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
@@ -327,7 +328,7 @@ export default function Sidebar({ sidebarOpen }) {
               isActive("/dashboard/admin/leads") ? "active" : ""
             }`}
           >
-            <FaUserPlus className="me-2" /> Leads
+            <FaUserPlus className="me-2" /> Contacts
           </Link>
         )}
 
@@ -449,6 +450,16 @@ export default function Sidebar({ sidebarOpen }) {
             }`}
           >
             <FaUndo className="me-2" /> Return Requests
+          </Link>
+        )}
+
+        {/* ================= WALLET MANAGEMENT ================= */}
+        {canAccess(user, "wallet") && (
+          <Link
+            href="/dashboard/admin/wallet"
+            className={`ops-item ${isActive("/dashboard/admin/wallet") ? "active" : ""}`}
+          >
+            <FaWallet className="me-2" /> Wallet Management
           </Link>
         )}
 

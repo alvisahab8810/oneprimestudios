@@ -698,6 +698,11 @@ export default function CartPage() {
   // appliedCoupon = { code, discount }
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
+  // Offers the buyer can actually use, listed so a code never has to be typed
+  const [offers, setOffers] = useState([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [showOffers, setShowOffers] = useState(false);
+
   const [cartItems, setCartItems] = useState([]);
   const [tempQty, setTempQty] = useState({}); // { [index]: "123" } - string for free typing
   const [removingIndex, setRemovingIndex] = useState(null);
@@ -880,10 +885,40 @@ export default function CartPage() {
     return imgPath;
   };
 
+  // Offers are listed for whatever the cart is worth right now, so a coupon
+  // that needs a bigger order shows how much more is needed
+  useEffect(() => {
+    if (loading || cartItems.length === 0) {
+      setOffers([]);
+      return;
+    }
+    let cancelled = false;
+    const loadOffers = async () => {
+      try {
+        setOffersLoading(true);
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`/api/coupons/available?cartTotal=${total}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        });
+        if (!cancelled) setOffers(res.data.offers || []);
+      } catch {
+        // Without the list the buyer can still type a code
+        if (!cancelled) setOffers([]);
+      } finally {
+        if (!cancelled) setOffersLoading(false);
+      }
+    };
+    loadOffers();
+    return () => { cancelled = true; };
+  }, [loading, cartItems.length, total]);
+
   // for coupon genration function
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) {
+  // Called both by the Apply button and by tapping an offer card
+  const applyCoupon = async (codeFromOffer) => {
+    const code = String(codeFromOffer || couponCode || "").trim();
+    if (!code) {
       toast.error("Please enter a coupon code");
       return;
     }
@@ -895,7 +930,7 @@ export default function CartPage() {
       const res = await axios.post(
         "/api/coupons/apply",
         {
-          code: couponCode,
+          code,
           cartTotal: total,
         },
         {
@@ -909,17 +944,26 @@ export default function CartPage() {
       };
 
       setAppliedCoupon(couponData);
+      setCouponCode(couponData.code);
 
       // ✅ ADD THIS (VERY IMPORTANT)
       localStorage.setItem("appliedCoupon", JSON.stringify(couponData));
+      setShowOffers(false);
 
-      toast.success("Coupon applied successfully");
+      toast.success(`${couponData.code} applied — you saved ₹${Number(couponData.discount).toFixed(2)}`);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Invalid coupon");
       setAppliedCoupon(null);
     } finally {
       setApplyingCoupon(false);
     }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    localStorage.removeItem("appliedCoupon");
+    toast.success("Coupon removed");
   };
 
   if (loading) {
@@ -1234,22 +1278,89 @@ export default function CartPage() {
               />
 
               {appliedCoupon ? (
-                <button
-                  onClick={() => {
-                    setAppliedCoupon(null);
-                    setCouponCode("");
-                    localStorage.removeItem("appliedCoupon"); // ✅ ADD
-                    toast.success("Coupon removed");
-                  }}
-                >
+                <button onClick={removeCoupon}>
                   Remove
                 </button>
               ) : (
-                <button onClick={applyCoupon} disabled={applyingCoupon}>
+                <button onClick={() => applyCoupon()} disabled={applyingCoupon}>
                   {applyingCoupon ? "Applying..." : "Apply"}
                 </button>
               )}
             </div>
+
+            {/* ── Available offers — tap one to apply, no typing needed ── */}
+            {!appliedCoupon && (offers.length > 0 || offersLoading) && (
+              <div style={{ marginBottom: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowOffers((v) => !v)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    width: "100%", background: "#fff7ed", border: "1px dashed #fdba74",
+                    borderRadius: 10, padding: "10px 12px", cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>
+                    {offersLoading
+                      ? "Checking for offers..."
+                      : `${offers.length} offer${offers.length > 1 ? "s" : ""} available`}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#c2410c" }}>
+                    {showOffers ? "Hide" : "View offers"}
+                  </span>
+                </button>
+
+                {showOffers && !offersLoading && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                    {offers.map((o) => (
+                      <div
+                        key={o.code}
+                        style={{
+                          border: "1px solid #eee", borderRadius: 10, padding: "10px 12px",
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          gap: 10, opacity: o.eligible ? 1 : 0.75,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                            <span style={{
+                              fontSize: 11.5, fontWeight: 800, letterSpacing: 0.5,
+                              background: "#f3f4f6", color: "#111", border: "1px dashed #d1d5db",
+                              borderRadius: 5, padding: "2px 7px",
+                            }}>
+                              {o.code}
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>{o.headline}</span>
+                          </div>
+                          <div style={{ fontSize: 11.5, color: "#6b7280", marginTop: 3 }}>
+                            {o.eligible
+                              ? `Saves ₹${Number(o.discount).toFixed(2)} on this cart`
+                              : o.reason}
+                            {o.expiryDate && (
+                              <> · Valid till {new Date(o.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => applyCoupon(o.code)}
+                          disabled={!o.eligible || applyingCoupon}
+                          style={{
+                            flexShrink: 0, background: "none", border: "none",
+                            color: o.eligible ? "#c2410c" : "#9ca3af",
+                            fontSize: 12.5, fontWeight: 800, letterSpacing: 0.3,
+                            cursor: o.eligible && !applyingCoupon ? "pointer" : "not-allowed",
+                          }}
+                        >
+                          APPLY
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="summary-line">
               <span>Sub-total</span>

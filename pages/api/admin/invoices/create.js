@@ -95,7 +95,10 @@ export default async function handler(req, res) {
     const grandTotal = taxableValue + gstAmount - couponDiscount;
 
     // ── Determine partnerType from GST ────────────────────────────────────────
-    const hasGst = !!(order.user?.gstNumber);
+    // A retail order carries its own GST details when the buyer asked for them
+    const orderGstin = order.gstDetails?.gstin || "";
+    const orderGstName = order.gstDetails?.businessName || "";
+    const hasGst = !!(orderGstin || order.user?.gstNumber);
     const resolvedPartnerType = partnerType || (hasGst ? "B2B" : "B2C");
 
     const invoiceNum = manualInvoiceNumber?.trim() || generateInvoiceNumber();
@@ -113,8 +116,8 @@ export default async function handler(req, res) {
 
       partnerAddress: billToAddress || {
         name:        order.user?.name || "—",
-        companyName: order.user?.companyName || "",
-        gst:         order.user?.gstNumber || "",
+        companyName: orderGstName || order.user?.companyName || "",
+        gst:         orderGstin || order.user?.gstNumber || "",
         phone:       order.user?.phone || order.shipping?.phone || "",
         email:       order.user?.email || "",
         street:      order.user?.businessAddress || order.shipping?.street || "",

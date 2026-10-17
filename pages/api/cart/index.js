@@ -220,23 +220,88 @@ export default async function handler(req, res) {
       }
 
 
-    // ✅ SINGLE-PRODUCT RESTRICTION: clear cart if a different product is being added
-    if (cart.items.length > 0 && String(cart.items[0].product) !== String(productId)) {
+    // A partner builds one job at a time, so for them a different product still
+    // replaces whatever is in the cart. A retail cart holds many products.
+    const isPartnerCart = user.userType === "partner";
+
+    if (
+      isPartnerCart &&
+      cart.items.length > 0 &&
+      String(cart.items[0].product) !== String(productId)
+    ) {
       cart.items = [];
     }
 
-    cart.items.push({
-  product: productId,
-  quantity: Number(quantity),
-  selectedAttrs,
-  uploadedFiles: uploadedFiles || [],
-  uploadedAttributeFiles: uploadedAttributeFiles || [],
-  price: unitPrice,
-  remarks: remarks || "",
-  // NEW: order name stored per cart item, carried through to order
-  orderName: orderName || "",
-  createdAt: new Date(),
-});
+    // Retail only: adding the same product with the same options again bumps the
+    // quantity on the existing line instead of creating a duplicate row
+    const attrKey = (attrs) =>
+      JSON.stringify(
+        Object.keys(attrs || {})
+          .sort()
+          .map((k) => [k, attrs[k]])
+      );
+
+    const hasNewFiles =
+      (uploadedFiles || []).length > 0 || (uploadedAttributeFiles || []).length > 0;
+
+    // A second identical request moments after the first is a double submit —
+    // a double click or a retried request — not a genuine second line
+    const justAdded =
+      !hasNewFiles &&
+      cart.updatedAt &&
+      Date.now() - new Date(cart.updatedAt).getTime() < 5000 &&
+      cart.items.find(
+        (item) =>
+          String(item.product) === String(productId) &&
+          Number(item.quantity) === Number(quantity) &&
+          (item.uploadedFiles || []).length === 0 &&
+          (item.uploadedAttributeFiles || []).length === 0 &&
+          String(item.orderName || "") === String(orderName || "") &&
+          String(item.remarks || "") === String(remarks || "") &&
+          attrKey(item.selectedAttrs) === attrKey(selectedAttrs)
+      );
+
+    if (justAdded) {
+      cart = await cart.populate("items.product");
+      return res.json(cart.items);
+    }
+
+    const existingLine =
+      !isPartnerCart && !hasNewFiles
+        ? cart.items.find(
+            (item) =>
+              String(item.product) === String(productId) &&
+              (item.uploadedFiles || []).length === 0 &&
+              (item.uploadedAttributeFiles || []).length === 0 &&
+              attrKey(item.selectedAttrs) === attrKey(selectedAttrs)
+          )
+        : null;
+
+    if (existingLine) {
+      const mergedQty = Number(existingLine.quantity || 0) + Number(quantity);
+
+      // The combined quantity has to clear stock and MOQ rules as well
+      const mergeIssue = checkOrderable(product, mergedQty);
+      if (mergeIssue) return res.status(400).json({ message: mergeIssue });
+
+      existingLine.quantity = mergedQty;
+      existingLine.price = unitPrice;
+      if (remarks) existingLine.remarks = remarks;
+      if (orderName) existingLine.orderName = orderName;
+    } else {
+      cart.items.push({
+        product: productId,
+        quantity: Number(quantity),
+        selectedAttrs,
+        uploadedFiles: uploadedFiles || [],
+        uploadedAttributeFiles: uploadedAttributeFiles || [],
+        price: unitPrice,
+        remarks: remarks || "",
+        // NEW: order name stored per cart item, carried through to order
+        orderName: orderName || "",
+        createdAt: new Date(),
+      });
+    }
 
 
       await cart.save();

@@ -14,6 +14,11 @@ const STATUS_STYLES = {
   Resolved:      { bg: "#dcfce7", color: "#15803d" },
 };
 
+// Partner (B2B) and retail (B2C) complaints share one list, so each row says which
+const typeBadge = { borderRadius: 5, padding: "1px 6px", fontSize: 10, fontWeight: 700, letterSpacing: 0.3 };
+const b2bBadge = { ...typeBadge, background: "#eef2ff", color: "#4338ca", border: "1px solid #ddd9fb" };
+const b2cBadge = { ...typeBadge, background: "#ecfdf5", color: "#047857", border: "1px solid #c6f0df" };
+
 export default function AdminComplaintsPage() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -130,7 +135,13 @@ export default function AdminComplaintsPage() {
                         <td style={{ padding: "12px 14px", fontWeight: 600, color: "#6366f1" }}>{c.complaintNumber}</td>
                         <td style={{ padding: "12px 14px" }}>{c.orderId}</td>
                         <td style={{ padding: "12px 14px" }}>
-                          <div style={{ fontWeight: 500 }}>{c.user?.name || "—"}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 500 }}>{c.user?.name || "—"}</span>
+                            {/* B2B and B2C complaints sit in one list, so the side is labelled */}
+                            <span style={c.user?.userType === "partner" ? b2bBadge : b2cBadge}>
+                              {c.user?.userType === "partner" ? "B2B" : "B2C"}
+                            </span>
+                          </div>
                           <div style={{ fontSize: 11, color: "#aaa" }}>{c.user?.phone || c.user?.email}</div>
                         </td>
                         <td style={{ padding: "12px 14px", maxWidth: 240 }}>

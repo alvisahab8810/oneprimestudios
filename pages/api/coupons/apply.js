@@ -2,6 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import Coupon from "@/models/Coupon";
 import Order from "@/models/Order";
 import getUserFromToken from "@/lib/getUserFromToken";
+import { couponDiscount, couponBlockReason } from "@/lib/couponRules";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -11,27 +12,14 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ message: "Unauthorized" });
 
   const { code, cartTotal } = req.body;
+  if (!code) return res.status(400).json({ message: "Coupon code required" });
 
   const coupon = await Coupon.findOne({
-    code: code.toUpperCase(),
+    code: String(code).toUpperCase().trim(),
     isActive: true,
   });
 
   if (!coupon) return res.status(400).json({ message: "Invalid coupon" });
-
-  if (coupon.expiryDate && new Date() > coupon.expiryDate)
-    return res.status(400).json({ message: "Coupon expired" });
-
-  if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit)
-    return res.status(400).json({ message: "Coupon usage limit reached" });
-
-  if (cartTotal < coupon.minOrderAmount)
-    return res.status(400).json({
-      message: `Minimum order ₹${coupon.minOrderAmount} required`,
-    });
-
-  if (!coupon.allowedUserTypes.includes(user.userType))
-    return res.status(403).json({ message: "Coupon not allowed for this user" });
 
   // per-user usage check
   const userUsage = await Order.countDocuments({
@@ -39,26 +27,23 @@ export default async function handler(req, res) {
     "coupon.code": coupon.code,
   });
 
-  if (userUsage >= coupon.perUserLimit)
-    return res.status(400).json({ message: "Coupon already used" });
-
-  // calculate discount
-  let discount = 0;
-
-  if (coupon.discountType === "percentage") {
-    discount = (cartTotal * coupon.discountValue) / 100;
-    if (coupon.maxDiscount)
-      discount = Math.min(discount, coupon.maxDiscount);
-  } else {
-    discount = coupon.discountValue;
+  // The same checks, in the same order, as the available-offers list
+  const reason = couponBlockReason(coupon, {
+    cartTotal: Number(cartTotal) || 0,
+    userType: user.userType,
+    userUsage,
+  });
+  if (reason) {
+    const status = reason === "Coupon not allowed for this user" ? 403 : 400;
+    return res.status(status).json({ message: reason });
   }
 
-  discount = Math.min(discount, cartTotal);
+  const discount = couponDiscount(coupon, cartTotal);
 
   return res.json({
     success: true,
     discount,
-    finalAmount: cartTotal - discount,
+    finalAmount: (Number(cartTotal) || 0) - discount,
     coupon: {
       code: coupon.code,
       discountType: coupon.discountType,

@@ -5,6 +5,8 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import { computeGstBreakdown } from "@/utils/gstBreakdown";
+import { requireAdminPermission } from "@/lib/adminAuth";
+import { INVOICE_DIR, ensureDir, pdfFilename } from "@/lib/documentStorage";
 
 // ── One Prime Studios constants ───────────────────────────────────────────────
 const OPS = {
@@ -49,17 +51,17 @@ function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
-
-  try {
+// The layout is built in one place: the admin route below and the buyer's own
+// download both call this, so both get the same file.
+export async function renderInvoicePdf(invoiceId) {
     await dbConnect();
 
-    const { invoiceId } = req.body;
-    if (!invoiceId) return res.status(400).json({ message: "invoiceId required" });
-
     const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+    if (!invoice) {
+      const err = new Error("Invoice not found");
+      err.statusCode = 404;
+      throw err;
+    }
 
     const inv    = invoice.toObject ? invoice.toObject() : invoice;
     const bill   = inv.partnerAddress || {};
@@ -367,22 +369,38 @@ export default async function handler(req, res) {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const pdfDir = path.join(process.cwd(), "public", "invoices");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+    // Outside /public: the file is only reachable through an authenticated route
+    const pdfDir = ensureDir(INVOICE_DIR);
 
-    const filename = `${invoice.invoiceNumber.replace(/\//g, "-")}.pdf`;
+    const filename = pdfFilename(invoice.invoiceNumber);
     const pdfPath  = path.join(pdfDir, filename);
 
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
-    invoice.pdfUrl = `/invoices/${filename}`;
+    invoice.pdfUrl = `/api/admin/documents/invoice/${invoice._id}`;
     await invoice.save();
 
-    return res.status(200).json({ message: "PDF generated", pdfUrl: invoice.pdfUrl });
+    return { pdfUrl: invoice.pdfUrl, filePath: pdfPath, filename };
+}
 
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
+
+  await dbConnect();
+  const admin = await requireAdminPermission(req, res, "invoices");
+  if (!admin) return;
+
+  try {
+    const { invoiceId } = req.body;
+    if (!invoiceId) return res.status(400).json({ message: "invoiceId required" });
+
+    const { pdfUrl } = await renderInvoicePdf(invoiceId);
+    return res.status(200).json({ message: "PDF generated", pdfUrl });
   } catch (error) {
     console.error("PDF GENERATION ERROR:", error);
-    return res.status(500).json({ message: error.message || "Server error" });
+    return res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Server error" });
   }
 }

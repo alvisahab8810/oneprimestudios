@@ -3,7 +3,7 @@
 // Homepage "Print On Demand" grid — real published products (dummy nahi).
 // Data: /api/products (wahi B2B/B2C filtering jo baaki homepage use karta hai).
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import axios from "axios";
@@ -81,12 +81,17 @@ export default function PrintOnDemand() {
     }
   };
 
+  // Blocks a second click that lands before the button has re-rendered
+  const addingRef = useRef(false);
+
   const handleAddToCart = async (product, e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Jis product me attributes/options hain uske liye seedha cart me daalna
-    // galat price bana dega — usse product page pe bhej rahe hain.
+    if (addingRef.current) return;
+
+    // A product with attributes or tier pricing would get the wrong price if it
+    // went straight into the cart, so it goes to the product page instead
     const needsOptions =
       (product.attributes && product.attributes.length > 0) ||
       (product.pricingTiers && product.pricingTiers.length > 0);
@@ -107,6 +112,7 @@ export default function PrintOnDemand() {
     const unitPrice = Number(product.salePrice ?? product.basePrice ?? 0);
 
     try {
+      addingRef.current = true;
       setAddingId(product._id);
       await axios.post(
         "/api/cart",
@@ -126,6 +132,7 @@ export default function PrintOnDemand() {
         toast.error("Failed to add to cart");
       }
     } finally {
+      addingRef.current = false;
       setAddingId(null);
     }
   };

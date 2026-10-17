@@ -100,6 +100,14 @@ export default function WalletHome() {
         >
           View Statement
         </button>
+
+        {/* For partners who pay by bank transfer instead of the online QR */}
+        <button
+          className="wallet-btn secondary"
+          onClick={() => router.push("/partner/wallet/manual")}
+        >
+          Manual Payment
+        </button>
       </div>
     </div>
   </div>

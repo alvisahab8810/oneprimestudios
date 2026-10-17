@@ -37,6 +37,8 @@ export default function AdminOrderDetail() {
   const [challanFile, setChallanFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
+  const [markingPaid, setMarkingPaid] = useState(false);
+
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   useEffect(() => {
@@ -68,6 +70,25 @@ export default function AdminOrderDetail() {
       setRemarks("");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update status");
+    }
+  };
+
+  // The courier hands the cash over after delivering, and this is where that
+  // is recorded; the order's own status is not touched
+  const markCodCollected = async () => {
+    try {
+      setMarkingPaid(true);
+      await axios.put(
+        `/api/admin/orders/${id}`,
+        { markPaid: true },
+        { withCredentials: true }
+      );
+      toast.success("Cash on delivery recorded");
+      setOrder((prev) => ({ ...prev, paymentStatus: "PAID" }));
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to record payment");
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -165,6 +186,30 @@ export default function AdminOrderDetail() {
                     {order.refundedAt && <> on {new Date(order.refundedAt).toLocaleString("en-IN")}</>}
                   </div>
                 )}
+                {/* The courier collects this money on our behalf, so an admin
+                    records it here once it has been handed over */}
+                {canViewPayments &&
+                  order.paymentMethod === "COD" &&
+                  order.paymentStatus !== "PAID" &&
+                  order.status !== "Cancelled" && (
+                    <div className="alert alert-warning mt-2 py-2 px-3 d-flex flex-wrap align-items-center gap-2" style={{ fontSize: 13 }}>
+                      <span>
+                        Cash on delivery — <strong>₹{order.total}</strong> to be collected
+                      </span>
+                      <button
+                        className="btn btn-sm btn-dark ms-auto"
+                        onClick={markCodCollected}
+                        disabled={markingPaid}
+                      >
+                        {markingPaid ? "Saving..." : "Mark as Paid"}
+                      </button>
+                    </div>
+                  )}
+                {canViewPayments && order.paymentMethod === "COD" && order.paymentStatus === "PAID" && (
+                  <div className="alert alert-success mt-2 py-1 px-3" style={{ fontSize: 13 }}>
+                    ✅ Cash of <strong>₹{order.total}</strong> collected on delivery
+                  </div>
+                )}
                 {canViewPayments && order.status === "Cancelled" && order.paymentMethod === "Razorpay" && (
                   <div className="alert alert-warning mt-2 py-1 px-3" style={{ fontSize: 13 }}>
                     ℹ Razorpay payment — manual refund required via Razorpay dashboard.
@@ -197,9 +242,27 @@ export default function AdminOrderDetail() {
               {canViewPayments && (
               <div className="col-md-4">
                 <h6 className="fw-semibold mb-2"><FaCreditCard className="me-2 text-primary" />Payment</h6>
-                <div>Method: {order.paymentMethod || "Not available"}</div>
+                <div>
+                  Method:{" "}
+                  {order.paymentMethod === "COD"
+                    ? "Cash on Delivery"
+                    : order.paymentMethod || "Not available"}
+                </div>
                 <div>Transaction ID: {order.transactionId || "—"}</div>
-                <div>Paid: <span className="fw-semibold text-success">₹{order.total}</span></div>
+                {/* Cash on delivery is collected by the courier, so the money
+                    is only in hand once the order is marked paid */}
+                <div>
+                  {order.paymentStatus === "PAID" ? "Paid: " : "To collect on delivery: "}
+                  <span
+                    className={
+                      order.paymentStatus === "PAID"
+                        ? "fw-semibold text-success"
+                        : "fw-semibold text-warning"
+                    }
+                  >
+                    ₹{order.total}
+                  </span>
+                </div>
               </div>
               )}
             </div>

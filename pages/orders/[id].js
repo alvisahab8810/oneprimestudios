@@ -6,7 +6,7 @@ import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
 import { toast } from "react-hot-toast";
 import Offcanvas from "@/components/header/Offcanvas";
-import { canUserCancelOrder } from "@/lib/orderRules";
+import { canUserCancelOrder, isDelivered } from "@/lib/orderRules";
 import {
   canRequestReturn,
   checkReturnEligibility,
@@ -19,7 +19,9 @@ import {
   FiPackage, FiCalendar, FiTruck, FiUser, FiCreditCard,
   FiMapPin, FiFileText, FiArrowLeft, FiUpload, FiAlertCircle,
   FiCheckCircle, FiClock, FiXCircle, FiRotateCcw, FiCamera, FiTrash2,
+  FiDownload, FiStar, FiRepeat,
 } from "react-icons/fi";
+import { downloadFile } from "@/lib/downloadDocument";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CFG = {
@@ -196,6 +198,19 @@ export default function OrderDetailPage() {
   const [returnPhotos, setReturnPhotos] = useState([]);
   const [submittingReturn, setSubmittingReturn] = useState(false);
 
+  // Post-delivery rating. One review per product on this order.
+  const [reviews, setReviews] = useState({});           // productId -> saved review
+  const [reviewDrafts, setReviewDrafts] = useState({}); // productId -> { rating, comment }
+  const [savingReview, setSavingReview] = useState(null);
+
+  // Quick Reorder — same flow for partner and retail accounts
+  const [reordering, setReordering] = useState(false);
+
+  // Invoices and e-way bills the buyer may download for this order
+  const [documents, setDocuments] = useState({ invoices: [], ewayBills: [] });
+  const [docsLoading, setDocsLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
+
   useEffect(() => {
     if (!id) return;
     const fetch = async () => {
@@ -215,6 +230,135 @@ export default function OrderDetailPage() {
     };
     fetch();
   }, [id]);
+
+  // Loaded separately from the order so a missing invoice never blocks the page
+  useEffect(() => {
+    if (!id) return;
+    const loadDocuments = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`/api/orders/documents/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        });
+        setDocuments({
+          invoices: res.data.invoices || [],
+          ewayBills: res.data.ewayBills || [],
+        });
+      } catch {
+        setDocuments({ invoices: [], ewayBills: [] });
+      } finally {
+        setDocsLoading(false);
+      }
+    };
+    loadDocuments();
+  }, [id]);
+
+  // Only a delivered order can be rated, so nothing is fetched before then
+  useEffect(() => {
+    if (!id || !order || !isDelivered(order)) return;
+    const loadReviews = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`/api/reviews?orderId=${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        });
+        const saved = {};
+        (res.data.reviews || []).forEach((r) => { saved[String(r.product)] = r; });
+        setReviews(saved);
+      } catch {
+        // A failed lookup only means the form starts empty
+      }
+    };
+    loadReviews();
+  }, [id, order]);
+
+  const draftFor = (productId) => {
+    const draft = reviewDrafts[productId] || {};
+    const saved = reviews[productId] || {};
+    return {
+      rating: Number(draft.rating ?? saved.rating ?? 0),
+      comment: draft.comment ?? saved.comment ?? "",
+    };
+  };
+
+  const setDraft = (productId, patch) =>
+    setReviewDrafts((prev) => ({ ...prev, [productId]: { ...draftFor(productId), ...patch } }));
+
+  const saveReview = async (productId) => {
+    const { rating, comment } = draftFor(productId);
+    if (!rating) {
+      toast.error("Pick a star rating first");
+      return;
+    }
+    setSavingReview(productId);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        "/api/reviews",
+        { orderId: id, productId, rating, comment },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      setReviews((prev) => ({ ...prev, [productId]: res.data.review }));
+      setReviewDrafts((prev) => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+      toast.success("Thanks for your review");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not save your review");
+    } finally {
+      setSavingReview(null);
+    }
+  };
+
+  // Puts this order's items back in the cart at today's prices
+  const reorder = async () => {
+    setReordering(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `/api/orders/reorder/${id}`,
+        {},
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      const skipped = res.data.skipped || [];
+      if (skipped.length) {
+        toast.success(`${res.data.added} item(s) added to your cart`);
+        toast.error(`Not added: ${skipped.join("; ")}`, { duration: 7000 });
+      } else {
+        toast.success("Items added to your cart");
+      }
+      router.push("/cart");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not reorder this order");
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  // The PDF is built when it is asked for, so this can take a few seconds
+  const downloadDocument = async (type, docId, filename) => {
+    try {
+      setDownloadingId(docId);
+      await downloadFile(
+        `/api/orders/documents/download?type=${type}&id=${docId}`,
+        filename
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not download the document");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const loadReturnRequests = async () => {
     try {
@@ -365,6 +509,21 @@ export default function OrderDetailPage() {
   const calculatedGst = order?.gstAmount || 0;
 
   const currentStep = TIMELINE.indexOf(order?.status);
+
+  // One rating block per product, even if the order has it on several lines
+  const reviewableProducts = Object.values(
+    (order?.items || []).reduce((acc, item) => {
+      const pid = String(item.product?._id || item.product || "");
+      if (pid && !acc[pid]) {
+        acc[pid] = {
+          productId: pid,
+          name: item.product?.name || item.productName || "Product",
+          image: item.product?.mainImage || "",
+        };
+      }
+      return acc;
+    }, {})
+  );
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) return (
@@ -748,7 +907,14 @@ export default function OrderDetailPage() {
                 {order.shipping?.street}<br />
                 {order.shipping?.city}, {order.shipping?.state} {order.shipping?.zip}
               </p>
-              <InfoRow label="Payment" value={order.paymentMethod || "Cash on Delivery"} />
+              <InfoRow
+                label="Payment"
+                value={
+                  order.paymentMethod === "COD"
+                    ? "Cash on Delivery"
+                    : order.paymentMethod || "—"
+                }
+              />
             </div>
           </div>
 
@@ -837,6 +1003,173 @@ export default function OrderDetailPage() {
               </div>
             </div>
           </div>
+          {/* ── Rate & review (delivered orders only) ── */}
+          {isDelivered(order) && reviewableProducts.length > 0 && (
+            <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "20px 22px", marginBottom: 20 }}>
+              <p style={sectionLabel}><FiStar size={11} style={{ marginRight: 5 }} />Rate &amp; Review</p>
+              <p style={{ margin: "0 0 16px", fontSize: 12.5, color: "#9ca3af" }}>
+                Your order has been delivered. Tell other buyers how it went — you can edit a review any time.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {reviewableProducts.map((p) => {
+                  const draft = draftFor(p.productId);
+                  const saved = reviews[p.productId];
+                  const busy = savingReview === p.productId;
+                  return (
+                    <div key={p.productId} style={{ border: "1px solid #f0f0f0", borderRadius: 12, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                        {p.image ? (
+                          <img src={p.image} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8, border: "1px solid #f0f0f0" }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: 8, background: "#f7f7f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <FiPackage size={15} color="#9ca3af" />
+                          </div>
+                        )}
+                        <div>
+                          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: "#111" }}>{p.name}</p>
+                          <p style={{ margin: 0, fontSize: 11.5, color: saved ? "#15803d" : "#9ca3af" }}>
+                            {saved ? "You rated this product" : "Not rated yet"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setDraft(p.productId, { rating: star })}
+                            title={`${star} star${star > 1 ? "s" : ""}`}
+                            aria-label={`Rate ${star} out of 5`}
+                            style={{ background: "none", border: "none", padding: 2, cursor: "pointer", lineHeight: 0 }}
+                          >
+                            <FiStar
+                              size={22}
+                              color={star <= draft.rating ? "#f59e0b" : "#d1d5db"}
+                              fill={star <= draft.rating ? "#f59e0b" : "none"}
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      <textarea
+                        value={draft.comment}
+                        onChange={(e) => setDraft(p.productId, { comment: e.target.value })}
+                        rows={3}
+                        maxLength={1000}
+                        placeholder="What did you think of the print quality, finish and delivery? (optional)"
+                        style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: 10, fontSize: 13, resize: "vertical", boxSizing: "border-box" }}
+                      />
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                        <button
+                          onClick={() => saveReview(p.productId)}
+                          disabled={busy}
+                          style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#111827", color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}
+                        >
+                          {busy ? "Saving..." : saved ? "Update review" : "Submit review"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Quick Reorder ── */}
+          <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "18px 22px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#111" }}>Order this again</div>
+              <div style={{ fontSize: 12.5, color: "#9ca3af", marginTop: 2 }}>
+                The same items, quantities and uploaded files go back into your cart at today&apos;s prices.
+              </div>
+            </div>
+            <button
+              onClick={reorder}
+              disabled={reordering}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 8, background: "#111", color: "#fff", border: "none", fontSize: 12.5, fontWeight: 700, cursor: reordering ? "not-allowed" : "pointer", opacity: reordering ? 0.7 : 1, whiteSpace: "nowrap" }}
+            >
+              <FiRepeat size={13} /> {reordering ? "Adding to cart..." : "Quick Reorder"}
+            </button>
+          </div>
+
+          {/* ── Help with this order ── */}
+          <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "18px 22px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#111" }}>Need help with this order?</div>
+              <div style={{ fontSize: 12.5, color: "#9ca3af", marginTop: 2 }}>
+                Raise a complaint with photos or a video, and follow our reply on the same page.
+              </div>
+            </div>
+            <a
+              href={`/complaints?orderId=${encodeURIComponent(order.orderNumber || "")}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 8, background: "#fff", color: "#111", border: "1.5px solid #e5e5e5", fontSize: 12.5, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}
+            >
+              Raise a complaint
+            </a>
+          </div>
+
+          {/* ── Documents ── */}
+          <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "20px 22px", marginBottom: 28 }}>
+            <p style={sectionLabel}><FiFileText size={11} style={{ marginRight: 5 }} />Documents</p>
+
+            {docsLoading ? (
+              <p style={{ margin: 0, fontSize: 13.5, color: "#9ca3af" }}>Checking for documents...</p>
+            ) : documents.invoices.length === 0 && documents.ewayBills.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13.5, color: "#9ca3af" }}>
+                Your invoice will appear here once it has been raised for this order.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {documents.invoices.map((inv) => (
+                  <div key={inv.id} style={docRowStyle}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#111" }}>
+                        Tax Invoice {inv.invoiceNumber}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                        {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        {inv.grandTotal > 0 ? `  ·  ₹${inv.grandTotal.toFixed(2)}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => downloadDocument("invoice", inv.id, `invoice-${inv.invoiceNumber}.pdf`)}
+                      disabled={downloadingId === inv.id}
+                      style={docBtnStyle(downloadingId === inv.id)}
+                    >
+                      <FiDownload size={13} />
+                      {downloadingId === inv.id ? "Preparing..." : "Download"}
+                    </button>
+                  </div>
+                ))}
+
+                {documents.ewayBills.map((bill) => (
+                  <div key={bill.id} style={docRowStyle}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#111" }}>
+                        E-Way Bill {bill.ewbNumber || `for ${bill.invoiceNumber}`}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                        {bill.validUpto
+                          ? `Valid up to ${new Date(bill.validUpto).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`
+                          : bill.status}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => downloadDocument("eway", bill.id, `eway-bill-${bill.ewbNumber || bill.invoiceNumber}.pdf`)}
+                      disabled={downloadingId === bill.id}
+                      style={docBtnStyle(downloadingId === bill.id)}
+                    >
+                      <FiDownload size={13} />
+                      {downloadingId === bill.id ? "Preparing..." : "Download"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -852,6 +1185,34 @@ export default function OrderDetailPage() {
     </>
   );
 }
+
+const docRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+  background: "#fafafa",
+  border: "1px solid #f0f0f0",
+  borderRadius: 10,
+  padding: "12px 14px",
+};
+
+const docBtnStyle = (busy) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  background: "#111",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  padding: "8px 14px",
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: busy ? "not-allowed" : "pointer",
+  opacity: busy ? 0.7 : 1,
+  whiteSpace: "nowrap",
+});
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 function InfoRow({ label, value }) {

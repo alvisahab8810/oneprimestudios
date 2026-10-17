@@ -5,7 +5,7 @@
 // 3. All other logic (B2B/B2C, cart, file upload, pricing tiers) 100% unchanged
 
 import { useRouter } from "next/router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import Head from "next/head";
@@ -18,6 +18,8 @@ import ProductFileUpload from "@/components/ProductFileUpload";
 import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
+import { FaTruck } from "react-icons/fa";
+import { isCodAvailable } from "@/lib/codRules";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -40,6 +42,24 @@ const formatImageDimensions = (dim) => {
   return "";
 };
 
+// Read-only star row used by the review list and its summary
+const Stars = ({ value = 0, size = 14 }) => (
+  <span style={{ display: "inline-flex", gap: 2, lineHeight: 0 }} aria-label={`Rated ${value} out of 5`}>
+    {[1, 2, 3, 4, 5].map((star) => (
+      <svg
+        key={star}
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill={star <= Math.round(value) ? "#f59e0b" : "#e5e7eb"}
+        aria-hidden="true"
+      >
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" />
+      </svg>
+    ))}
+  </span>
+);
+
 export default function ProductDetails() {
   const [specialRemarks, setSpecialRemarks] = useState("");
   const [orderName, setOrderName] = useState("");
@@ -53,6 +73,10 @@ export default function ProductDetails() {
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Buyer reviews, loaded once the product is known
+  const [reviews, setReviews] = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({ total: 0, average: 0 });
 
   const [activeImage, setActiveImage] = useState("");
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -94,6 +118,20 @@ export default function ProductDetails() {
       })
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Reviews are public, so this needs no token
+  useEffect(() => {
+    if (!product?._id) return;
+    axios
+      .get(`/api/reviews?productId=${product._id}`)
+      .then((res) => {
+        setReviews(res.data.reviews || []);
+        setReviewSummary(res.data.summary || { total: 0, average: 0 });
+      })
+      .catch(() => {
+        // Without reviews the section simply shows the empty state
+      });
+  }, [product?._id]);
 
   // City-based pricing: fetch the logged-in buyer's city (if any) so we can
   // show the city-specific price override. Anonymous visitors keep the
@@ -293,7 +331,12 @@ export default function ProductDetails() {
   //   }
   // };
   // NEW:
+  // Set the moment the first click lands, unlike state which only stops the
+  // second click once React has re-rendered the button
+  const addingToCart = useRef(false);
+
   const addToCart = async () => {
+    if (addingToCart.current) return;
     if (!product) return toast.error("Product not loaded");
     if (outOfStock) return toast.error(unavailableNote);
     if (qty < getMinOrderQty(product))
@@ -307,6 +350,7 @@ export default function ProductDetails() {
     const token = localStorage.getItem("token");
     if (!token) return toast.error("Please login first");
 
+    addingToCart.current = true;
     setIsUploading(true);
     try {
       let uploadedAttrUrls = [];
@@ -359,6 +403,7 @@ export default function ProductDetails() {
       }
       toast.error(err.response?.data?.message || "Failed to add to cart");
     } finally {
+      addingToCart.current = false;
       setIsUploading(false);
     }
   };
@@ -466,6 +511,49 @@ export default function ProductDetails() {
                 </div>
               );
             })()}
+
+            {/* Delivery is on us for this product, so the buyer is told up front */}
+            {product.freeDelivery && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "#e8f7ee",
+                  border: "1px solid #bfe5cd",
+                  color: "#1d7044",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  margin: "12px 0",
+                }}
+              >
+                <FaTruck /> Free Delivery
+              </div>
+            )}
+
+            {/* Retail buyers can pay for this one on delivery, so they are told
+                before they reach checkout */}
+            {!showB2BForm && isCodAvailable(product) && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  color: "#b45309",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  margin: "12px 0",
+                }}
+              >
+                <FaTruck /> Cash on Delivery available
+              </div>
+            )}
 
             {/* ── B2B Section ── */}
             {showB2BForm ? (
@@ -737,6 +825,48 @@ export default function ProductDetails() {
               </div>
             )}
           </aside>
+        </div>
+
+        {/* ── Ratings & reviews — written by buyers whose order was delivered ── */}
+        <div className="product-desc-section">
+          <h4 className="product-description">Ratings &amp; Reviews</h4>
+
+          {reviewSummary.total === 0 ? (
+            <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
+              No reviews yet. Buyers can rate this product once their order is delivered.
+            </p>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 28, fontWeight: 800, color: "#111", lineHeight: 1 }}>
+                  {reviewSummary.average.toFixed(1)}
+                </span>
+                <Stars value={reviewSummary.average} size={18} />
+                <span style={{ fontSize: 13, color: "#6b7280" }}>
+                  {reviewSummary.total} review{reviewSummary.total > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {reviews.map((r) => (
+                  <div key={r._id} style={{ border: "1px solid #eee", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                      <Stars value={r.rating} size={14} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>
+                        {r.userName || "Verified buyer"}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                        {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+                    {r.comment && (
+                      <p style={{ margin: 0, fontSize: 13.5, color: "#374151", lineHeight: 1.6 }}>{r.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* ── Description — outside sidebar so visible on mobile too ── */}

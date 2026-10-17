@@ -542,14 +542,13 @@ export default function Topbar() {
 
                            )} */}
 
-                            {user.userType === "partner" && user.memberId && (
-                                <li>
-                                  <Link href="/complaints/" target="_blank" className="gap-2">  
-                                     <i className="ri-customer-service-line"></i>  
-                                  Register  Complaint
-                                  </Link>
-                                </li>
-                              )}
+                          {/* Retail buyers raise complaints the same way partners do */}
+                          <li>
+                            <Link href="/complaints/" className="gap-2">
+                              <i className="ri-customer-service-line"></i>
+                              Help &amp; Complaints
+                            </Link>
+                          </li>
 
                            {user.userType === "partner" && user.memberId && (
                                 <li>

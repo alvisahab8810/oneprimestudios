@@ -86,11 +86,11 @@ export default async function handler(req, res) {
 
       partnerName:        order.user?.name        || "—",
       partnerCompanyName: order.user?.companyName || "",
-      partnerGst:         order.user?.gstNumber   || "",
+      partnerGst:         order.gstDetails?.gstin || order.user?.gstNumber || "",
       partnerAddress: {
         name:        order.shipping?.name   || order.user?.name || "—",
-        companyName: order.user?.companyName || "",
-        gst:         order.user?.gstNumber   || "",
+        companyName: order.gstDetails?.businessName || order.user?.companyName || "",
+        gst:         order.gstDetails?.gstin || order.user?.gstNumber   || "",
         phone:       order.shipping?.phone   || order.user?.phone || "—",
         email:       order.user?.email       || "",
         street:      order.user?.businessAddress || order.shipping?.street || "",

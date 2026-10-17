@@ -7,7 +7,7 @@ export const PERMISSIONS = [
   { key: "reports.product_sales", label: "Product Sales Report" },
    // ✅ NEW
   { key: "categories", label: "Categories" },
-  { key: "leads", label: "Leads" },
+  { key: "leads", label: "Contacts" },
   { key: "dispatch_requests", label: "Dispatch Requests" },
   
   { key: "products", label: "Products" },
@@ -15,4 +15,5 @@ export const PERMISSIONS = [
   { key: "invoices", label: "Invoices" },
   { key: "site_stats", label: "Site Stats" },
   { key: "rate_couriers", label: "Rate List Couriers" },
+  { key: "wallet", label: "Wallet Management" },
 ];

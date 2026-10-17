@@ -64,6 +64,8 @@ handler.put(async (req, res) => {
       minOrderQty,
       lowStockThreshold,
       isFeatured,
+
+      freeDelivery,
       gstPercent,
       hsnCode,      // NEW: HSN/SAC code
       shipping,     // NEW: courier package details (JSON string)
@@ -142,6 +144,8 @@ handler.put(async (req, res) => {
       // Blank means "use the site default", so it is stored as null, not 0
       lowStockThreshold: parseLowStockThreshold(lowStockThreshold),
       isFeatured: isFeatured === "true" || isFeatured === true,
+
+      freeDelivery: freeDelivery === "true" || freeDelivery === true,
       gstPercent: gstPercent ? Number(gstPercent) : 0,
       hsnCode: hsnCode || "",  // NEW
       shipping: safeParse(shipping, product.shipping || {}),  // NEW

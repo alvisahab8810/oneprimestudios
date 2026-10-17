@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     const cart = await Cart.findOne({ user: user._id }).populate({
       path: "items.product",
-      select: "name shipping",
+      select: "name shipping freeDelivery",
       model: Product,
     });
     const items = cart?.items || [];
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       serviceable: quote.available,
       charge: quote.charge,
+      freeDelivery: !!quote.freeDelivery,
       courierName: quote.courierName || "",
       etd: quote.etd || "",
       weight: quote.weight,

@@ -97,7 +97,8 @@ export default async function handler(req, res) {
     const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}&id=${user._id}`;
 
     // ✅ Send email using CENTRALIZED email system (Google Workspace)
-    await sendEmail({
+    try {
+      await sendEmail({
       to: email,
       subject: "Password Reset Request",
       html: `
@@ -114,6 +115,15 @@ export default async function handler(req, res) {
         <p>If you didn’t request this, you can safely ignore this email.</p>
       `,
     });
+
+    } catch (mailError) {
+      // The account is fine; only delivery failed, so say so rather than
+      // showing the customer a blank internal error
+      console.error("Reset email could not be sent:", mailError?.responseCode || mailError?.code || "", mailError?.message);
+      return res.status(502).json({
+        message: "We could not send the reset email just now. Please try again in a minute.",
+      });
+    }
 
     return res.status(200).json({
       message: "Password reset link sent to email!",

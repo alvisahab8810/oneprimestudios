@@ -243,6 +243,10 @@ const ProductSchema = new mongoose.Schema(
     gstPercent: { type: Number, default: 0 }, // GST % applicable on this product (0, 5, 12, 18, 28)
     hsnCode: { type: String, default: "" }, // NEW: HSN/SAC code for GST invoicing
 
+    // When the admin absorbs the courier cost for a product, the buyer is not
+    // charged for its delivery and the product page says so instead
+    freeDelivery: { type: Boolean, default: false },
+
     // NEW: package details used to book a courier shipment (Shiprocket)
     shipping: {
       weight: { type: Number, default: 0 }, // kg, per unit
@@ -281,6 +285,9 @@ const ProductSchema = new mongoose.Schema(
       quantityOptions: { type: [Number], default: [] },
       // WhatsApp number used by the product page's chat and order buttons
       whatsappNumber: { type: String, default: "" },
+      // Cash on delivery is on for every retail product; this turns it off for
+      // this one product only
+      codDisabled: { type: Boolean, default: false },
     },
   },
   { timestamps: true }

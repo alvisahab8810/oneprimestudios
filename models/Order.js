@@ -194,7 +194,7 @@ const OrderSchema = new mongoose.Schema(
     // paymentMethod: { type: String, default: "Cash on Delivery" },
     paymentMethod: {
       type: String,
-      enum: ["Wallet", "Razorpay"],
+      enum: ["Wallet", "Razorpay", "COD"],
       required: true,
     },
 
@@ -237,6 +237,13 @@ const OrderSchema = new mongoose.Schema(
 
     total: { type: Number, required: true },
     gstAmount: { type: Number, default: 0 }, // GST included in total
+
+    // A retail buyer who wants the invoice made out to a business gives these
+    // at checkout. Partners are not asked: theirs come from their own profile.
+    gstDetails: {
+      gstin: { type: String, default: "" },
+      businessName: { type: String, default: "" },
+    },
 
     // What the courier quoted for this delivery, charged to the customer as "Transport Charge"
     shippingCharge: { type: Number, default: 0 },
