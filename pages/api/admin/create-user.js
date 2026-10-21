@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import Admin from "@/models/Admin";
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { requireSuperAdmin } from "@/lib/adminAuth";
 import { sendEmail } from "@/lib/sendEmail";
 import { logActivity } from "@/lib/logActivity";
 
@@ -14,25 +14,9 @@ export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    // 1️⃣ Read JWT from cookie
-    const token = req.cookies.admin_auth;
-
-    console.log("COOKIES:", req.cookies);
-    console.log("TOKEN:", req.cookies?.admin_auth);
-
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // 2️⃣ Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    console.log("DECODED JWT:", decoded);
-
-    // 3️⃣ Super Admin check
-   if (decoded.role !== "admin") {
-  return res.status(403).json({ message: "Access denied" });
-}
+    // Staff accounts are created by the super admin only
+    const me = await requireSuperAdmin(req, res);
+    if (!me) return;
 
     // 4️⃣ Validate input
     const { name, email, role } = req.body;

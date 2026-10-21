@@ -13,6 +13,7 @@ import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
 import { checkOrderable } from "@/lib/stockRules";
+import { checkDeliverable } from "@/lib/deliveryZones";
 import { isCodAvailable } from "@/lib/codRules";
 import {
   checkPaymentMatchesOrder,
@@ -147,7 +148,7 @@ export default async function handler(req, res) {
     const productIds = items.map((i) => i.product);
     const productDocs = await Product.find(
       { _id: { $in: productIds } },
-      "name shipping freeDelivery stockStatus minOrderQty stock b2cOptions"
+      "name shipping freeDelivery stockStatus minOrderQty stock b2cOptions deliveryZones"
     ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });
@@ -178,6 +179,13 @@ export default async function handler(req, res) {
     const deliveryPincode = String(
       req.body.shippingAddress?.zip || fullUser.pinCode || ""
     ).trim();
+
+    // Products the admin limited to certain PIN codes are checked against the
+    // address this order actually ships to — the browser is never trusted
+    for (const item of items) {
+      const problem = checkDeliverable(productMap[String(item.product)], deliveryPincode);
+      if (problem) return res.status(400).json({ message: problem });
+    }
 
     if (chargeTransport) {
       shippingQuote = await quoteShipping({

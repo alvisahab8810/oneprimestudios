@@ -15,9 +15,10 @@ import styles from "@/styles/ProductDetails.module.css";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
-import { getEffectivePrice, getCityExtraCharge } from "@/lib/resolveProductPrice";
+import { priceForQuantity } from "@/lib/productPricing";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
+import { deliveryStatus, isValidPincode, normalizePincode } from "@/lib/deliveryZones";
 import { FaTruck } from "react-icons/fa";
 import { isCodAvailable } from "@/lib/codRules";
 
@@ -74,6 +75,10 @@ export default function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Coupons on offer for this side of the business
+  const [couponOffers, setCouponOffers] = useState([]);
+  const [copiedCode, setCopiedCode] = useState("");
+
   // Buyer reviews, loaded once the product is known
   const [reviews, setReviews] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({ total: 0, average: 0 });
@@ -88,9 +93,18 @@ export default function ProductDetails() {
   const [selectedAttrs, setSelectedAttrs] = useState({});
   const [userCity, setUserCity] = useState("");
 
+  // The PIN code the delivery check is answered for: the buyer's own, or one
+  // they typed in. Products the admin has not limited ignore it entirely.
+  const [pincode, setPincode] = useState("");
+  const [pincodeInput, setPincodeInput] = useState("");
+
+  // Whether this product reaches that PIN code — see lib/deliveryZones.js
+  const delivery = useMemo(() => deliveryStatus(product, pincode), [product, pincode]);
+
   // File upload is optional — Add to Cart is available as soon as the product loads.
   // Attributes marked required (e.g. a mandatory upload) are still enforced in validateUploadAttrs().
-  const canAddToCart = !!product && !isOutOfStock(product);
+  // A product that cannot be delivered to the buyer's PIN code cannot be ordered either.
+  const canAddToCart = !!product && !isOutOfStock(product) && delivery.serviceable;
 
   // Which form the buyer sees. A product the admin marked "B2C only" must never
   // render the B2B form, even when a stale b2bOptions.enabled is still true on
@@ -119,6 +133,43 @@ export default function ProductDetails() {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  // Offers are shown to visitors who have not signed in yet as well, so the
+  // product's own side decides which coupons are advertised
+  useEffect(() => {
+    if (!product?._id) return;
+    const audience = product.productFor === "b2b" ? "b2b" : "b2c";
+    const token = localStorage.getItem("token");
+    axios
+      .get(`/api/coupons/offers?audience=${audience}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      .then((res) => setCouponOffers(res.data.offers || []))
+      .catch(() => {
+        // No offers strip is shown if this fails
+      });
+  }, [product?._id, product?.productFor]);
+
+  const copyCoupon = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      toast.success(`${code} copied`);
+      setTimeout(() => setCopiedCode((c) => (c === code ? "" : c)), 2000);
+    } catch {
+      toast.error("Could not copy the code");
+    }
+  };
+
+  // "Apply" here saves the code for the cart, where the discount is worked out
+  const applyCouponLater = (code) => {
+    try {
+      localStorage.setItem("pendingCoupon", code);
+    } catch {
+      // Private browsing can block storage — the buyer can still type the code
+    }
+    toast.success(`${code} will be applied on your cart`);
+  };
+
   // Reviews are public, so this needs no token
   useEffect(() => {
     if (!product?._id) return;
@@ -133,6 +184,19 @@ export default function ProductDetails() {
       });
   }, [product?._id]);
 
+  // A PIN code checked on an earlier product answers the check straight away
+  useEffect(() => {
+    try {
+      const saved = normalizePincode(localStorage.getItem("deliveryPincode"));
+      if (isValidPincode(saved)) {
+        setPincode(saved);
+        setPincodeInput(saved);
+      }
+    } catch {
+      // Private browsing can block storage — the buyer can still type it in
+    }
+  }, []);
+
   // City-based pricing: fetch the logged-in buyer's city (if any) so we can
   // show the city-specific price override. Anonymous visitors keep the
   // default product price — see lib/resolveProductPrice.js.
@@ -141,7 +205,16 @@ export default function ProductDetails() {
     if (!token) return;
     axios
       .get("/api/user/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setUserCity(res.data?.city || ""))
+      .then((res) => {
+        setUserCity(res.data?.city || "");
+        // The saved profile PIN code answers the delivery check without the
+        // buyer typing anything; one they typed themselves is left alone.
+        const profilePin = normalizePincode(res.data?.pinCode);
+        if (isValidPincode(profilePin)) {
+          setPincode((current) => current || profilePin);
+          setPincodeInput((current) => current || profilePin);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -170,67 +243,11 @@ export default function ProductDetails() {
     }
   };
 
-  function calculateDynamicPrice(qty, tiers, baseTotalPrice, minOrderQty) {
-    const allTiers = [
-      { minQty: minOrderQty, totalPrice: baseTotalPrice },
-      ...tiers.map((t) => ({ minQty: Number(t.minQty), totalPrice: Number(t.pricePerUnit) })),
-    ].sort((a, b) => a.minQty - b.minQty);
-
-    let matchingTier = allTiers.find((t) => qty <= t.minQty);
-    if (!matchingTier) {
-      const last = allTiers[allTiers.length - 1];
-      return qty * (last.totalPrice / last.minQty);
-    }
-    return qty * (matchingTier.totalPrice / matchingTier.minQty);
-  }
-
+  // Every screen quotes from lib/productPricing.js, so the cart and the
+  // partner rate list can never disagree with what is shown here.
   const finalPrice = useMemo(() => {
     if (!product) return 0;
-    const minQty = product.minOrderQty || 1;
-    const effectiveQty = qty < minQty ? minQty : qty;
-    const batchCount = effectiveQty / minQty;
-    // Sale price wins over base price when set — same convention used
-    // elsewhere in the app (ProductSlider, cart unit-price fallback).
-    const { basePrice, salePrice } = getEffectivePrice(product);
-    const sellingPrice = salePrice != null ? salePrice : basePrice;
-    const baseTierPrice = calculateDynamicPrice(effectiveQty, product.pricingTiers, sellingPrice, minQty);
-
-    // City pricing is a flat add-on charge for the buyer's city — added once
-    // to the total, not multiplied by quantity.
-    const cityExtraCharge = getCityExtraCharge(product, userCity);
-
-    // Resolve the priceModifier for an attribute option, respecting qty-based tiers.
-    const resolveAttrPrice = (opt, qty) => {
-      const tiers = opt.pricingTiers;
-      if (!tiers || tiers.length === 0) return Number(opt.priceModifier || 0);
-      // Pick the highest-minQty tier that is still <= qty
-      const matched = [...tiers]
-        .filter(t => Number(t.minQty) <= qty)
-        .sort((a, b) => Number(b.minQty) - Number(a.minQty))[0];
-      return matched ? Number(matched.priceModifier || 0) : Number(opt.priceModifier || 0);
-    };
-
-    let attrExtraPerBatch = 0;
-    (product.attributes || []).forEach((attr) => {
-      const sel = selectedAttrs[attr.name];
-      if (!sel) return;
-      if (attr.type === "select") {
-        const opt = (attr.values || []).find((v) => v.label === sel);
-        if (opt) attrExtraPerBatch += resolveAttrPrice(opt, effectiveQty);
-      }
-      if (attr.type === "checkbox") {
-        (Array.isArray(sel) ? sel : []).forEach((label) => {
-          const opt = (attr.values || []).find((v) => v.label === label);
-          if (opt) attrExtraPerBatch += resolveAttrPrice(opt, effectiveQty);
-        });
-      }
-      if (attr.type === "number") {
-        const numeric = Number(sel);
-        if (!isNaN(numeric)) attrExtraPerBatch += numeric;
-      }
-    });
-
-    return baseTierPrice + attrExtraPerBatch * batchCount + cityExtraCharge;
+    return priceForQuantity(product, qty, { selectedAttrs, city: userCity }).total;
   }, [product, qty, selectedAttrs, userCity]);
 
   const quantityLadder = useMemo(
@@ -245,10 +262,29 @@ export default function ProductDetails() {
 
   // A B2B partner is shown nothing about stock, so a product that cannot be
   // ordered is simply marked unavailable rather than naming the stock level
-  const unavailableLabel = showB2BForm ? "Currently Unavailable" : "Out of Stock";
-  const unavailableNote = showB2BForm
+  // A product we cannot deliver there is not a stock problem, so it says so
+  const unavailableLabel = !delivery.serviceable
+    ? "Not Deliverable"
+    : showB2BForm
+    ? "Currently Unavailable"
+    : "Out of Stock";
+  const unavailableNote = !delivery.serviceable
+    ? delivery.message
+    : showB2BForm
     ? "This product is currently unavailable."
     : "This product is currently out of stock.";
+
+  // Remembered, so the next product the buyer opens is already answered
+  const applyPincode = () => {
+    const pin = normalizePincode(pincodeInput);
+    if (!isValidPincode(pin)) return toast.error("Enter a valid 6-digit PIN code");
+    setPincode(pin);
+    try {
+      localStorage.setItem("deliveryPincode", pin);
+    } catch {
+      // Storage being unavailable only costs us the next page's head start
+    }
+  };
 
   const increaseQty = () => {
     const list = quantityLadder;
@@ -339,6 +375,7 @@ export default function ProductDetails() {
     if (addingToCart.current) return;
     if (!product) return toast.error("Product not loaded");
     if (outOfStock) return toast.error(unavailableNote);
+    if (!delivery.serviceable) return toast.error(delivery.message);
     if (qty < getMinOrderQty(product))
       return toast.error(`Minimum order quantity is ${getMinOrderQty(product)}`);
     // NEW: validate orderName is filled for B2B products
@@ -474,6 +511,59 @@ export default function ProductDetails() {
             )}
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
             <p className="product-min-order">Minimum Order: {getMinOrderQty(product)}</p>
+
+            {/* Delivery check — shown only for products the admin limited to
+                certain PIN codes, because everything else delivers everywhere
+                and asking would only get in the buyer's way. */}
+            {delivery.restricted && (
+              <div style={{ margin: "10px 0 14px", padding: "12px 14px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#f8fafc" }}>
+                <label htmlFor="delivery-pincode" style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Check delivery at your PIN code
+                </label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <input
+                    id="delivery-pincode"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="6-digit PIN code"
+                    value={pincodeInput}
+                    onChange={(e) => setPincodeInput(normalizePincode(e.target.value))}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPincode(); } }}
+                    style={{ flex: "1 1 140px", minWidth: 0, height: 38, padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={applyPincode}
+                    disabled={!isValidPincode(pincodeInput)}
+                    style={{
+                      height: 38,
+                      padding: "0 18px",
+                      border: 0,
+                      borderRadius: 8,
+                      background: isValidPincode(pincodeInput) ? "#4f6ef7" : "#cbd5e1",
+                      color: "#fff",
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: isValidPincode(pincodeInput) ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    Check
+                  </button>
+                </div>
+                {delivery.checked ? (
+                  <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 600, color: delivery.serviceable ? "#15803d" : "#b91c1c" }}>
+                    {delivery.serviceable
+                      ? `Delivery is available at ${delivery.pincode}.`
+                      : delivery.message}
+                  </p>
+                ) : (
+                  <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "#64748b" }}>
+                    This product is delivered to selected PIN codes only.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* ── GST Breakdown (B2B only) ── */}
             {showB2BForm && Number(product.gstPercent) > 0 && (() => {
@@ -815,8 +905,8 @@ export default function ProductDetails() {
                     </button>
                   ) : (
                     <>
-                      <button className={styles.primaryBtn} disabled>Out of Stock</button>
-                      <p className="text-muted mt-2">This product is currently out of stock.</p>
+                      <button className={styles.primaryBtn} disabled>{unavailableLabel}</button>
+                      <p className="text-muted mt-2">{unavailableNote}</p>
                     </>
                   )}
 
@@ -826,6 +916,75 @@ export default function ProductDetails() {
             )}
           </aside>
         </div>
+
+        {/* ── Offers — copy the code, or send it straight to the cart ── */}
+        {couponOffers.length > 0 && (
+          <div className="product-desc-section">
+            <h4 className="product-description">Available Offers</h4>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {couponOffers.map((o) => (
+                <div
+                  key={o.code}
+                  style={{
+                    flex: "1 1 260px", minWidth: 0,
+                    border: "1px dashed #fdba74", background: "#fff7ed",
+                    borderRadius: 12, padding: "12px 14px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 800, letterSpacing: 0.5,
+                      background: "#fff", color: "#9a3412",
+                      border: "1px dashed #fb923c", borderRadius: 5, padding: "3px 8px",
+                    }}>
+                      {o.code}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#15803d" }}>{o.headline}</span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 5 }}>
+                    {o.minOrderAmount > 0
+                      ? `On orders above ₹${o.minOrderAmount}`
+                      : "On any order"}
+                    {o.expiryDate && (
+                      <> · Valid till {new Date(o.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => copyCoupon(o.code)}
+                      style={{
+                        background: "#fff", color: "#9a3412", border: "1.5px solid #fdba74",
+                        borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {copiedCode === o.code ? "Copied" : "Copy code"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyCouponLater(o.code)}
+                      style={{
+                        background: "#c2410c", color: "#fff", border: "none",
+                        borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>
+              Codes are applied on the cart, where the saving is calculated on your order total.
+            </p>
+          </div>
+        )}
 
         {/* ── Ratings & reviews — written by buyers whose order was delivered ── */}
         <div className="product-desc-section">

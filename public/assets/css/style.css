@@ -5372,3 +5372,230 @@ ease;
   z-index: 3;
   /* debug ke liye: background: rgba(0,128,255,.35); */
 }
+
+/* ── Uploaded file preview (product detail page) ───────────────────────── */
+.ops-thumb {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ops-thumb:hover {
+  border-color: #e10600;
+}
+
+.ops-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ops-thumb-ext {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.4px;
+}
+
+.ops-preview-link {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e10600;
+  cursor: pointer;
+}
+
+.ops-preview-link:hover {
+  text-decoration: underline;
+}
+
+.ops-attached {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ops-attached-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ops-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  background: rgba(17, 17, 17, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ops-preview-box {
+  width: 100%;
+  max-width: 880px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ops-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ops-preview-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ops-preview-title strong {
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.ops-preview-title span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ops-preview-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #f3f4f6;
+  font-size: 22px;
+  line-height: 1;
+  color: #111;
+  cursor: pointer;
+}
+
+.ops-preview-body {
+  flex: 1;
+  min-height: 260px;
+  overflow: auto;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.ops-preview-image {
+  max-width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+}
+
+.ops-preview-frame {
+  width: 100%;
+  height: 68vh;
+  border: none;
+  background: #fff;
+}
+
+.ops-preview-note {
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.ops-preview-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.ops-preview-download {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ops-preview-download:hover {
+  color: #fff;
+  opacity: 0.9;
+}
+
+@media (max-width: 575px) {
+  .ops-preview-frame {
+    height: 60vh;
+  }
+}
+
+/* ── "See it in Action" video slides ── */
+.action-video {
+  object-fit: cover;
+  background: #0d0d0d;
+}
+
+/* Sound control for the slide on screen; only put up when it is a video */
+.action-mute {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s ease;
+}
+
+.action-mute:hover {
+  background: #e10600;
+}
+
+@media (max-width: 575px) {
+  .action-mute {
+    bottom: 10px;
+    padding: 6px 13px;
+    font-size: 12px;
+  }
+}

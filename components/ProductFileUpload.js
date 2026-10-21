@@ -12,7 +12,7 @@
 // 8. CDR files always skip dimension check (no way to read CDR dimensions in browser)
 // 9. All paths (image/pdf/cdr/other) produce clear toast messages with correct unit display
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { toast } from "react-hot-toast";
 
 // ── PDF.js loader ────────────────────────────────────────────────────────────
@@ -94,6 +94,155 @@ const parseAllowedDims = (dimStr) => {
 // ── Constants ────────────────────────────────────────────────────────────────
 const PRINT_DPI = 300; // used for image px conversion from inch/mm
 
+// ── File kind, from the MIME type with an extension fallback ─────────────────
+// Some browsers report "application/octet-stream" for PDFs, so the extension
+// is checked too — the same fallback the dimension validation already uses.
+const fileKind = (file) => {
+  if (!file) return "other";
+  const ext = (file.name?.split(".").pop() || "").toLowerCase();
+  if (file.type?.startsWith("image/") && ext !== "svg") return "image";
+  if (ext === "pdf" || file.type === "application/pdf") return "pdf";
+  if (ext === "svg" || file.type === "image/svg+xml") return "image";
+  return "other";
+};
+
+// ── Thumbnail of the picked file ─────────────────────────────────────────────
+// Images are shown straight from an object URL; the first page of a PDF is
+// rendered to a canvas with the PDF.js build already used for validation.
+// Anything the browser cannot draw (CDR, AI, EPS) falls back to its extension.
+function FileThumb({ file, onOpen }) {
+  const [thumb, setThumb] = useState("");
+  const kind = fileKind(file);
+  const ext = (file?.name?.split(".").pop() || "file").toUpperCase();
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+
+    const build = async () => {
+      if (!file) return;
+
+      if (kind === "image") {
+        objectUrl = URL.createObjectURL(file);
+        if (!cancelled) setThumb(objectUrl);
+        return;
+      }
+
+      if (kind === "pdf") {
+        try {
+          const pdfjsLib = await loadPdfJs();
+          if (!pdfjsLib || cancelled) return;
+
+          const data = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data }).promise;
+          const page = await pdf.getPage(1);
+
+          const base = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: 160 / base.width });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+          if (!cancelled) setThumb(canvas.toDataURL("image/png"));
+        } catch (err) {
+          // The row still shows the file name and the extension badge
+          console.error("PDF thumbnail error:", err);
+        }
+      }
+    };
+
+    build();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [file, kind]);
+
+  return (
+    <button
+      type="button"
+      className="ops-thumb"
+      onClick={onOpen}
+      title="Click to preview"
+      aria-label={`Preview ${file?.name || "file"}`}
+    >
+      {thumb ? (
+        <img src={thumb} alt={file?.name || "preview"} />
+      ) : (
+        <span className="ops-thumb-ext">{ext}</span>
+      )}
+    </button>
+  );
+}
+
+// ── Full preview, over the page ──────────────────────────────────────────────
+function FilePreviewModal({ file, onClose }) {
+  const [url, setUrl] = useState("");
+  const kind = fileKind(file);
+
+  useEffect(() => {
+    if (!file) return undefined;
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!file) return null;
+
+  return (
+    <div className="ops-preview-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="ops-preview-box" onClick={(e) => e.stopPropagation()}>
+        <div className="ops-preview-head">
+          <div className="ops-preview-title">
+            <strong>{file.name}</strong>
+            <span>{(file.size / 1024).toFixed(1)} KB</span>
+          </div>
+          <button type="button" className="ops-preview-close" onClick={onClose} aria-label="Close preview">
+            &times;
+          </button>
+        </div>
+
+        <div className="ops-preview-body">
+          {!url ? (
+            <p className="ops-preview-note">Loading preview...</p>
+          ) : kind === "image" ? (
+            <img src={url} alt={file.name} className="ops-preview-image" />
+          ) : kind === "pdf" ? (
+            <iframe src={url} title={file.name} className="ops-preview-frame" />
+          ) : (
+            <div className="ops-preview-note">
+              <p>This file type cannot be shown in the browser.</p>
+              <p>Download it to check your artwork before placing the order.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="ops-preview-foot">
+          {url && (
+            <a className="ops-preview-download" href={url} download={file.name}>
+              Download
+            </a>
+          )}
+          <button type="button" className="ops-btn-cancel" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductFileUpload({
   product,
   selectedFiles = [],
@@ -113,6 +262,10 @@ export default function ProductFileUpload({
   singleFile = false,
 }) {
   const [openPanel, setOpenPanel] = useState(false);
+
+  // The file currently shown full size, if any
+  const [previewFile, setPreviewFile] = useState(null);
+
   const fileInputRef = useRef(null);
 
   // ── Derived dimension values ─────────────────────────────────────────────
@@ -374,6 +527,11 @@ export default function ProductFileUpload({
 
   const openPicker = () => fileInputRef.current?.click();
 
+  // Whatever the buyer has picked, in both the attribute and the legacy mode
+  const attachedFiles = attributeKey
+    ? (uploadedAttrFiles?.[attributeKey] ? [uploadedAttrFiles[attributeKey]] : [])
+    : selectedFiles;
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className={`ops-file-uploader ${openPanel ? "expanded" : ""}`}>
@@ -388,16 +546,38 @@ export default function ProductFileUpload({
         onChange={onInputChange}
       />
 
-      {/* Closed state — just the trigger button */}
+      {/* Closed state — the trigger, plus whatever is already attached */}
       {!openPanel ? (
-        <button
-          className="ops-upload-primary"
-          onClick={() => setOpenPanel(true)}
-          type="button"
-        >
-          <img src="/assets/images/icons/upload.svg" alt="upload" />
-          {attributeName || "Upload Your Design"}
-        </button>
+        <>
+          <button
+            className="ops-upload-primary"
+            onClick={() => setOpenPanel(true)}
+            type="button"
+          >
+            <img src="/assets/images/icons/upload.svg" alt="upload" />
+            {attributeName || "Upload Your Design"}
+          </button>
+
+          {attachedFiles.length > 0 && (
+            <div className="ops-attached">
+              {attachedFiles.map((file, idx) => (
+                <div className="ops-attached-item" key={idx}>
+                  <FileThumb file={file} onOpen={() => setPreviewFile(file)} />
+                  <div className="ops-file-meta">
+                    <div className="ops-file-name">{file.name}</div>
+                    <button
+                      type="button"
+                      className="ops-preview-link"
+                      onClick={() => setPreviewFile(file)}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         /* Open panel */
         <div className="ops-panel" onDrop={onDrop} onDragOver={onDragOver}>
@@ -461,10 +641,9 @@ export default function ProductFileUpload({
                 ) : (
                   <div className="ops-file-row">
                     <div className="ops-file-left">
-                      <img
-                        src="/assets/images/icons/file.svg"
-                        className="ops-file-icon"
-                        alt="file"
+                      <FileThumb
+                        file={uploadedAttrFiles[attributeKey]}
+                        onOpen={() => setPreviewFile(uploadedAttrFiles[attributeKey])}
                       />
                       <div className="ops-file-meta">
                         <div className="ops-file-name">
@@ -473,6 +652,13 @@ export default function ProductFileUpload({
                         <div className="ops-file-sub">
                           {(uploadedAttrFiles[attributeKey].size / 1024).toFixed(1)} KB
                         </div>
+                        <button
+                          type="button"
+                          className="ops-preview-link"
+                          onClick={() => setPreviewFile(uploadedAttrFiles[attributeKey])}
+                        >
+                          Preview
+                        </button>
                       </div>
                     </div>
                     <button
@@ -492,16 +678,19 @@ export default function ProductFileUpload({
                     selectedFiles.map((file, idx) => (
                       <div className="ops-file-row" key={idx}>
                         <div className="ops-file-left">
-                          <img
-                            src="/assets/images/icons/file.svg"
-                            className="ops-file-icon"
-                            alt="file"
-                          />
+                          <FileThumb file={file} onOpen={() => setPreviewFile(file)} />
                           <div className="ops-file-meta">
                             <div className="ops-file-name">{file.name}</div>
                             <div className="ops-file-sub">
                               {(file.size / 1024).toFixed(1)} KB
                             </div>
+                            <button
+                              type="button"
+                              className="ops-preview-link"
+                              onClick={() => setPreviewFile(file)}
+                            >
+                              Preview
+                            </button>
                           </div>
                         </div>
                         <button
@@ -553,6 +742,10 @@ export default function ProductFileUpload({
             </div>
           </div>
         </div>
+      )}
+
+      {previewFile && (
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}
     </div>
   );

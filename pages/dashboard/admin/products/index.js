@@ -195,7 +195,11 @@ export default function AdminProductList() {
           <div className="panel mt-3">
             <div className="toolbar">
               <div className="search-wrap">
-                <FiSearch className="search-icon" />
+                {/* The icon sits in a span: styled-jsx scopes its classes to real
+                    elements, so the class on an icon component never applies */}
+                <span className="search-icon">
+                  <FiSearch />
+                </span>
                 <input
                   type="text"
                   className="form-control search-input"
@@ -525,6 +529,8 @@ export default function AdminProductList() {
           left: 12px;
           top: 50%;
           transform: translateY(-50%);
+          display: flex;
+          align-items: center;
           color: var(--muted);
           pointer-events: none;
         }

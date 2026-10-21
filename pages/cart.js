@@ -667,7 +667,7 @@
 
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Topbar from "@/components/header/Topbar";
@@ -702,6 +702,10 @@ export default function CartPage() {
   const [offers, setOffers] = useState([]);
   const [offersLoading, setOffersLoading] = useState(false);
   const [showOffers, setShowOffers] = useState(false);
+  const [copiedCode, setCopiedCode] = useState("");
+
+  // A code picked on a product page is applied once, when the offers load
+  const pendingHandled = useRef(false);
 
   const [cartItems, setCartItems] = useState([]);
   const [tempQty, setTempQty] = useState({}); // { [index]: "123" } - string for free typing
@@ -913,6 +917,38 @@ export default function CartPage() {
     return () => { cancelled = true; };
   }, [loading, cartItems.length, total]);
 
+  // A code the buyer tapped "Apply" on from a product page. It is applied here,
+  // where the order total is known, and only when it is actually usable — so
+  // arriving at the cart never greets the buyer with an error.
+  useEffect(() => {
+    if (pendingHandled.current || appliedCoupon || offersLoading || offers.length === 0) return;
+
+    let pending = "";
+    try {
+      pending = localStorage.getItem("pendingCoupon") || "";
+    } catch {
+      pending = "";
+    }
+    if (!pending) return;
+
+    pendingHandled.current = true;
+    try {
+      localStorage.removeItem("pendingCoupon");
+    } catch {
+      // Nothing to clean up if storage is unavailable
+    }
+
+    const offer = offers.find((o) => o.code === pending);
+    if (offer?.eligible) {
+      applyCoupon(offer.code);
+    } else {
+      // Not usable yet: the code is filled in and the reason is on its card
+      setCouponCode(pending);
+      setShowOffers(true);
+      if (offer?.reason) toast.error(offer.reason);
+    }
+  }, [offers, offersLoading, appliedCoupon]);
+
   // for coupon genration function
 
   // Called both by the Apply button and by tapping an offer card
@@ -956,6 +992,17 @@ export default function CartPage() {
       setAppliedCoupon(null);
     } finally {
       setApplyingCoupon(false);
+    }
+  };
+
+  const copyCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      toast.success(`${code} copied`);
+      setTimeout(() => setCopiedCode((c) => (c === code ? "" : c)), 2000);
+    } catch {
+      toast.error("Could not copy the code");
     }
   };
 
@@ -1341,6 +1388,19 @@ export default function CartPage() {
                             )}
                           </div>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => copyCode(o.code)}
+                          style={{
+                            flexShrink: 0, background: "#fff", color: "#374151",
+                            border: "1.5px solid #e5e7eb", borderRadius: 8,
+                            padding: "6px 12px", fontSize: 12, fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {copiedCode === o.code ? "Copied" : "Copy"}
+                        </button>
 
                         <button
                           type="button"

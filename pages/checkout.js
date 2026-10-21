@@ -860,6 +860,7 @@
 
 "use client";
 
+import Link from "next/link";
 import Script from "next/script";
 
 import { useEffect, useState } from "react";
@@ -901,6 +902,58 @@ export default function CheckoutPage() {
   // ✅ New: track which fields came from backend (prefilled)
   const [prefilled, setPrefilled] = useState({});
   const [errors, setErrors] = useState({});
+
+  // A saved address is shown locked so it is not changed by accident. Retail
+  // shoppers can unlock it for this order, and keep the change on their account.
+  const [editAddress, setEditAddress] = useState(false);
+  const [saveAddress, setSaveAddress] = useState(true);
+
+  // Only a retail account's address is editable here; a partner's doubles as
+  // the billing address on their GST invoice and is changed from the profile.
+  const canEditAddress = userType === "customer";
+  const addressFieldsLocked = (field) =>
+    !!prefilled[field] && !(canEditAddress && editAddress);
+  const lockedStyle = (field) =>
+    addressFieldsLocked(field)
+      ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+      : {};
+
+  // The saved address is only worth offering to edit once there is one
+  const hasSavedAddress = ["street", "city", "state", "zip"].some(
+    (f) => !!prefilled[f]
+  );
+
+  // Writes the address on screen back to the shopper's account, so the next
+  // order starts from it. A failure here must not stop the order going through.
+  const persistAddress = async () => {
+    if (!canEditAddress || !editAddress || !saveAddress) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/user/address", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          street: formData.street,
+          city: formData.city,
+          state: formData.state,
+          pinCode: formData.zip,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Address save skipped:", data.message || res.status);
+      }
+    } catch (err) {
+      console.error("Address save skipped:", err.message);
+    }
+  };
 
   const getImageUrl = (imgPath) => {
     if (!imgPath) return "/no-image.png";
@@ -1246,6 +1299,9 @@ const placeOrder = async (method, payment = null) => {
   if (!validateForm()) return;
   if (!checkShippingReady()) return;
 
+  // Keeps an edited address on the account before the order is written
+  await persistAddress();
+
   try {
     setSubmitting(true);
     const token = localStorage.getItem("token");
@@ -1479,7 +1535,19 @@ const placeOrder = async (method, payment = null) => {
             {/* Shipping Details */}
             <div className="col-md-8">
               <div className="card p-4 ">
-                <h4 className="mb-3 fw-semibold">Shipping Details</h4>
+                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                  <h4 className="mb-0 fw-semibold">Shipping Details</h4>
+
+                  {canEditAddress && hasSavedAddress && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => setEditAddress((v) => !v)}
+                    >
+                      {editAddress ? "Done editing" : "Edit address"}
+                    </button>
+                  )}
+                </div>
 
                 {/* Name & Phone */}
                 <div className="row">
@@ -1495,15 +1563,8 @@ const placeOrder = async (method, payment = null) => {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Enter full name"
-                      readOnly={!!prefilled.name}
-                      style={
-                        prefilled.name
-                          ? {
-                              backgroundColor: "#f5f5f5",
-                              cursor: "not-allowed",
-                            }
-                          : {}
-                      }
+                      readOnly={addressFieldsLocked("name")}
+                      style={lockedStyle("name")}
                     />
                     {errors.name && (
                       <div className="invalid-feedback">{errors.name}</div>
@@ -1521,12 +1582,8 @@ const placeOrder = async (method, payment = null) => {
                       onChange={handleChange}
                       placeholder="10-digit mobile number"
                       maxLength={10}
-                      readOnly={!!prefilled.phone}
-                      style={
-                        prefilled.phone
-                          ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
-                          : {}
-                      }
+                      readOnly={addressFieldsLocked("phone")}
+                      style={lockedStyle("phone")}
                     />
                     {errors.phone && (
                       <div className="invalid-feedback">{errors.phone}</div>
@@ -1545,12 +1602,8 @@ const placeOrder = async (method, payment = null) => {
                     value={formData.street}
                     onChange={handleChange}
                     placeholder="House number, street, etc."
-                    readOnly={!!prefilled.street}
-                    style={
-                      prefilled.street
-                        ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
-                        : {}
-                    }
+                    readOnly={addressFieldsLocked("street")}
+                    style={lockedStyle("street")}
                   />
                   {errors.street && (
                     <div className="invalid-feedback">{errors.street}</div>
@@ -1568,15 +1621,8 @@ const placeOrder = async (method, payment = null) => {
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
-                      readOnly={!!prefilled.city}
-                      style={
-                        prefilled.city
-                          ? {
-                              backgroundColor: "#f5f5f5",
-                              cursor: "not-allowed",
-                            }
-                          : {}
-                      }
+                      readOnly={addressFieldsLocked("city")}
+                      style={lockedStyle("city")}
                     />
                     {errors.city && (
                       <div className="invalid-feedback">{errors.city}</div>
@@ -1592,15 +1638,8 @@ const placeOrder = async (method, payment = null) => {
                       name="state"
                       value={formData.state}
                       onChange={handleChange}
-                      readOnly={!!prefilled.state}
-                      style={
-                        prefilled.state
-                          ? {
-                              backgroundColor: "#f5f5f5",
-                              cursor: "not-allowed",
-                            }
-                          : {}
-                      }
+                      readOnly={addressFieldsLocked("state")}
+                      style={lockedStyle("state")}
                     />
                     {errors.state && (
                       <div className="invalid-feedback">{errors.state}</div>
@@ -1617,21 +1656,35 @@ const placeOrder = async (method, payment = null) => {
                       value={formData.zip}
                       onChange={handleChange}
                       maxLength={6}
-                      readOnly={!!prefilled.zip}
-                      style={
-                        prefilled.zip
-                          ? {
-                              backgroundColor: "#f5f5f5",
-                              cursor: "not-allowed",
-                            }
-                          : {}
-                      }
+                      readOnly={addressFieldsLocked("zip")}
+                      style={lockedStyle("zip")}
                     />
                     {errors.zip && (
                       <div className="invalid-feedback">{errors.zip}</div>
                     )}
                   </div>
                 </div>
+
+                {/* Keeping an edited address, so the next order starts from it */}
+                {canEditAddress && hasSavedAddress && editAddress && (
+                  <label className="d-flex align-items-start gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={saveAddress}
+                      onChange={(e) => setSaveAddress(e.target.checked)}
+                    />
+                    <span style={{ fontSize: 13 }}>
+                      Save this address to my account for future orders
+                    </span>
+                  </label>
+                )}
+
+                {canEditAddress && (
+                  <p className="text-muted mb-0" style={{ fontSize: 12 }}>
+                    You can also change your address any time from{" "}
+                    <Link href="/address">My Address</Link>.
+                  </p>
+                )}
 
                 {/* Retail buyers who need the bill in a business name */}
                 {userType === "customer" && (

@@ -41,18 +41,14 @@
 
 import dbConnect from "@/lib/dbConnect";
 import Admin from "@/models/Admin";
-import { verifyJWT } from "@/lib/verifyJWT";
+import { requireSuperAdmin } from "@/lib/adminAuth";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  const token = req.cookies.admin_auth;
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
-
-  const decoded = verifyJWT(token);
-  if (!decoded || decoded.role !== "admin") {
-    return res.status(403).json({ message: "Access denied" });
-  }
+  // Staff accounts are managed by the super admin only
+  const me = await requireSuperAdmin(req, res);
+  if (!me) return;
 
   const {
     search = "",
@@ -76,19 +72,35 @@ export default async function handler(req, res) {
 
   const skip = (page - 1) * limit;
 
-  const users = await Admin.find(query, {
+  const rows = await Admin.find(query, {
     name: 1,
     email: 1,
     role: 1,
     isActive: 1,
     permissions: 1,
+    lastLoginAt: 1,
+    lastLoginIp: 1,
+    loginCount: 1,
+    inviteExpires: 1,
+    createdAt: 1,
+    password: 1,
   })
     .sort({ createdAt: -1 })
     .skip(Number(skip))
-    .limit(Number(limit) + 1);
+    .limit(Number(limit) + 1)
+    .lean();
 
-  const hasMore = users.length > limit;
-  if (hasMore) users.pop();
+  const hasMore = rows.length > limit;
+  if (hasMore) rows.pop();
 
-  res.json({ users, hasMore });
+  // The hash itself never leaves the server — only whether one is set, which
+  // is what tells an invite apart from a working account.
+  const users = rows.map(({ password, inviteExpires, ...u }) => ({
+    ...u,
+    hasPassword: !!password && password !== "INVITED_USER",
+    inviteExpiresAt: inviteExpires || null,
+    invitePending: !!inviteExpires && new Date(inviteExpires) > new Date(),
+  }));
+
+  res.json({ users, hasMore, me: { id: String(me.id), role: me.role } });
 }

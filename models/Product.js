@@ -271,6 +271,21 @@ const ProductSchema = new mongoose.Schema(
     pricingTiers: [PricingTierSchema], // ✅ restored
     cityPrices: [CityPriceSchema], // city-based price overrides
 
+    // Where this product can be delivered. "all" means everywhere, which is
+    // how every product behaves until the admin limits it — see
+    // lib/deliveryZones.js for how a list entry is matched.
+    deliveryZones: {
+      mode: {
+        type: String,
+        enum: ["all", "allowlist", "blocklist"],
+        default: "all",
+      },
+      // Full 6-digit PIN codes, or a leading part like "226" for 226xxx
+      pincodes: { type: [String], default: [] },
+      // Optional wording shown instead of the standard "not deliverable" note
+      message: { type: String, default: "" },
+    },
+
     b2bOptions: {
       enabled: { type: Boolean, default: false },
       allowFileUpload: { type: Boolean, default: true },

@@ -9,6 +9,7 @@ import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
+import { parsePincodeList } from "@/lib/deliveryZones";
 import Link from "next/link";
 import { FaBell } from "react-icons/fa";
 import Sidebar from "@/components/admin-panel/Sidebar";
@@ -51,6 +52,10 @@ export default function AddProduct() {
     pricingTiers: [],
     pricingTiersCSV: "",
     cityPrices: [],
+    // Delivery area: "all" until the admin limits it — see lib/deliveryZones.js
+    deliveryMode: "all",
+    deliveryPincodesCSV: "",
+    deliveryMessage: "",
     b2b_enabled: true,
     b2b_allowFileUpload: true,
     b2b_quantityOptionsCSV: "",
@@ -202,6 +207,11 @@ export default function AddProduct() {
       fd.append("attributes", JSON.stringify(transformedAttributes));
       fd.append("pricingTiers", JSON.stringify(transformedTiers));
       fd.append("cityPrices", JSON.stringify(transformedCityPrices));
+      fd.append("deliveryZones", JSON.stringify({
+        mode: form.deliveryMode || "all",
+        pincodes: parsePincodeList(form.deliveryPincodesCSV),
+        message: form.deliveryMessage || "",
+      }));
 
       fd.append("b2bOptions", JSON.stringify({
         enabled: !!form.b2b_enabled,
@@ -230,6 +240,7 @@ export default function AddProduct() {
         stock: 0, stockStatus: "in_stock", minOrderQty: 1, lowStockThreshold: "", isFeatured: false, freeDelivery: false,
         gstPercent: 0, hsnCode: "", shippingWeight: "", shippingLength: "", shippingBreadth: "", shippingHeight: "",
         productFor: "b2b", status: "published", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
+        deliveryMode: "all", deliveryPincodesCSV: "", deliveryMessage: "",
         b2b_enabled: true, b2b_allowFileUpload: true, b2b_quantityOptionsCSV: "",
         b2c_enabled: false, b2c_designUpload: true, b2c_whatsapp: true, b2c_codDisabled: false, b2c_quantityOptionsCSV: "",
       });
@@ -617,6 +628,52 @@ export default function AddProduct() {
                       onClick={() => setForm((f) => ({ ...f, cityPrices: [...(f.cityPrices || []), { city: "", price: "", salePrice: "" }] }))}>
                       + Add City Extra Charge
                     </button>
+                  </div>
+
+                  {/* Delivery Zones — which PIN codes this product reaches */}
+                  <div className="tiers-section">
+                    <h4>Delivery Zones</h4>
+                    <p style={{ fontSize: 12, color: "#718096", marginTop: -6, marginBottom: 10 }}>
+                      A buyer outside the delivery area still sees the product, but Add to Cart is
+                      disabled for them and the page says it cannot be delivered to their PIN code.
+                    </p>
+
+                    <label className="mb-2 d-block">Where can this product be delivered?</label>
+                    <select name="deliveryMode" value={form.deliveryMode} onChange={handleChange} className="select-primary">
+                      <option value="all">Everywhere (no restriction)</option>
+                      <option value="allowlist">Only these PIN codes</option>
+                      <option value="blocklist">Everywhere except these PIN codes</option>
+                    </select>
+
+                    {form.deliveryMode !== "all" && (
+                      <>
+                        <label className="mb-2 d-block mt-3">PIN codes</label>
+                        <textarea
+                          name="deliveryPincodesCSV"
+                          value={form.deliveryPincodesCSV}
+                          onChange={handleChange}
+                          className="input-primary"
+                          style={{ width: "100%", minHeight: 80 }}
+                          placeholder="226025, 226016, 110001"
+                        />
+                        <p style={{ fontSize: 12, color: "#718096", marginTop: 4 }}>
+                          Separate them with commas or new lines. A shorter entry covers everything
+                          under it — 226 covers every 226xxx PIN code.
+                        </p>
+
+                        <label className="mb-2 d-block mt-3">
+                          Message for a buyer outside the area (optional)
+                        </label>
+                        <input
+                          type="text"
+                          name="deliveryMessage"
+                          value={form.deliveryMessage}
+                          onChange={handleChange}
+                          className="input-primary"
+                          placeholder="Leave blank to use the standard message"
+                        />
+                      </>
+                    )}
                   </div>
 
                   {/* B2B / B2C Options */}

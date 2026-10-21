@@ -65,6 +65,23 @@ const AdminSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    // Login tracking, shown to the super admin on the OPS Users screen.
+    // The full history lives in ActivityLog; these are the quick-read fields.
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastLoginIp: {
+      type: String,
+      default: "",
+    },
+
+    loginCount: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

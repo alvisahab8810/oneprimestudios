@@ -14,6 +14,7 @@ export const PERMISSIONS = [
   { key: "coupons", label: "Coupons" },
   { key: "invoices", label: "Invoices" },
   { key: "site_stats", label: "Site Stats" },
+  { key: "homepage_media", label: "See it in Action" },
   { key: "rate_couriers", label: "Rate List Couriers" },
   { key: "wallet", label: "Wallet Management" },
 ];

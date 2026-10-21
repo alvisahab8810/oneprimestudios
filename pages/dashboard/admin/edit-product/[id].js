@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { parsePincodeList } from "@/lib/deliveryZones";
 import Link from "next/link";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import AdminTopbar from "@/components/admin-panel/AdminTopbar";
@@ -51,6 +52,10 @@ export default function EditProductPage() {
     attributes: [],
      pricingTiers: [],   // ✅ ADD THIS
     cityPrices: [],
+    // Delivery area: "all" until the admin limits it — see lib/deliveryZones.js
+    deliveryMode: "all",
+    deliveryPincodesCSV: "",
+    deliveryMessage: "",
     // pricingTiersCSV: "",
     // b2b/b2c
     b2b_enabled: false,
@@ -188,6 +193,10 @@ export default function EditProductPage() {
         attributes: normalizedAttributes,
        pricingTiers: normalizedPricingTiers,
         cityPrices: normalizedCityPrices,
+        // Loaded back so saving the form again does not drop the delivery area
+        deliveryMode: p.deliveryZones?.mode || "all",
+        deliveryPincodesCSV: parsePincodeList(p.deliveryZones?.pincodes).join(", "),
+        deliveryMessage: p.deliveryZones?.message || "",
         b2b_enabled: !!(p.b2bOptions && p.b2bOptions.enabled),
         b2b_allowFileUpload: !!(p.b2bOptions && p.b2bOptions.allowFileUpload),
         b2c_enabled: !!(p.b2cOptions && p.b2cOptions.enabled),
@@ -391,6 +400,11 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
           ...(cp.salePrice !== "" && cp.salePrice != null ? { salePrice: Number(cp.salePrice) } : {}),
         }));
       fd.append("cityPrices", JSON.stringify(transformedCityPrices));
+      fd.append("deliveryZones", JSON.stringify({
+        mode: form.deliveryMode || "all",
+        pincodes: parsePincodeList(form.deliveryPincodesCSV),
+        message: form.deliveryMessage || "",
+      }));
 
 
       // b2b/b2c
@@ -690,6 +704,52 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
   + Add City Extra Charge
 </button>
 </div>
+
+                  {/* Delivery Zones — which PIN codes this product reaches */}
+                  <div className="tiers-section">
+                    <h4>Delivery Zones</h4>
+                    <p style={{ fontSize: 12, color: "#718096", marginTop: -6, marginBottom: 10 }}>
+                      A buyer outside the delivery area still sees the product, but Add to Cart is
+                      disabled for them and the page says it cannot be delivered to their PIN code.
+                    </p>
+
+                    <label className="mb-2 d-block">Where can this product be delivered?</label>
+                    <select name="deliveryMode" value={form.deliveryMode} onChange={handleChange} className="select-primary">
+                      <option value="all">Everywhere (no restriction)</option>
+                      <option value="allowlist">Only these PIN codes</option>
+                      <option value="blocklist">Everywhere except these PIN codes</option>
+                    </select>
+
+                    {form.deliveryMode !== "all" && (
+                      <>
+                        <label className="mb-2 d-block mt-3">PIN codes</label>
+                        <textarea
+                          name="deliveryPincodesCSV"
+                          value={form.deliveryPincodesCSV}
+                          onChange={handleChange}
+                          className="input-primary"
+                          style={{ width: "100%", minHeight: 80 }}
+                          placeholder="226025, 226016, 110001"
+                        />
+                        <p style={{ fontSize: 12, color: "#718096", marginTop: 4 }}>
+                          Separate them with commas or new lines. A shorter entry covers everything
+                          under it — 226 covers every 226xxx PIN code.
+                        </p>
+
+                        <label className="mb-2 d-block mt-3">
+                          Message for a buyer outside the area (optional)
+                        </label>
+                        <input
+                          type="text"
+                          name="deliveryMessage"
+                          value={form.deliveryMessage}
+                          onChange={handleChange}
+                          className="input-primary"
+                          placeholder="Leave blank to use the standard message"
+                        />
+                      </>
+                    )}
+                  </div>
 
 
 

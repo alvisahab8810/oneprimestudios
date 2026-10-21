@@ -153,6 +153,7 @@ import {
   FaChartBar,
   FaShippingFast,
   FaWallet,
+  FaPhotoVideo,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
@@ -378,6 +379,16 @@ export default function Sidebar({ sidebarOpen }) {
             className={`ops-item ${isActive("/dashboard/admin/popular-products") ? "active" : ""}`}
           >
             <FaStar className="me-2" /> Popular Products
+          </Link>
+        )}
+
+        {/* ================= HOMEPAGE "SEE IT IN ACTION" ================= */}
+        {canAccess(user, "homepage_media") && (
+          <Link
+            href="/dashboard/admin/action-media"
+            className={`ops-item ${isActive("/dashboard/admin/action-media") ? "active" : ""}`}
+          >
+            <FaPhotoVideo className="me-2" /> See it in Action
           </Link>
         )}
 

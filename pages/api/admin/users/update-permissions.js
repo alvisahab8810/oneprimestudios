@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import Admin from "@/models/Admin";
-import { verifyJWT } from "@/lib/verifyJWT";
+import { requireSuperAdmin } from "@/lib/adminAuth";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,15 +10,8 @@ export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    const token = req.cookies.admin_auth;
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const decoded = verifyJWT(token);
-    if (!decoded || decoded.role !== "admin") {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    const me = await requireSuperAdmin(req, res);
+    if (!me) return;
 
     const { userId, permissions } = req.body;
     if (!userId || !Array.isArray(permissions)) {

@@ -9,6 +9,7 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { resolveAudience, visibleFor } from "@/lib/audience";
 import { parseLowStockThreshold } from "@/lib/stockRules";
+import { parseDeliveryZones } from "@/lib/deliveryZones";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/products");
 
@@ -101,6 +102,7 @@ handler.post(
         attributes,
         pricingTiers,
         cityPrices,
+        deliveryZones,  // NEW: PIN codes this product can be delivered to
       } = req.body;
 
       // Base price is optional — a product can be saved before its price is set
@@ -198,6 +200,8 @@ parsedAttributes.forEach(attr => {
         attributes: parsedAttributes,
         pricingTiers: parsedTiers,
         cityPrices: parsedCityPrices,
+        // Unset, or a list-based rule with an empty list, means "deliver everywhere"
+        deliveryZones: parseDeliveryZones(deliveryZones),
         b2bOptions: parsedB2B,
         b2cOptions: parsedB2C,
       });

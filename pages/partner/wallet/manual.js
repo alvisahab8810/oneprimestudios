@@ -133,12 +133,14 @@ export default function ManualWalletTopup() {
   };
 
   const bankRows = [
+    ["Account Name", MANUAL_TOPUP_BANK.firmName],
     ["Bank Name", MANUAL_TOPUP_BANK.bankName],
-    ["Branch", MANUAL_TOPUP_BANK.branch],
-    ["Firm Name", MANUAL_TOPUP_BANK.firmName],
+    ["Account Number", MANUAL_TOPUP_BANK.accountNumber],
+    ["Account Type", MANUAL_TOPUP_BANK.accountType],
     ["IFSC Code", MANUAL_TOPUP_BANK.ifsc],
-    ["A/C No", MANUAL_TOPUP_BANK.accountNumber],
-  ];
+    ["Branch", MANUAL_TOPUP_BANK.branch],
+    ["Branch Address", MANUAL_TOPUP_BANK.branchAddress],
+  ].filter(([, value]) => !!value);
 
   return (
     <div className="wallet-area">
@@ -173,6 +175,7 @@ export default function ManualWalletTopup() {
           <div className="mt-card">
             <h3 className="mt-card-title">Our Bank Details</h3>
 
+            <div className="mt-bank-split">
             <table className="mt-bank-table">
               <tbody>
                 {bankRows.map(([label, value]) => (
@@ -207,6 +210,22 @@ export default function ManualWalletTopup() {
                 )}
               </tbody>
             </table>
+
+            {MANUAL_TOPUP_BANK.qrImage && (
+              <div className="mt-qr">
+                <h4 className="mt-qr-title">Scan &amp; Pay</h4>
+                <img
+                  src={MANUAL_TOPUP_BANK.qrImage}
+                  alt={`Payment QR code for ${MANUAL_TOPUP_BANK.firmName}`}
+                  className="mt-qr-img"
+                />
+                <p className="mt-qr-note">
+                  Works with any UPI app. After paying, submit the reference number in the
+                  form so we can credit your wallet.
+                </p>
+              </div>
+            )}
+            </div>
 
             <div className="mt-info">
               <strong>How it works</strong>
@@ -406,6 +425,40 @@ export default function ManualWalletTopup() {
           margin-bottom: 16px;
           color: #0d0d0d;
         }
+        .manual-topup .mt-bank-split {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: flex-start;
+          gap: 20px;
+        }
+        .manual-topup .mt-bank-split > .mt-bank-table {
+          flex: 1 1 300px;
+        }
+        .manual-topup .mt-qr {
+          flex: 0 1 240px;
+          text-align: center;
+          margin: 0 auto;
+        }
+        .manual-topup .mt-qr-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #0d0d0d;
+          margin: 0 0 10px;
+        }
+        .manual-topup .mt-qr-img {
+          width: 100%;
+          max-width: 220px;
+          height: auto;
+          border: 1px solid #ededed;
+          border-radius: 12px;
+          padding: 6px;
+          background: #fff;
+        }
+        .manual-topup .mt-qr-note {
+          margin: 10px 0 0;
+          font-size: 12.5px;
+          color: #6b7280;
+        }
         .manual-topup .mt-bank-table {
           width: 100%;
           border-collapse: collapse;
@@ -427,9 +480,15 @@ export default function ManualWalletTopup() {
           font-weight: 600;
           color: #0d0d0d;
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
           justify-content: space-between;
-          gap: 10px;
+          gap: 8px;
+        }
+        /* A branch address is long, so it wraps instead of stretching the table */
+        .manual-topup .mt-bank-table td > span {
+          min-width: 0;
+          word-break: break-word;
         }
         .manual-topup .mt-copy {
           border: 1px solid #e5e5e5;

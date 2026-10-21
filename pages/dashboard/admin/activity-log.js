@@ -25,7 +25,13 @@ const ACTION_META = {
   product_updated:      { label: "Product Updated",      color: "#d97706", bg: "#fffbeb", icon: "✏️" },
   product_deleted:      { label: "Product Deleted",      color: "#dc2626", bg: "#fef2f2", icon: "🗑️" },
   ops_user_created:     { label: "OPS User Created",     color: "#0891b2", bg: "#ecfeff", icon: "👤" },
+  ops_user_reinvited:   { label: "OPS User Re-invited",  color: "#0891b2", bg: "#ecfeff", icon: "✉️" },
+  ops_user_password_reset: { label: "OPS Password Reset", color: "#d97706", bg: "#fffbeb", icon: "🔁" },
+  ops_user_updated:     { label: "OPS User Updated",     color: "#7c3aed", bg: "#f5f3ff", icon: "⚙️" },
+  ops_user_deleted:     { label: "OPS User Deleted",     color: "#dc2626", bg: "#fef2f2", icon: "🗑️" },
   invoice_created:      { label: "Invoice Created",      color: "#059669", bg: "#ecfdf5", icon: "🧾" },
+  admin_login:          { label: "User Login",           color: "#2563eb", bg: "#eff6ff", icon: "🔑" },
+  admin_logout:         { label: "User Logout",          color: "#6b7280", bg: "#f3f4f6", icon: "🚪" },
 };
 
 const ACTION_OPTIONS = [

@@ -6,6 +6,7 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { logActivity } from "@/lib/logActivity";
 import { parseLowStockThreshold } from "@/lib/stockRules";
+import { parseDeliveryZones } from "@/lib/deliveryZones";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/products");
 
@@ -72,6 +73,7 @@ handler.put(async (req, res) => {
       attributes,
       pricingTiers,
       cityPrices,
+      deliveryZones,  // NEW: PIN codes this product can be delivered to
       b2bOptions,
       b2cOptions,
       productFor,
@@ -152,6 +154,8 @@ handler.put(async (req, res) => {
       attributes: safeParse(attributes, []),
       pricingTiers: safeParse(pricingTiers, []),
       cityPrices: safeParse(cityPrices, []),
+      // Unset, or a list-based rule with an empty list, means "deliver everywhere"
+      deliveryZones: parseDeliveryZones(deliveryZones),
       b2bOptions: safeParse(b2bOptions, {}),
       b2cOptions: safeParse(b2cOptions, {}),
       productFor: PRODUCT_FOR.includes(productFor) ? productFor : product.productFor || "both",

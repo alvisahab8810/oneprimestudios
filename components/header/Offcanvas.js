@@ -69,6 +69,13 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
               <Link href="/orders">My Orders</Link>
             </li>
 
+            {/* Retail shoppers manage the address their orders ship to */}
+            {user && user.userType !== "partner" && (
+              <li>
+                <Link href="/address">My Address</Link>
+              </li>
+            )}
+
              {/* <li>
               <Link href="#">Privacy Policy</Link>
             </li>

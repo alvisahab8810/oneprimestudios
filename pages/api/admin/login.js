@@ -196,6 +196,15 @@ import dbConnect from "@/lib/dbConnect";
 import Admin from "@/models/Admin";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { logActivity } from "@/lib/logActivity";
+
+// Behind a proxy (nginx/pm2) the socket address is the proxy, so the
+// forwarded header is what actually identifies the person signing in.
+function clientIp(req) {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd.trim()) return fwd.split(",")[0].trim();
+  return req.socket?.remoteAddress || "";
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -215,6 +224,13 @@ export default async function handler(req, res) {
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
 
+    // Suspended by the super admin, or still waiting on the invite
+    if (admin.isActive === false) {
+      return res.status(403).json({
+        message: "This account is not active. Please contact your administrator.",
+      });
+    }
+
     // 🔐 CREATE JWT (ROLE MUST COME FROM DB)
     const token = jwt.sign(
       {
@@ -233,6 +249,26 @@ export default async function handler(req, res) {
         60 * 60 * 24 * 365
       }; SameSite=Lax${isProd ? "; Secure" : ""}`
     );
+
+    // Login time + history. A failure here must never block the sign-in.
+    const loginAt = new Date();
+    const ip = clientIp(req);
+    try {
+      await Admin.updateOne(
+        { _id: admin._id },
+        { $set: { lastLoginAt: loginAt, lastLoginIp: ip }, $inc: { loginCount: 1 } },
+      );
+      await logActivity(req, "admin_login", admin.name + " signed in", {
+        entity: "admin",
+        entityId: admin._id,
+        adminId: admin._id,
+        adminName: admin.name,
+        adminEmail: admin.email,
+        meta: { ip, role: admin.role, userAgent: req.headers["user-agent"] || "" },
+      });
+    } catch (logErr) {
+      console.error("Login tracking error:", logErr.message);
+    }
 
     // 🎯 ROLE-BASED REDIRECT
     let redirect = "/dashboard";

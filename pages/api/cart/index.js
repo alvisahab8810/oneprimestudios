@@ -154,6 +154,8 @@ import Cart from "@/models/Cart";
 import Product from "@/models/Product";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 import { checkOrderable } from "@/lib/stockRules";
+import { checkDeliverable } from "@/lib/deliveryZones";
+import { priceForQuantity } from "@/lib/productPricing";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -181,7 +183,6 @@ export default async function handler(req, res) {
   selectedAttrs = {},
   uploadedFiles = [],
   uploadedAttributeFiles = [],
-  price = 0,
   remarks = "",
   // NEW: B2B mandatory order name
   orderName = "",
@@ -198,6 +199,12 @@ export default async function handler(req, res) {
       const orderProblem = checkOrderable(product, quantity);
       if (orderProblem) return res.status(400).json({ message: orderProblem });
 
+      // A product limited to certain PIN codes cannot be added by a buyer
+      // outside them. A buyer with no PIN code on file is let through here and
+      // checked again at checkout, where the delivery address is known.
+      const deliveryProblem = checkDeliverable(product, user.pinCode);
+      if (deliveryProblem) return res.status(400).json({ message: deliveryProblem });
+
       // Attributes the admin marked "Required" must be filled before adding to cart
       const missingAttr = findMissingRequiredAttr(
         product.attributes,
@@ -209,9 +216,12 @@ export default async function handler(req, res) {
       );
       if (missingAttr) return res.status(400).json({ message: missingAttrMessage(missingAttr) });
 
-      // price coming from frontend may be total price for requested quantity.
-      // We'll store unitPrice on the cart item for consistent recalculation.
-      const unitPrice = Number(quantity > 0 ? price / quantity : price) || Number(product.salePrice ?? product.basePrice ?? 0);
+      // The price is worked out here, never taken from the browser, and stored
+      // per unit so a line's subtotal is simply unit price times quantity.
+      const unitPrice = priceForQuantity(product, quantity, {
+        selectedAttrs,
+        city: user.city,
+      }).unitPrice;
 
       // get or create cart
       let cart = await Cart.findOne({ user: user._id });
@@ -285,7 +295,11 @@ export default async function handler(req, res) {
       if (mergeIssue) return res.status(400).json({ message: mergeIssue });
 
       existingLine.quantity = mergedQty;
-      existingLine.price = unitPrice;
+      // The merged quantity may reach a cheaper slab, so the line is priced again
+      existingLine.price = priceForQuantity(product, mergedQty, {
+        selectedAttrs,
+        city: user.city,
+      }).unitPrice;
       if (remarks) existingLine.remarks = remarks;
       if (orderName) existingLine.orderName = orderName;
     } else {
@@ -327,6 +341,12 @@ export default async function handler(req, res) {
       if (qtyProblem) return res.status(400).json({ message: qtyProblem });
 
       cart.items[itemIndex].quantity = Number(quantity);
+      // Quantity pricing only works if the line is priced again for the new
+      // quantity — otherwise the slab the buyer first landed on is kept forever.
+      cart.items[itemIndex].price = priceForQuantity(itemProduct, quantity, {
+        selectedAttrs: cart.items[itemIndex].selectedAttrs,
+        city: user.city,
+      }).unitPrice;
       await cart.save();
       cart = await cart.populate("items.product");
       return res.json(cart.items);

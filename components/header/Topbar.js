@@ -520,6 +520,15 @@ export default function Topbar() {
 
                             )}
 
+                          {/* Retail shoppers manage the address their orders ship to */}
+                          {!isPartner && (
+                            <li>
+                              <Link href="/address" className="gap-2">
+                                <i className="ri-map-pin-line"></i> My Address
+                              </Link>
+                            </li>
+                          )}
+
                           {/* The rate list is a partner-only tool, so the link is only put up for them */}
                           {isPartner && (
                             <li>
@@ -663,12 +672,24 @@ export default function Topbar() {
 
                         {/* Menu */}
                         <ul className="ops-menu-list">
-                          <li>
-                            <Link href="/profile">
-                              <img src="/assets/images/icons/user.png" /> My
-                              Profile
-                            </Link>
-                          </li>
+                          {/* The profile screen is a partner-only form */}
+                          {isPartner && (
+                            <li>
+                              <Link href="/profile">
+                                <img src="/assets/images/icons/user.png" /> My
+                                Profile
+                              </Link>
+                            </li>
+                          )}
+
+                          {/* Retail shoppers manage the address their orders ship to */}
+                          {!isPartner && (
+                            <li>
+                              <Link href="/address" className="gap-2">
+                                <i className="ri-map-pin-line"></i> My Address
+                              </Link>
+                            </li>
+                          )}
 
                           {/* The rate list is a partner-only tool, so the link is only put up for them */}
                           {isPartner && (
