@@ -56,6 +56,8 @@ export default function OrdersListPage() {
   const [total, setTotal]             = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [dispatchingId, setDispatchingId] = useState(null);
+  // Dispatch requests are part of the partner (B2B) flow only
+  const [isPartner, setIsPartner] = useState(false);
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const [invoiceOrderId, setInvoiceOrderId] = useState(null);
@@ -232,6 +234,7 @@ export default function OrdersListPage() {
         withCredentials: true,
       });
       setOrders(res.data.orders || []);
+      setIsPartner(String(res.data.userType || "").toLowerCase() === "partner");
       setTotal(res.data.total || 0);
       setTotalAmount(res.data.totalAmount || 0);
       setTotalPages(res.data.totalPages || 1);
@@ -599,7 +602,7 @@ export default function OrdersListPage() {
                     )}
 
                     {/* Row 2.5: dispatch request banner */}
-                    {o.status === "Order Ready" && o.dispatchRequest === "none" && (
+                    {isPartner && o.status === "Order Ready" && o.dispatchRequest === "none" && (
                       <div style={{
                         background: "#f5f3ff", border: "1.5px solid #c4b5fd", borderRadius: 10,
                         padding: "10px 14px", marginBottom: 14,
@@ -624,7 +627,7 @@ export default function OrdersListPage() {
                       </div>
                     )}
 
-                    {o.status === "Order Ready" && o.dispatchRequest === "pending" && (
+                    {isPartner && o.status === "Order Ready" && o.dispatchRequest === "pending" && (
                       <div style={{
                         background: "#eff6ff", border: "1.5px solid #93c5fd", borderRadius: 10,
                         padding: "9px 14px", marginBottom: 14,

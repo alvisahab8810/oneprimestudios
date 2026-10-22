@@ -6,8 +6,14 @@
 import dbConnect from "@/lib/dbConnect";
 import Complaint from "@/models/Complaint";
 import Admin from "@/models/Admin";
+import User from "@/models/User";
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission } from "@/lib/hasPermission";
+
+// A typed search term is used as a regular expression, so anything in it that
+// has a meaning there is escaped first
+const escapeForSearch = (term) =>
+  String(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const getAdmin = async (req) => {
   const token = req.cookies.admin_auth;
@@ -27,13 +33,56 @@ export default async function handler(req, res) {
   // ── GET: list all complaints ──────────────────────────────────────────────
   if (req.method === "GET") {
     try {
-      const { status, search, page = 1, limit = 15 } = req.query;
+      const { status, search, page = 1, limit = 15, from, to, userType } = req.query;
       const pageNum  = Math.max(1, Number(page));
-      const limitNum = Number(limit);
+      // A bigger page is allowed so the admin screen can export every match
+      const limitNum = Math.min(Math.max(1, Number(limit) || 15), 5000);
       const skip     = (pageNum - 1) * limitNum;
 
       const filter = {};
       if (status) filter.status = status;
+
+      // Date range on when the complaint was raised; both days are included
+      const raisedOn = {};
+      if (from) {
+        const d = new Date(`${from}T00:00:00`);
+        if (!Number.isNaN(d.getTime())) raisedOn.$gte = d;
+      }
+      if (to) {
+        const d = new Date(`${to}T23:59:59.999`);
+        if (!Number.isNaN(d.getTime())) raisedOn.$lte = d;
+      }
+      if (Object.keys(raisedOn).length) filter.createdAt = raisedOn;
+
+      // The side (B2B / B2C) and the search term both live on the user, so the
+      // matching users are looked up once and the complaints narrowed to them.
+      // Doing it here — instead of filtering the page after it is read — keeps
+      // the count, the pages and the export in agreement.
+      const side =
+        userType === "partner" ? "partner" : userType === "customer" ? "customer" : "";
+      const term = String(search || "").trim();
+
+      if (side) {
+        const sideFilter =
+          side === "partner" ? { userType: "partner" } : { userType: { $ne: "partner" } };
+        const sideUsers = await User.find(sideFilter, { _id: 1 }).lean();
+        filter.user = { $in: sideUsers.map((u) => u._id) };
+      }
+
+      if (term) {
+        const rx = new RegExp(escapeForSearch(term), "i");
+        const matchedUsers = await User.find(
+          { $or: [{ name: rx }, { email: rx }, { phone: rx }, { companyName: rx }] },
+          { _id: 1 }
+        ).lean();
+
+        filter.$or = [
+          { complaintNumber: rx },
+          { orderId: rx },
+          { message: rx },
+          { user: { $in: matchedUsers.map((u) => u._id) } },
+        ];
+      }
 
       const complaints = await Complaint.find(filter)
         .populate("user", "name email phone companyName userType")
@@ -42,22 +91,23 @@ export default async function handler(req, res) {
         .limit(limitNum)
         .lean();
 
-      // Client-side search filter on populated user name / orderId / complaintNumber
-      const filtered = search
-        ? complaints.filter(c =>
-            c.complaintNumber?.toLowerCase().includes(search.toLowerCase()) ||
-            c.orderId?.toLowerCase().includes(search.toLowerCase()) ||
-            c.user?.name?.toLowerCase().includes(search.toLowerCase())
-          )
-        : complaints;
-
       const total = await Complaint.countDocuments(filter);
+
+      // Counts for the cards at the top: every other filter applies, but not
+      // the status one, so the cards keep showing the full picture
+      const countFilter = { ...filter };
+      delete countFilter.status;
+      const grouped = await Complaint.aggregate([
+        { $match: countFilter },
+        { $group: { _id: "$status", n: { $sum: 1 } } },
+      ]);
 
       return res.status(200).json({
         success: true,
-        data: filtered,
+        data: complaints,
         total,
-        totalPages: Math.ceil(total / limitNum),
+        counts: grouped.reduce((acc, g) => ({ ...acc, [g._id]: g.n }), {}),
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
         currentPage: pageNum,
       });
     } catch (err) {

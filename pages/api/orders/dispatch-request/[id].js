@@ -11,6 +11,10 @@ export default async function handler(req, res) {
   const { id } = req.query;
 
   if (req.method === "POST") {
+    // Only partners ask for a dispatch; a retail order ships on its own
+    if (user.userType !== "partner")
+      return res.status(403).json({ message: "Dispatch requests are for partner orders only" });
+
     const order = await Order.findOne({ _id: id, user: user._id });
     if (!order) return res.status(404).json({ message: "Order not found" });
 

@@ -65,8 +65,13 @@ export default async function handler(req, res) {
     if (!fullUser) return res.status(400).json({ message: "User not found" });
 
     // PAYMENT METHOD HARD LOCK
-    if (fullUser.userType === "partner" && normalizedPaymentMethod !== "wallet") {
-      return res.status(403).json({ message: "Partners can pay only using Wallet" });
+    // A partner pays from the wallet, or online when the balance is short
+    if (
+      fullUser.userType === "partner" &&
+      normalizedPaymentMethod !== "wallet" &&
+      normalizedPaymentMethod !== "razorpay"
+    ) {
+      return res.status(403).json({ message: "Partners can pay using Wallet or online" });
     }
     if (
       fullUser.userType === "customer" &&
@@ -148,7 +153,7 @@ export default async function handler(req, res) {
     const productIds = items.map((i) => i.product);
     const productDocs = await Product.find(
       { _id: { $in: productIds } },
-      "name shipping freeDelivery stockStatus minOrderQty stock b2cOptions deliveryZones"
+      "name shipping freeDelivery freeDeliveryPincodes stockStatus minOrderQty stock b2cOptions deliveryZones"
     ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });

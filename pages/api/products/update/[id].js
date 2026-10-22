@@ -6,7 +6,7 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { logActivity } from "@/lib/logActivity";
 import { parseLowStockThreshold } from "@/lib/stockRules";
-import { parseDeliveryZones } from "@/lib/deliveryZones";
+import { parseDeliveryZones, parsePincodeList } from "@/lib/deliveryZones";
 
 const uploadDir = path.join(process.cwd(), "public/uploads/products");
 
@@ -67,6 +67,7 @@ handler.put(async (req, res) => {
       isFeatured,
 
       freeDelivery,
+      freeDeliveryPincodes,
       gstPercent,
       hsnCode,      // NEW: HSN/SAC code
       shipping,     // NEW: courier package details (JSON string)
@@ -148,6 +149,8 @@ handler.put(async (req, res) => {
       isFeatured: isFeatured === "true" || isFeatured === true,
 
       freeDelivery: freeDelivery === "true" || freeDelivery === true,
+      // Empty list means free everywhere; listed PIN codes limit it to those
+      freeDeliveryPincodes: parsePincodeList(freeDeliveryPincodes),
       gstPercent: gstPercent ? Number(gstPercent) : 0,
       hsnCode: hsnCode || "",  // NEW
       shipping: safeParse(shipping, product.shipping || {}),  // NEW

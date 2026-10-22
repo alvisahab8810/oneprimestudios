@@ -5,7 +5,8 @@ import axios from "axios";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
-import { FaBell, FaSearch, FaTimes } from "react-icons/fa";
+import { FaBell, FaSearch, FaTimes, FaFileExcel } from "react-icons/fa";
+import * as XLSX from "xlsx";
 
 const STATUS_STYLES = {
   Pending:       { bg: "#fef9c3", color: "#854d0e" },
@@ -26,9 +27,15 @@ export default function AdminComplaintsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput]   = useState("");
   const [searchQuery, setSearchQuery]   = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate]     = useState("");
+  const [sideFilter, setSideFilter] = useState("");
+  const [exporting, setExporting]   = useState(false);
   const [page, setPage]         = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal]       = useState(0);
+  // Status counts for the cards, worked out by the server over every match
+  const [counts, setCounts]     = useState({});
 
   // Debounce search
   useEffect(() => {
@@ -36,30 +43,108 @@ export default function AdminComplaintsPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Every filter on screen, in the shape the API reads them
+  const filterParams = (extra = {}) => {
+    const params = new URLSearchParams({ page, limit: 15, ...extra });
+    if (statusFilter) params.append("status", statusFilter);
+    if (searchQuery)  params.append("search", searchQuery);
+    if (sideFilter)   params.append("userType", sideFilter);
+    if (fromDate)     params.append("from", fromDate);
+    if (toDate)       params.append("to", toDate);
+    return params;
+  };
+
   const load = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 15 });
-      if (statusFilter) params.append("status", statusFilter);
-      if (searchQuery)  params.append("search", searchQuery);
+      const params = filterParams();
       const res = await axios.get(`/api/admin/complaints?${params}`, { withCredentials: true });
       setComplaints(res.data.data || []);
       setTotalPages(res.data.totalPages || 1);
       setTotal(res.data.total || 0);
+      setCounts(res.data.counts || {});
     } catch { toast.error("Failed to load complaints"); }
     finally  { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [statusFilter, page, searchQuery]);
+  useEffect(() => { load(); }, [statusFilter, page, searchQuery, sideFilter, fromDate, toDate]);
 
-  const hasFilters = searchQuery || statusFilter;
-  const clearFilters = () => { setSearchInput(""); setSearchQuery(""); setStatusFilter(""); setPage(1); };
+  const hasFilters = searchQuery || statusFilter || sideFilter || fromDate || toDate;
+  const clearFilters = () => {
+    setSearchInput(""); setSearchQuery(""); setStatusFilter("");
+    setSideFilter(""); setFromDate(""); setToDate(""); setPage(1);
+  };
+
+  // The table shows one page at a time; the export takes every complaint the
+  // filters match, so what is downloaded is the whole filtered list.
+  const exportExcel = async () => {
+    try {
+      setExporting(true);
+
+      const params = filterParams({ page: 1, limit: 5000 });
+      const res = await axios.get(`/api/admin/complaints?${params}`, { withCredentials: true });
+      const rows = res.data.data || [];
+
+      if (!rows.length) {
+        toast.error("There is nothing to export");
+        return;
+      }
+
+      const dateTime = (d) =>
+        d ? new Date(d).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "";
+
+      const sheet = rows.map((c) => ({
+        "Complaint No": c.complaintNumber || "",
+        "Raised On": dateTime(c.createdAt),
+        Status: c.status || "",
+        Side: c.user?.userType === "partner" ? "B2B" : "B2C",
+        Customer: c.user?.name || "",
+        Company: c.user?.companyName || "",
+        Email: c.user?.email || "",
+        Phone: c.user?.phone || "",
+        "Order ID": c.orderId || "",
+        Complaint: c.message || "",
+        "Admin Reply": c.adminReply || "",
+        Photos: (c.images || []).length,
+        Video: c.video ? "Yes" : "No",
+        "Last Updated": dateTime(c.updatedAt),
+      }));
+
+      const summary = [
+        { Field: "Exported on", Value: dateTime(new Date()) },
+        { Field: "Status filter", Value: statusFilter || "All" },
+        { Field: "Side filter", Value: sideFilter === "partner" ? "B2B" : sideFilter === "customer" ? "B2C" : "All" },
+        { Field: "From date", Value: fromDate || "Any" },
+        { Field: "To date", Value: toDate || "Any" },
+        { Field: "Search", Value: searchQuery || "None" },
+        { Field: "Complaints", Value: sheet.length },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Complaints");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Filters");
+
+      const range = fromDate || toDate ? `_${fromDate || "start"}-to-${toDate || "today"}` : "";
+      XLSX.writeFile(
+        wb,
+        `complaints_${statusFilter ? statusFilter.replace(/\s+/g, "-").toLowerCase() : "all"}${range}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+
+      toast.success(`Exported ${sheet.length} complaint${sheet.length !== 1 ? "s" : ""}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not build the Excel file");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const allCount = Object.values(counts).reduce((sum, n) => sum + Number(n || 0), 0);
 
   const stats = [
-    { label: "Total",        value: total,                                                        color: "#6366f1" },
-    { label: "Pending",      value: complaints.filter(c => c.status === "Pending").length,        color: "#f59e0b" },
-    { label: "Under Review", value: complaints.filter(c => c.status === "Under Review").length,   color: "#3b82f6" },
-    { label: "Resolved",     value: complaints.filter(c => c.status === "Resolved").length,       color: "#22c55e" },
+    { label: "Total",        value: allCount,                 color: "#6366f1" },
+    { label: "Pending",      value: counts["Pending"] || 0,      color: "#f59e0b" },
+    { label: "Under Review", value: counts["Under Review"] || 0, color: "#3b82f6" },
+    { label: "Resolved",     value: counts["Resolved"] || 0,     color: "#22c55e" },
   ];
 
   return (
@@ -104,11 +189,37 @@ export default function AdminComplaintsPage() {
               <option value="Initiated">Initiated</option>
               <option value="Resolved">Resolved</option>
             </select>
+
+            {/* B2B and B2C complaints share this list, so either side can be picked */}
+            <select value={sideFilter} onChange={e => { setPage(1); setSideFilter(e.target.value); }}
+              style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: "#fff", minWidth: 130 }}>
+              <option value="">All Users</option>
+              <option value="partner">B2B (Partner)</option>
+              <option value="customer">B2C (Customer)</option>
+            </select>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>From</label>
+              <input type="date" value={fromDate} max={toDate || undefined}
+                onChange={e => { setPage(1); setFromDate(e.target.value); }}
+                style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 10px", fontSize: 13 }} />
+              <label style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>To</label>
+              <input type="date" value={toDate} min={fromDate || undefined}
+                onChange={e => { setPage(1); setToDate(e.target.value); }}
+                style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 10px", fontSize: 13 }} />
+            </div>
+
             {hasFilters && (
               <button onClick={clearFilters} style={{ height: 38, padding: "0 14px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#f8f8f8", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                 <FaTimes size={11} /> Clear
               </button>
             )}
+
+            <button onClick={exportExcel} disabled={exporting || loading || total === 0}
+              title="Download every complaint these filters match"
+              style={{ height: 38, padding: "0 14px", borderRadius: 8, border: "1px solid #15803d", background: "#15803d", color: "#fff", cursor: exporting || loading || total === 0 ? "not-allowed" : "pointer", opacity: exporting || loading || total === 0 ? 0.6 : 1, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
+              <FaFileExcel size={13} /> {exporting ? "Exporting..." : "Export Excel"}
+            </button>
           </div>
 
           {/* Table */}

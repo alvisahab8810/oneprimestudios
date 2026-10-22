@@ -18,7 +18,13 @@ import ProductFileUpload from "@/components/ProductFileUpload";
 import { priceForQuantity } from "@/lib/productPricing";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
-import { deliveryStatus, isValidPincode, normalizePincode } from "@/lib/deliveryZones";
+import {
+  deliveryStatus,
+  isValidPincode,
+  normalizePincode,
+  freeDeliveryScope,
+  isFreeDeliveryAt,
+} from "@/lib/deliveryZones";
 import { FaTruck } from "react-icons/fa";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
@@ -95,6 +101,27 @@ export default function ProductDetails() {
 
   // Whether this product reaches that PIN code — see lib/deliveryZones.js
   const delivery = useMemo(() => deliveryStatus(product, pincode), [product, pincode]);
+
+  // Free delivery either applies everywhere or only at listed PIN codes, so
+  // the badge says which one, and for a listed product what this PIN code gets
+  const freeHere = useMemo(() => {
+    const scope = freeDeliveryScope(product);
+    if (!scope.enabled) return { limited: false, free: false, label: "" };
+    if (scope.everywhere) return { limited: false, free: true, label: "Free Delivery" };
+
+    const checked = isValidPincode(pincode);
+    const free = isFreeDeliveryAt(product, pincode);
+
+    return {
+      limited: true,
+      free,
+      label: !checked
+        ? "Free delivery at selected PIN codes — check yours above"
+        : free
+        ? `Free delivery at ${normalizePincode(pincode)}`
+        : `Delivery is charged at ${normalizePincode(pincode)}`,
+    };
+  }, [product, pincode]);
 
   // File upload is optional — Add to Cart is available as soon as the product loads.
   // Attributes marked required (e.g. a mandatory upload) are still enforced in validateUploadAttrs().
@@ -560,16 +587,18 @@ export default function ProductDetails() {
               );
             })()}
 
-            {/* Delivery is on us for this product, so the buyer is told up front */}
+            {/* Delivery is on us for this product, so the buyer is told up front.
+                Where free delivery is limited to certain PIN codes, the badge
+                answers for the PIN code the buyer checked above. */}
             {product.freeDelivery && (
               <div
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
-                  background: "#e8f7ee",
-                  border: "1px solid #bfe5cd",
-                  color: "#1d7044",
+                  background: freeHere.limited && !freeHere.free ? "#f8fafc" : "#e8f7ee",
+                  border: `1px solid ${freeHere.limited && !freeHere.free ? "#dbe3ec" : "#bfe5cd"}`,
+                  color: freeHere.limited && !freeHere.free ? "#475569" : "#1d7044",
                   borderRadius: 8,
                   padding: "8px 14px",
                   fontWeight: 600,
@@ -577,7 +606,7 @@ export default function ProductDetails() {
                   margin: "12px 0",
                 }}
               >
-                <FaTruck /> Free Delivery
+                <FaTruck /> {freeHere.label}
               </div>
             )}
 

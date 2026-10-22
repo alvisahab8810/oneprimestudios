@@ -247,6 +247,11 @@ const ProductSchema = new mongoose.Schema(
     // charged for its delivery and the product page says so instead
     freeDelivery: { type: Boolean, default: false },
 
+    // Where that free delivery applies. Empty means everywhere; with PIN codes
+    // listed, delivery is free only there and charged normally elsewhere. Full
+    // 6-digit codes, or a leading part like "226" for 226xxx.
+    freeDeliveryPincodes: { type: [String], default: [] },
+
     // NEW: package details used to book a courier shipment (Shiprocket)
     shipping: {
       weight: { type: Number, default: 0 }, // kg, per unit

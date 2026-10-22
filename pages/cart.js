@@ -917,6 +917,63 @@ export default function CartPage() {
     return () => { cancelled = true; };
   }, [loading, cartItems.length, total]);
 
+  // A coupon stays applied across visits, so it is re-checked against what the
+  // cart is worth now. Changing a quantity or removing an item can take the
+  // order under a coupon's minimum, and then the coupon has to go.
+  useEffect(() => {
+    if (loading || cartItems.length === 0) return;
+
+    let stored = null;
+    try {
+      stored = JSON.parse(localStorage.getItem("appliedCoupon") || "null");
+    } catch {
+      stored = null;
+    }
+
+    if (!stored?.code) {
+      setAppliedCoupon(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.post(
+          "/api/coupons/apply",
+          { code: stored.code, cartTotal: total },
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+        );
+        if (cancelled) return;
+
+        const next = { code: res.data.coupon.code, discount: res.data.discount };
+        setAppliedCoupon(next);
+        setCouponCode(next.code);
+        localStorage.setItem("appliedCoupon", JSON.stringify(next));
+      } catch (err) {
+        if (cancelled) return;
+
+        // Only a refusal removes the coupon; a network or server failure
+        // leaves it alone, and the order route checks it again anyway
+        const status = err?.response?.status;
+        if (!status || status >= 500) return;
+
+        setAppliedCoupon(null);
+        localStorage.removeItem("appliedCoupon");
+        toast.error(
+          `${stored.code} removed — ${err?.response?.data?.message || "this coupon cannot be used for this order"}`,
+        );
+      }
+    };
+
+    check();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, cartItems.length, total]);
+
   // A code the buyer tapped "Apply" on from a product page. It is applied here,
   // where the order total is known, and only when it is actually usable — so
   // arriving at the cart never greets the buyer with an error.

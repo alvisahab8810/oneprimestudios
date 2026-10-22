@@ -56,6 +56,8 @@ export default function EditProductPage() {
     deliveryMode: "all",
     deliveryPincodesCSV: "",
     deliveryMessage: "",
+    // Empty means free delivery everywhere; see lib/deliveryZones.js
+    freeDeliveryPincodesCSV: "",
     // pricingTiersCSV: "",
     // b2b/b2c
     b2b_enabled: false,
@@ -196,6 +198,7 @@ export default function EditProductPage() {
         // Loaded back so saving the form again does not drop the delivery area
         deliveryMode: p.deliveryZones?.mode || "all",
         deliveryPincodesCSV: parsePincodeList(p.deliveryZones?.pincodes).join(", "),
+        freeDeliveryPincodesCSV: parsePincodeList(p.freeDeliveryPincodes).join(", "),
         deliveryMessage: p.deliveryZones?.message || "",
         b2b_enabled: !!(p.b2bOptions && p.b2bOptions.enabled),
         b2b_allowFileUpload: !!(p.b2bOptions && p.b2bOptions.allowFileUpload),
@@ -342,6 +345,10 @@ export default function EditProductPage() {
       fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("freeDelivery", String(form.freeDelivery));
+      fd.append(
+        "freeDeliveryPincodes",
+        JSON.stringify(form.freeDelivery ? parsePincodeList(form.freeDeliveryPincodesCSV) : [])
+      );
       fd.append("gstPercent", String(form.gstPercent || 0));
       fd.append("hsnCode", form.hsnCode || "");   // NEW
       fd.append("shipping", JSON.stringify({      // NEW: courier package details
@@ -747,6 +754,27 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                           className="input-primary"
                           placeholder="Leave blank to use the standard message"
                         />
+                      </>
+                    )}
+
+                    {/* Free delivery can be limited to certain PIN codes — a
+                        buyer anywhere else is quoted the courier charge */}
+                    {form.freeDelivery && (
+                      <>
+                        <label className="mb-2 d-block mt-3">Free delivery PIN codes</label>
+                        <textarea
+                          name="freeDeliveryPincodesCSV"
+                          value={form.freeDeliveryPincodesCSV}
+                          onChange={handleChange}
+                          className="input-primary"
+                          style={{ width: "100%", minHeight: 70 }}
+                          placeholder="226025, 226016 — leave empty for free delivery everywhere"
+                        />
+                        <p style={{ fontSize: 12, color: "#718096", marginTop: 4 }}>
+                          Leave this empty and delivery is free everywhere. With PIN codes listed,
+                          delivery is free only there and charged normally everywhere else. A
+                          shorter entry covers everything under it — 226 covers every 226xxx code.
+                        </p>
                       </>
                     )}
                   </div>

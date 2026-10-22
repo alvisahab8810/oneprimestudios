@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
-import { FiSearch, FiX, FiRefreshCw } from "react-icons/fi";
+import { FiSearch, FiX, FiRefreshCw, FiDownload } from "react-icons/fi";
+import * as XLSX from "xlsx";
 import { FaWallet } from "react-icons/fa";
 
 const ACCENT = "#1A71F6";
@@ -76,6 +77,10 @@ export default function AdminWalletPage() {
   const [counts, setCounts] = useState({});
   const [statusFilter, setStatusFilter] = useState("pending");
   const [search, setSearch] = useState("");
+  // Date range on when the request was raised; both ends are optional
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(true);
 
   // Review modal
@@ -98,7 +103,7 @@ export default function AdminWalletPage() {
     setLoadingRequests(true);
     try {
       const res = await axios.get("/api/admin/wallet/manual-topups", {
-        params: { status: statusFilter, search },
+        params: { status: statusFilter, search, from: fromDate, to: toDate },
         withCredentials: true,
       });
       setRequests(res.data.requests || []);
@@ -108,7 +113,7 @@ export default function AdminWalletPage() {
     } finally {
       setLoadingRequests(false);
     }
-  }, [statusFilter, search]);
+  }, [statusFilter, search, fromDate, toDate]);
 
   const loadPartners = useCallback(async () => {
     setLoadingPartners(true);
@@ -131,6 +136,102 @@ export default function AdminWalletPage() {
   useEffect(() => {
     loadPartners();
   }, [loadPartners]);
+
+  // Exports exactly what the filters above have left on screen, one row per
+  // request, with the refund columns filled in where there was a refund.
+  const exportRequests = () => {
+    if (!requests.length) {
+      toast.error("There is nothing to export");
+      return;
+    }
+
+    try {
+      setExporting(true);
+
+      const rows = requests.map((r) => ({
+        "Request No": r.requestNumber || "",
+        "Raised On": fmtDate(r.createdAt),
+        Partner: r.user?.name || "Deleted partner",
+        Company: r.user?.companyName || "",
+        "Member ID": r.user?.memberId || "",
+        Email: r.user?.email || "",
+        Phone: r.user?.phone || "",
+        "Amount (₹)": Number(r.amount || 0),
+        Mode: r.paymentMode || "",
+        Reference: r.referenceNumber || "",
+        "Paid On": r.paidAt ? fmtDate(r.paidAt) : "",
+        Proof: r.screenshotUrl ? "Attached" : "Not attached",
+        "Partner Note": r.note || "",
+        "Wallet Balance (₹)": Number(r.walletBalance || 0),
+        Status: STATUS_STYLE[r.status]?.label || r.status,
+        "Reviewed On": r.reviewedAt ? fmtDate(r.reviewedAt) : "",
+        "Admin Remarks": r.adminRemarks || "",
+        "Refunded Amount (₹)": r.refund?.amount ? Number(r.refund.amount) : "",
+        "Refund Mode": r.refund?.mode || "",
+        "Refund Reference": r.refund?.reference || "",
+        "Refunded On": r.refund?.at ? fmtDate(r.refund.at) : "",
+      }));
+
+      const total = requests.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+      const summary = [
+        { Field: "Exported on", Value: fmtDate(new Date()) },
+        { Field: "Status filter", Value: statusFilter === "all" ? "All" : STATUS_STYLE[statusFilter]?.label || statusFilter },
+        { Field: "From date", Value: fromDate || "Any" },
+        { Field: "To date", Value: toDate || "Any" },
+        { Field: "Search", Value: search.trim() || "None" },
+        { Field: "Requests", Value: requests.length },
+        { Field: "Total amount (₹)", Value: total },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Requests");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Filters");
+
+      const range = fromDate || toDate ? `_${fromDate || "start"}-to-${toDate || "today"}` : "";
+      XLSX.writeFile(
+        wb,
+        `wallet-topups_${statusFilter}${range}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+
+      toast.success(`Exported ${rows.length} request${rows.length !== 1 ? "s" : ""}`);
+    } catch (err) {
+      console.error("Wallet export error:", err);
+      toast.error("Could not build the Excel file");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportBalances = () => {
+    if (!filteredPartners.length) {
+      toast.error("There is nothing to export");
+      return;
+    }
+
+    const rows = filteredPartners.map((p) => ({
+      "Member ID": p.memberId || "",
+      Company: p.companyName || "",
+      Partner: p.name || "",
+      Email: p.email || "",
+      Phone: p.phone || "",
+      "Balance (₹)": Number(p.balance || 0),
+      "Last Change": p.updatedAt ? fmtDate(p.updatedAt) : "No activity",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Balances");
+    XLSX.writeFile(wb, `partner-balances_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    toast.success(`Exported ${rows.length} partner${rows.length !== 1 ? "s" : ""}`);
+  };
+
+  const clearRequestFilters = () => {
+    setStatusFilter("pending");
+    setSearch("");
+    setFromDate("");
+    setToDate("");
+  };
 
   const openReview = (request, action) => {
     setReview({ request, action });
@@ -337,6 +438,43 @@ export default function AdminWalletPage() {
                     />
                   </div>
 
+                  <div className="aw-dates">
+                    <label>
+                      From
+                      <input
+                        type="date"
+                        value={fromDate}
+                        max={toDate || undefined}
+                        onChange={(e) => setFromDate(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      To
+                      <input
+                        type="date"
+                        value={toDate}
+                        min={fromDate || undefined}
+                        onChange={(e) => setToDate(e.target.value)}
+                      />
+                    </label>
+                  </div>
+
+                  {(statusFilter !== "pending" || search || fromDate || toDate) && (
+                    <button type="button" className="aw-clear" onClick={clearRequestFilters}>
+                      <FiX /> Clear
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="aw-export"
+                    onClick={exportRequests}
+                    disabled={exporting || loadingRequests || requests.length === 0}
+                    title="Download what is on screen as an Excel file"
+                  >
+                    <FiDownload /> {exporting ? "Exporting…" : "Export Excel"}
+                  </button>
+
                   <button
                     type="button"
                     className="aw-refresh"
@@ -514,6 +652,15 @@ export default function AdminWalletPage() {
                       placeholder="Search partner by name, company, email or member ID"
                     />
                   </div>
+                  <button
+                    type="button"
+                    className="aw-export"
+                    onClick={exportBalances}
+                    disabled={loadingPartners || filteredPartners.length === 0}
+                    title="Download these balances as an Excel file"
+                  >
+                    <FiDownload /> Export Excel
+                  </button>
                   <button
                     type="button"
                     className="aw-refresh"
@@ -979,6 +1126,79 @@ export default function AdminWalletPage() {
         .admin-wallet .aw-refresh:hover {
           color: #1A71F6;
           border-color: #1A71F6;
+        }
+        .admin-wallet .aw-dates {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .admin-wallet .aw-dates label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          margin: 0;
+        }
+        .admin-wallet .aw-dates input {
+          border: 1px solid #e7e7e7;
+          border-radius: 10px;
+          height: 38px;
+          padding: 0 10px;
+          font-size: 13px;
+          color: #0d0d0d;
+          background: #fff;
+          text-transform: none;
+          letter-spacing: 0;
+        }
+        .admin-wallet .aw-dates input:focus {
+          outline: none;
+          border-color: #1A71F6;
+          box-shadow: 0 0 0 3px rgba(26, 113, 246, 0.1);
+        }
+        .admin-wallet .aw-clear {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          height: 38px;
+          padding: 0 12px;
+          border: 1px solid #e7e7e7;
+          border-radius: 10px;
+          background: #fff;
+          color: #6b7280;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .admin-wallet .aw-clear:hover {
+          color: #b91c1c;
+          border-color: #fecaca;
+        }
+        .admin-wallet .aw-export {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          height: 38px;
+          padding: 0 14px;
+          border: 1px solid #047857;
+          border-radius: 10px;
+          background: #047857;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .admin-wallet .aw-export:hover:not(:disabled) {
+          background: #03654a;
+          border-color: #03654a;
+        }
+        .admin-wallet .aw-export:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
         }
         .admin-wallet .aw-table-scroll {
           overflow-x: auto;

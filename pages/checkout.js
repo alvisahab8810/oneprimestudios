@@ -1038,14 +1038,6 @@ export default function CheckoutPage() {
 
 
 
-useEffect(() => {
-  if (userType === "partner") {
-    setPaymentMethod("wallet");
-  } else if (userType === "customer") {
-    setPaymentMethod("razorpay");
-  }
-}, [userType]);
-
 
   // Retail buyers buying for a business can ask for the invoice in the firm's
   // name; left off, nothing changes for an ordinary shopper
@@ -1165,6 +1157,16 @@ useEffect(() => {
 
   // Nothing can be ordered until the courier has priced this delivery
   const shippingReady = !transportApplies || (!!shippingQuote?.serviceable && !shippingLoading);
+
+  // A partner pays from the wallet by default. When the balance cannot cover
+  // this order the selection moves to online payment, and an explicit choice of
+  // online payment is left alone.
+  useEffect(() => {
+    if (userType !== "partner" || walletBalance === null) return;
+    setPaymentMethod((prev) =>
+      prev === "razorpay" ? prev : walletBalance >= finalAmount ? "wallet" : "razorpay"
+    );
+  }, [userType, walletBalance, finalAmount]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1407,18 +1409,75 @@ const placeOrder = async (method, payment = null) => {
 
   // for the coupon
 
+  // The coupon was applied on the cart, which may have changed since. It is
+  // re-checked against this order's subtotal, so one that no longer qualifies
+  // (a minimum order, an expiry) is dropped here with the reason, instead of
+  // being shown as a discount and then refused at Place Order.
   useEffect(() => {
-    const storedCoupon = localStorage.getItem("appliedCoupon");
-    if (storedCoupon) {
-      try {
-        const parsed = JSON.parse(storedCoupon);
-        setAppliedCoupon(parsed);
-        setDiscountAmount(parsed.discount || 0);
-      } catch (e) {
-        console.error("Invalid coupon data");
-      }
+    if (loading || cartItems.length === 0) return;
+
+    let stored = null;
+    try {
+      stored = JSON.parse(localStorage.getItem("appliedCoupon") || "null");
+    } catch {
+      stored = null;
     }
-  }, []);
+
+    if (!stored?.code) {
+      setAppliedCoupon(null);
+      setDiscountAmount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/coupons/apply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ code: stored.code, cartTotal: total }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+
+        if (res.ok && data.success) {
+          // The discount is recalculated too, so a percentage coupon never
+          // carries over an amount worked out on a bigger cart
+          const next = { code: data.coupon.code, discount: data.discount };
+          setAppliedCoupon(next);
+          setDiscountAmount(next.discount || 0);
+          localStorage.setItem("appliedCoupon", JSON.stringify(next));
+          return;
+        }
+
+        // A server error is not the buyer's fault — only a refusal removes it
+        if (res.status >= 500) return;
+
+        setAppliedCoupon(null);
+        setDiscountAmount(0);
+        localStorage.removeItem("appliedCoupon");
+        toast.error(
+          `${stored.code} removed — ${data.message || "this coupon cannot be used for this order"}`
+        );
+      } catch (err) {
+        // Offline or a dropped request: leave the coupon as it is, the order
+        // route checks it again before anything is charged
+        console.error("Coupon re-check failed:", err);
+      }
+    };
+
+    check();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, cartItems.length, total]);
 
   if (loading)
     return (
@@ -2183,6 +2242,43 @@ const placeOrder = async (method, payment = null) => {
     Wallet Balance: ₹{walletBalance.toFixed(2)}
   </div>
 )}
+
+                {/* A partner pays from the wallet, or online when it is short */}
+                {userType === "partner" && (
+                  <div className="mt-3">
+                    <label className="form-label fw-semibold mb-2">Payment Method</label>
+                    <select
+                      className="form-select"
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    >
+                      <option
+                        value="wallet"
+                        disabled={walletBalance !== null && walletBalance < finalAmount}
+                      >
+                        {walletBalance !== null && walletBalance < finalAmount
+                          ? "Pay using Wallet (insufficient balance)"
+                          : "Pay using Wallet"}
+                      </option>
+                      <option value="razorpay">Pay Online (UPI, Card, Net Banking)</option>
+                    </select>
+
+                    {paymentMethod === "wallet" && walletBalance !== null && (
+                      <p className="mb-0 mt-2" style={{ fontSize: 12.5, color: "#6b7280" }}>
+                        ₹{finalAmount.toFixed(2)} will be deducted from your wallet. Balance after
+                        this order: ₹{Math.max(walletBalance - finalAmount, 0).toFixed(2)}.
+                      </p>
+                    )}
+
+                    {walletBalance !== null && walletBalance < finalAmount && (
+                      <p className="mb-0 mt-2" style={{ fontSize: 12.5, color: "#92400e" }}>
+                        Your wallet has ₹{walletBalance.toFixed(2)} — ₹
+                        {(finalAmount - walletBalance).toFixed(2)} short for this order. Pay online
+                        now, or <Link href="/partner/wallet/add">add money to your wallet</Link>.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* <select
                   className="form-select"

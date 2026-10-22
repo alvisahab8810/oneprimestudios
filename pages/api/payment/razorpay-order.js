@@ -20,10 +20,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // 🚫 PARTNER MUST NOT USE RAZORPAY FOR ORDERS
-    if (user.userType !== "customer") {
+    // Retail buyers and partners may both pay online. A partner's wallet is
+    // still there; this is the alternative when its balance is short.
+    if (user.userType !== "customer" && user.userType !== "partner") {
       return res.status(403).json({
-        message: "Online payment is allowed for customers only",
+        message: "Online payment is not available for this account",
       });
     }
 
@@ -44,7 +45,8 @@ export default async function handler(req, res) {
       currency: "INR",
       receipt: `rcpt_${Date.now()}`,
       notes: {
-        purpose: "customer_order_payment",
+        purpose: "order_payment",
+        userType: user.userType,
         userId: user._id.toString(),
       },
     });

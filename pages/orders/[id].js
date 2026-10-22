@@ -649,7 +649,7 @@ export default function OrderDetailPage() {
             </div>
           )}
 
-          {order.status === "Order Ready" && order.dispatchRequest === "none" && (
+          {!isRetailOrder && order.status === "Order Ready" && order.dispatchRequest === "none" && (
             <div style={{ background: "#f5f3ff", border: "1.5px solid #c4b5fd", borderRadius: 12, padding: "16px 18px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
               <div>
                 <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: 13, color: "#5b21b6" }}>Your order is ready!</p>
@@ -662,14 +662,14 @@ export default function OrderDetailPage() {
             </div>
           )}
 
-          {order.status === "Order Ready" && order.dispatchRequest === "pending" && (
+          {!isRetailOrder && order.status === "Order Ready" && order.dispatchRequest === "pending" && (
             <div style={{ background: "#eff6ff", border: "1.5px solid #93c5fd", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center" }}>
               <FiClock size={16} color="#1d4ed8" />
               <p style={{ margin: 0, fontSize: 13, color: "#1e40af", fontWeight: 500 }}>Dispatch request sent — awaiting admin approval.</p>
             </div>
           )}
 
-          {order.dispatchRequest === "approved" && (
+          {!isRetailOrder && order.dispatchRequest === "approved" && (
             <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center" }}>
               <FiCheckCircle size={16} color="#15803d" />
               <p style={{ margin: 0, fontSize: 13, color: "#166534", fontWeight: 500 }}>Dispatch request approved — your order is on the way.</p>

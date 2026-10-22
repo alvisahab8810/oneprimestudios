@@ -5,11 +5,9 @@ import { verifyAdmin } from "@/lib/verifyJWT";
 export default async function handler(req, res) {
   await dbConnect();
 
-  try {
-    await verifyAdmin(req);
-  } catch {
-    return res.status(401).json({ message: "Admin access only" });
-  }
+  // verifyAdmin returns null instead of throwing, so the result has to be checked
+  const admin = await verifyAdmin(req, res);
+  if (!admin) return res.status(401).json({ message: "Admin access only" });
 
   if (req.method !== "PUT") {
     return res.status(405).json({ message: "Method not allowed" });

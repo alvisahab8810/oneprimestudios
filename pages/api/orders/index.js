@@ -111,6 +111,8 @@ export default async function handler(req, res) {
 
     return res.json({
       orders,
+      // Lets the list hide the partner-only dispatch request flow for retail buyers
+      userType: user.userType || "customer",
       total,
       totalAmount,
       totalPages: Math.ceil(total / limitNum),

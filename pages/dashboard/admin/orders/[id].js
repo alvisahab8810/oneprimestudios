@@ -114,6 +114,10 @@ export default function AdminOrderDetail() {
   if (loading) return <div className="p-5 text-center">Loading...</div>;
   if (!order) return <div className="p-5 text-center">Order not found</div>;
 
+  // Dispatch requests and the delivery challan belong to the partner (B2B)
+  // flow only — a retail order ships as soon as it is ready.
+  const isB2BOrder = String(order.user?.userType || "").toLowerCase() === "partner";
+
   return (
     <div className="d-flex bg-light">
       <Sidebar sidebarOpen={sidebarOpen} />
@@ -387,13 +391,13 @@ export default function AdminOrderDetail() {
               </div>
             </div>
 
-            {order.status === "Order Ready" && (
+            {isB2BOrder && order.status === "Order Ready" && (
               <div className="alert alert-warning my-3">
                 <strong>Dispatch Request:</strong>{" "}
                 {order.dispatchRequest === "pending" ? "Customer Requested Dispatch" : "Waiting for customer request"}
               </div>
             )}
-            {order.dispatchRequest === "approved" && (
+            {isB2BOrder && order.dispatchRequest === "approved" && (
               <div className="alert alert-success my-3">Dispatch request approved — Order is dispatched</div>
             )}
 
@@ -402,8 +406,8 @@ export default function AdminOrderDetail() {
               <ShipmentPanel order={order} onOrderChange={(next) => { setOrder(next); setNewStatus(next.status); }} />
             )}
 
-            {/* Delivery Challan — unchanged */}
-            {(order.status === "Order Dispatched" || order.status === "Order Delivered") && (
+            {/* Delivery Challan — B2B only, it is the partner's goods receipt */}
+            {isB2BOrder && (order.status === "Order Dispatched" || order.status === "Order Delivered") && (
               <div className="card mt-4 border shadow-sm">
                 <div className="card-body">
                   <h6 className="fw-semibold mb-3"><FaTruck className="me-2 text-success" />Delivery Challan & Remarks</h6>
