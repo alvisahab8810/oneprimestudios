@@ -6,7 +6,7 @@ import Wallet from "@/models/Wallet";
 // Imported so the User model is registered before populate() runs
 import User from "@/models/User";
 
-const STATUSES = ["pending", "approved", "rejected"];
+const STATUSES = ["pending", "approved", "rejected", "refunded"];
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

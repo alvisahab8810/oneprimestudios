@@ -16,7 +16,11 @@ const STATUS_STYLE = {
   pending: { bg: "#fffbeb", color: "#b45309", border: "#fde68a", label: "Pending" },
   approved: { bg: "#ecfdf5", color: "#047857", border: "#a7f3d0", label: "Approved" },
   rejected: { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca", label: "Rejected" },
+  refunded: { bg: "#eef2ff", color: "#4338ca", border: "#c7d2fe", label: "Refunded" },
 };
+
+// What the admin picked in the refund box, kept in one place
+const EMPTY_REFUND = { amount: "", mode: "", reference: "" };
 
 const money = (n) =>
   `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -77,6 +81,7 @@ export default function AdminWalletPage() {
   // Review modal
   const [review, setReview] = useState(null); // { request, action }
   const [remarks, setRemarks] = useState("");
+  const [refundForm, setRefundForm] = useState(EMPTY_REFUND);
   const [processing, setProcessing] = useState(false);
 
   // Balances
@@ -130,6 +135,11 @@ export default function AdminWalletPage() {
   const openReview = (request, action) => {
     setReview({ request, action });
     setRemarks("");
+    setRefundForm(
+      action === "refund"
+        ? { ...EMPTY_REFUND, amount: String(request.amount || "") }
+        : EMPTY_REFUND
+    );
   };
 
   const submitReview = async () => {
@@ -139,16 +149,38 @@ export default function AdminWalletPage() {
       return;
     }
 
+    const payload = { action: review.action, remarks: remarks.trim() };
+
+    if (review.action === "refund") {
+      if (!remarks.trim()) {
+        toast.error("Please write a note about this refund for the partner");
+        return;
+      }
+      const amount = Number(refundForm.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        toast.error("Enter the amount that was refunded");
+        return;
+      }
+      if (amount > Number(review.request.amount)) {
+        toast.error("The refund cannot be more than the amount paid");
+        return;
+      }
+      payload.refundAmount = amount;
+      payload.refundMode = refundForm.mode.trim();
+      payload.refundReference = refundForm.reference.trim();
+    }
+
     try {
       setProcessing(true);
       const res = await axios.put(
         `/api/admin/wallet/manual-topups/${review.request._id}`,
-        { action: review.action, remarks: remarks.trim() },
+        payload,
         { withCredentials: true }
       );
       toast.success(res.data.message || "Done");
       setReview(null);
       setRemarks("");
+      setRefundForm(EMPTY_REFUND);
       loadRequests();
       loadPartners();
     } catch (err) {
@@ -251,6 +283,10 @@ export default function AdminWalletPage() {
                 <strong style={{ color: "#b91c1c" }}>{counts.rejected || 0}</strong>
               </div>
               <div className="aw-stat">
+                <span>Refunded</span>
+                <strong style={{ color: "#4338ca" }}>{counts.refunded || 0}</strong>
+              </div>
+              <div className="aw-stat">
                 <span>Total Wallet Balance</span>
                 <strong style={{ color: ACCENT }}>{money(totalHeld)}</strong>
               </div>
@@ -279,7 +315,7 @@ export default function AdminWalletPage() {
               <div className="aw-card">
                 <div className="aw-toolbar">
                   <div className="aw-filters">
-                    {["pending", "approved", "rejected", "all"].map((s) => (
+                    {["pending", "approved", "rejected", "refunded", "all"].map((s) => (
                       <button
                         key={s}
                         type="button"
@@ -404,6 +440,22 @@ export default function AdminWalletPage() {
                                   {r.adminRemarks}
                                 </div>
                               )}
+                              {r.status === "refunded" && (
+                                <div
+                                  style={{
+                                    fontSize: 11.5,
+                                    color: "#4338ca",
+                                    marginTop: 4,
+                                    whiteSpace: "normal",
+                                    maxWidth: 220,
+                                  }}
+                                >
+                                  {money(r.refund?.amount)} refunded
+                                  {r.refund?.mode ? ` by ${r.refund.mode}` : ""}
+                                  {r.refund?.reference ? ` · ${r.refund.reference}` : ""}
+                                  {r.refund?.remarks ? ` — ${r.refund.remarks}` : ""}
+                                </div>
+                              )}
                             </td>
                             <td style={td}>
                               {r.status === "pending" ? (
@@ -424,9 +476,20 @@ export default function AdminWalletPage() {
                                   </button>
                                 </div>
                               ) : (
-                                <span style={{ fontSize: 12, color: "#6b7280" }}>
-                                  {fmtDate(r.reviewedAt)}
-                                </span>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                  <span style={{ fontSize: 12, color: "#6b7280" }}>
+                                    {fmtDate(r.refund?.at || r.reviewedAt)}
+                                  </span>
+                                  {r.status !== "refunded" && (
+                                    <button
+                                      type="button"
+                                      className="aw-btn ghost"
+                                      onClick={() => openReview(r, "refund")}
+                                    >
+                                      Mark Refunded
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </td>
                           </tr>
@@ -541,7 +604,11 @@ export default function AdminWalletPage() {
           <div className="aw-modal" onClick={(e) => e.stopPropagation()}>
             <div className="aw-modal-head">
               <h5>
-                {review.action === "approve" ? "Approve Top-Up" : "Reject Request"}
+                {review.action === "approve"
+                  ? "Approve Top-Up"
+                  : review.action === "refund"
+                  ? "Mark as Refunded"
+                  : "Reject Request"}
               </h5>
               <button type="button" onClick={() => setReview(null)} disabled={processing}>
                 <FiX />
@@ -574,9 +641,22 @@ export default function AdminWalletPage() {
                 </div>
                 <div>
                   <span>Balance After</span>
-                  <strong style={{ color: review.action === "approve" ? "#047857" : "#6b7280" }}>
+                  <strong
+                    style={{
+                      color:
+                        review.action === "approve"
+                          ? "#047857"
+                          : review.action === "refund" && review.request.status === "approved"
+                          ? "#b91c1c"
+                          : "#6b7280",
+                    }}
+                  >
                     {review.action === "approve"
                       ? money(Number(review.request.walletBalance) + Number(review.request.amount))
+                      : review.action === "refund" && review.request.status === "approved"
+                      ? money(
+                          Number(review.request.walletBalance) - Number(refundForm.amount || 0)
+                        )
                       : money(review.request.walletBalance)}
                   </strong>
                 </div>
@@ -599,8 +679,45 @@ export default function AdminWalletPage() {
                 </a>
               )}
 
+              {review.action === "refund" && (
+                <>
+                  <label className="aw-label">
+                    Refunded Amount <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={review.request.amount}
+                    value={refundForm.amount}
+                    onChange={(e) =>
+                      setRefundForm((f) => ({ ...f, amount: e.target.value }))
+                    }
+                    placeholder={`Up to ${money(review.request.amount)}`}
+                  />
+
+                  <label className="aw-label">Refund Mode</label>
+                  <input
+                    type="text"
+                    value={refundForm.mode}
+                    onChange={(e) => setRefundForm((f) => ({ ...f, mode: e.target.value }))}
+                    placeholder="How it was sent back, e.g. NEFT or UPI"
+                  />
+
+                  <label className="aw-label">Refund Reference</label>
+                  <input
+                    type="text"
+                    value={refundForm.reference}
+                    onChange={(e) =>
+                      setRefundForm((f) => ({ ...f, reference: e.target.value }))
+                    }
+                    placeholder="UTR or transaction number of the refund"
+                  />
+                </>
+              )}
+
               <label className="aw-label">
-                Remarks {review.action === "reject" && <span style={{ color: "#dc2626" }}>*</span>}
+                Remarks{" "}
+                {review.action !== "approve" && <span style={{ color: "#dc2626" }}>*</span>}
               </label>
               <textarea
                 rows={3}
@@ -609,6 +726,8 @@ export default function AdminWalletPage() {
                 placeholder={
                   review.action === "approve"
                     ? "Optional — visible to the partner"
+                    : review.action === "refund"
+                    ? "Why the money was returned, e.g. partner changed their plan"
                     : "Tell the partner what was wrong, e.g. reference not found in our account"
                 }
                 style={{ resize: "none" }}
@@ -618,6 +737,16 @@ export default function AdminWalletPage() {
                 <p className="aw-warn">
                   Check the amount against your bank statement first. Approving credits the wallet
                   straight away and cannot be undone — it would have to be deducted manually.
+                </p>
+              )}
+
+              {review.action === "refund" && (
+                <p className="aw-warn">
+                  Send the money from the bank first, then record it here.{" "}
+                  {review.request.status === "approved"
+                    ? "This top-up was already credited, so the same amount is taken back out of the wallet now."
+                    : "This top-up never reached the wallet, so no balance changes — only the status does."}{" "}
+                  The partner sees this on their top-up history.
                 </p>
               )}
             </div>
@@ -633,7 +762,9 @@ export default function AdminWalletPage() {
               </button>
               <button
                 type="button"
-                className={review.action === "approve" ? "aw-btn primary" : "aw-btn danger"}
+                className={
+                  review.action === "reject" ? "aw-btn danger" : "aw-btn primary"
+                }
                 onClick={submitReview}
                 disabled={processing}
               >
@@ -641,6 +772,8 @@ export default function AdminWalletPage() {
                   ? "Working…"
                   : review.action === "approve"
                   ? `Approve & Credit ${money(review.request.amount)}`
+                  : review.action === "refund"
+                  ? "Mark Refunded"
                   : "Reject Request"}
               </button>
             </div>

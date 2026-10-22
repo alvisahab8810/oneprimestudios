@@ -111,7 +111,8 @@ const LoginPopup = () => {
           &times;
         </button>
 
-        <AuthForm popup onSuccess={handleSuccess} />
+        {/* Retail sign-in only — partners sign in from /login */}
+        <AuthForm popup customerOnly onSuccess={handleSuccess} />
       </div>
 
       <style jsx global>{`
@@ -131,7 +132,8 @@ const LoginPopup = () => {
         .login-popup-box {
           position: relative;
           width: 100%;
-          max-width: 920px;
+          /* A small sign-in card: no side image, one column */
+          max-width: 400px;
           max-height: 92vh;
           overflow: hidden;
           background: #fff;
@@ -170,14 +172,10 @@ const LoginPopup = () => {
           max-height: 92vh;
         }
 
-        .login-popup-box .auth-popup-container .auth-image-section {
-          flex: 1;
-          border-radius: 16px 0 0 16px;
-        }
-
         .login-popup-box .auth-popup-container .auth-form-section {
-          flex: 1.15;
-          padding: 36px 32px;
+          flex: 1;
+          width: 100%;
+          padding: 30px 26px 26px;
           max-height: 92vh;
           overflow-y: auto;
           scrollbar-width: thin;
@@ -235,8 +233,7 @@ const LoginPopup = () => {
           }
 
           .login-popup-box .auth-popup-container .auth-form-section {
-            flex: 1;
-            padding: 30px 20px 24px;
+            padding: 28px 18px 22px;
           }
         }
       `}</style>

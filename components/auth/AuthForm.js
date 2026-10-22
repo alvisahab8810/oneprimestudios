@@ -8,9 +8,12 @@ import { useRouter } from "next/router";
 // The same form is used by the /login page and by the welcome popup, so the
 // markup lives here once. `popup` only changes the wrapper class; `onSuccess`
 // lets the popup close itself instead of sending the visitor to the homepage.
-const AuthForm = ({ popup = false, onSuccess }) => {
+// `customerOnly` drops the side image and the Partner/Customer tabs, so the
+// welcome popup stays a small retail sign-in — partners use /login.
+const AuthForm = ({ popup = false, customerOnly = false, onSuccess }) => {
   const router = useRouter();
-  const [isPartner, setIsPartner] = useState(true);
+  const [partnerTab, setPartnerTab] = useState(true);
+  const isPartner = customerOnly ? false : partnerTab;
   const [isSignup, setIsSignup] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -31,7 +34,7 @@ const AuthForm = ({ popup = false, onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleTabClick = (isPartnerTab) => setIsPartner(isPartnerTab);
+  const handleTabClick = (isPartnerTab) => setPartnerTab(isPartnerTab);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -173,31 +176,41 @@ const AuthForm = ({ popup = false, onSuccess }) => {
   };
 
   return (
-    <div className={popup ? "auth-container auth-popup-container" : "auth-container"}>
-      <div className="auth-image-section mobile-none"></div>
+    <div
+      className={
+        popup
+          ? `auth-container auth-popup-container${customerOnly ? " auth-compact" : ""}`
+          : "auth-container"
+      }
+    >
+      {!customerOnly && <div className="auth-image-section mobile-none"></div>}
 
       <div className="auth-form-section">
         <div className="logo">
           <img src="/assets/images/logo.png" alt="Logo" />
         </div>
 
-        {/* Top Tabs */}
-        <div className="toggle-buttons">
-          <button
-            type="button"
-            className={isPartner ? "active" : ""}
-            onClick={() => handleTabClick(true)}
-          >
-            {isSignup ? "Partner Signup" : "Partner Login"}
-          </button>
-          <button
-            type="button"
-            className={!isPartner ? "active" : ""}
-            onClick={() => handleTabClick(false)}
-          >
-            {isSignup ? "Customer Signup" : "Customer Login"}
-          </button>
-        </div>
+        {/* Top Tabs — left out where only the customer side is offered */}
+        {!customerOnly && (
+          <div className="toggle-buttons">
+            <button
+              type="button"
+              className={isPartner ? "active" : ""}
+              onClick={() => handleTabClick(true)}
+            >
+              {isSignup ? "Partner Signup" : "Partner Login"}
+            </button>
+            <button
+              type="button"
+              className={!isPartner ? "active" : ""}
+              onClick={() => handleTabClick(false)}
+            >
+              {isSignup ? "Customer Signup" : "Customer Login"}
+            </button>
+          </div>
+        )}
+
+        {customerOnly && !isSignup && <h3 className="form-heading">Sign in</h3>}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {/* SIGNUP */}

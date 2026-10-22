@@ -53,9 +53,11 @@ const WalletTopupRequestSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // "refunded" is set by an admin after the money has been sent back to the
+    // partner's bank account, whether or not it ever reached the wallet.
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected", "refunded"],
       default: "pending",
       index: true,
     },
@@ -75,6 +77,27 @@ const WalletTopupRequestSchema = new mongoose.Schema(
     reviewedAt: {
       type: Date,
       default: null,
+    },
+
+    // Filled in when the money is returned to the partner's bank account. The
+    // status it is refunded from is kept so the history still reads correctly:
+    // a refund after an approval also takes the amount back out of the wallet,
+    // a refund after a rejection moves nothing.
+    refund: {
+      amount: { type: Number, default: 0 },
+      // How the money was sent back (NEFT, UPI, …) and its bank reference
+      mode: { type: String, default: "", trim: true },
+      reference: { type: String, default: "", trim: true },
+      remarks: { type: String, default: "", trim: true },
+      refundedFrom: { type: String, default: "" },
+      at: { type: Date, default: null },
+      by: { type: mongoose.Schema.Types.ObjectId, ref: "Admin", default: null },
+      // The debit entry written when a credited top-up is refunded
+      walletTransaction: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "WalletTransaction",
+        default: null,
+      },
     },
 
     // The credit entry written into the partner's statement on approval

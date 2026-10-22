@@ -1150,6 +1150,64 @@ export default function CartPage() {
         {/* <h2 className="mb-4 fw-bold cart-m-heading">Your Cart</h2> */}
         {/* NEW CART LAYOUT */}
         <div className="cart-layout">
+          {/* Uploaded artwork is shown as a thumbnail, never at its own size */}
+          <style jsx>{`
+            .cart-file-row {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 10px;
+              margin: 6px 0 10px;
+            }
+
+            .cart-file-chip {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 4px;
+              width: 72px;
+              text-decoration: none;
+              color: #6b7280;
+            }
+
+            .cart-preview-img,
+            .cart-preview-doc {
+              width: 64px;
+              height: 64px;
+              border-radius: 8px;
+              border: 1px solid #e5e7eb;
+              background: #f8f9fb;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .cart-preview-img {
+              object-fit: cover;
+            }
+
+            .cart-preview-doc {
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+              color: #4b5563;
+            }
+
+            .cart-file-chip:hover .cart-preview-img,
+            .cart-file-chip:hover .cart-preview-doc {
+              border-color: #1a71f6;
+            }
+
+            .cart-file-caption {
+              font-size: 11px;
+              line-height: 1.2;
+              max-width: 72px;
+              text-align: center;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          `}</style>
+
           {/* LEFT SIDE – CART ITEMS */}
           <div className="cart-items-wrapper">
             {cartItems.map((item, idx) => {
@@ -1188,43 +1246,63 @@ export default function CartPage() {
                     <h4 className="cart-name">{item.product?.name}</h4>
 
 
-                    {/* 🔹 LEGACY FILE PREVIEW */}
-{Array.isArray(item.uploadedFiles) &&
-  item.uploadedFiles.map((fileUrl, i) => (
-    <div key={i} className="cart-file-preview">
-      {getFileType(fileUrl) === "image" ? (
-        <img
-          src={getImageUrl(fileUrl)}
-          className="cart-preview-img"
-          alt="Design"
-        />
-      ) : (
-        <a href={getImageUrl(fileUrl)} target="_blank">
-          📄 View File
-        </a>
-      )}
-    </div>
-  ))}
+                    {/* 🔹 UPLOADED FILES — small thumbnails, click to open full size */}
+                    {(Array.isArray(item.uploadedFiles) &&
+                      item.uploadedFiles.length > 0) ||
+                    (Array.isArray(item.uploadedAttributeFiles) &&
+                      item.uploadedAttributeFiles.length > 0) ? (
+                      <div className="cart-file-row">
+                        {(item.uploadedFiles || []).map((fileUrl, i) => (
+                          <a
+                            key={`f${i}`}
+                            className="cart-file-chip"
+                            href={getImageUrl(fileUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Open uploaded file"
+                          >
+                            {getFileType(fileUrl) === "image" ? (
+                              <img
+                                src={getImageUrl(fileUrl)}
+                                className="cart-preview-img"
+                                alt="Uploaded design"
+                              />
+                            ) : (
+                              <span className="cart-preview-doc">
+                                {getFileType(fileUrl) === "pdf" ? "PDF" : "FILE"}
+                              </span>
+                            )}
+                            <span className="cart-file-caption">Design</span>
+                          </a>
+                        ))}
 
-{/* 🔹 ATTRIBUTE FILE PREVIEW */}
-{Array.isArray(item.uploadedAttributeFiles) &&
-  item.uploadedAttributeFiles.map((file, i) => (
-    <div key={i} className="cart-file-preview">
-      <small className="text-muted">{file.attributeName}</small>
-
-      {getFileType(file.url) === "image" ? (
-        <img
-          src={getImageUrl(file.url)}
-          className="cart-preview-img"
-          alt={file.name}
-        />
-      ) : (
-        <a href={getImageUrl(file.url)} target="_blank">
-          📄 {file.name}
-        </a>
-      )}
-    </div>
-  ))}
+                        {(item.uploadedAttributeFiles || []).map((file, i) => (
+                          <a
+                            key={`a${i}`}
+                            className="cart-file-chip"
+                            href={getImageUrl(file.url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={file.name || "Open uploaded file"}
+                          >
+                            {getFileType(file.url) === "image" ? (
+                              <img
+                                src={getImageUrl(file.url)}
+                                className="cart-preview-img"
+                                alt={file.name || "Uploaded file"}
+                              />
+                            ) : (
+                              <span className="cart-preview-doc">
+                                {getFileType(file.url) === "pdf" ? "PDF" : "FILE"}
+                              </span>
+                            )}
+                            <span className="cart-file-caption">
+                              {file.attributeName || file.name || "File"}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
 
 
 

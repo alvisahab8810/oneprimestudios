@@ -17,6 +17,7 @@ export default function ActionMediaPage() {
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [alt, setAlt] = useState("");
+  const [seeding, setSeeding] = useState(false);
 
   const fileRef = useRef(null);
 
@@ -84,6 +85,26 @@ export default function ActionMediaPage() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  // The homepage used to fall back to three bundled photos. Once anything is
+  // uploaded the slider shows only this list, so the photos are brought in here
+  // as normal items an admin can reorder, hide or delete.
+  const addDefaults = async () => {
+    try {
+      setSeeding(true);
+      const res = await axios.post(
+        "/api/admin/action-media/defaults",
+        {},
+        { withCredentials: true }
+      );
+      toast.success(res.data.message || "Added");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not add the photos");
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -158,7 +179,23 @@ export default function ActionMediaPage() {
 
         {/* UPLOAD */}
         <div className="card p-3 mb-4">
-          <h6 className="fw-semibold mb-2">Add a photo or video</h6>
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <h6 className="fw-semibold mb-0">Add a photo or video</h6>
+
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary"
+              disabled={seeding}
+              onClick={addDefaults}
+            >
+              {seeding ? "Adding..." : "Add the 3 built-in photos"}
+            </button>
+          </div>
+
+          <p className="text-muted mb-2" style={{ fontSize: 13 }}>
+            The slider shows only the list below, so use that button once to put
+            the website&apos;s own three photos in it alongside your uploads.
+          </p>
 
           <ul className="text-muted mb-3" style={{ fontSize: 13, paddingLeft: 18 }}>
             <li>Photos: WebP only, up to {formatBytes(IMAGE_MAX_BYTES)}</li>
@@ -209,8 +246,8 @@ export default function ActionMediaPage() {
           <p>Loading...</p>
         ) : items.length === 0 ? (
           <p className="text-muted">
-            Nothing uploaded yet. Until something is added, the homepage shows
-            its three built-in photos.
+            Nothing in the list yet. Until something is added, the homepage shows
+            its three built-in photos on its own.
           </p>
         ) : (
           <div className="table-responsive">

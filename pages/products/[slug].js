@@ -20,7 +20,6 @@ import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/li
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
 import { deliveryStatus, isValidPincode, normalizePincode } from "@/lib/deliveryZones";
 import { FaTruck } from "react-icons/fa";
-import { isCodAvailable } from "@/lib/codRules";
 
 // ── FIX: show correct unit label ─────────────────────────────────────────────
 // OLD code always showed "px" even when admin saved "inch" or "mm"
@@ -75,10 +74,6 @@ export default function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Coupons on offer for this side of the business
-  const [couponOffers, setCouponOffers] = useState([]);
-  const [copiedCode, setCopiedCode] = useState("");
-
   // Buyer reviews, loaded once the product is known
   const [reviews, setReviews] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({ total: 0, average: 0 });
@@ -132,43 +127,6 @@ export default function ProductDetails() {
       })
       .finally(() => setLoading(false));
   }, [slug]);
-
-  // Offers are shown to visitors who have not signed in yet as well, so the
-  // product's own side decides which coupons are advertised
-  useEffect(() => {
-    if (!product?._id) return;
-    const audience = product.productFor === "b2b" ? "b2b" : "b2c";
-    const token = localStorage.getItem("token");
-    axios
-      .get(`/api/coupons/offers?audience=${audience}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      .then((res) => setCouponOffers(res.data.offers || []))
-      .catch(() => {
-        // No offers strip is shown if this fails
-      });
-  }, [product?._id, product?.productFor]);
-
-  const copyCoupon = async (code) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
-      toast.success(`${code} copied`);
-      setTimeout(() => setCopiedCode((c) => (c === code ? "" : c)), 2000);
-    } catch {
-      toast.error("Could not copy the code");
-    }
-  };
-
-  // "Apply" here saves the code for the cart, where the discount is worked out
-  const applyCouponLater = (code) => {
-    try {
-      localStorage.setItem("pendingCoupon", code);
-    } catch {
-      // Private browsing can block storage — the buyer can still type the code
-    }
-    toast.success(`${code} will be applied on your cart`);
-  };
 
   // Reviews are public, so this needs no token
   useEffect(() => {
@@ -623,28 +581,6 @@ export default function ProductDetails() {
               </div>
             )}
 
-            {/* Retail buyers can pay for this one on delivery, so they are told
-                before they reach checkout */}
-            {!showB2BForm && isCodAvailable(product) && (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "#fffbeb",
-                  border: "1px solid #fde68a",
-                  color: "#b45309",
-                  borderRadius: 8,
-                  padding: "8px 14px",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  margin: "12px 0",
-                }}
-              >
-                <FaTruck /> Cash on Delivery available
-              </div>
-            )}
-
             {/* ── B2B Section ── */}
             {showB2BForm ? (
               <div className={styles.b2bForm}>
@@ -917,74 +853,6 @@ export default function ProductDetails() {
           </aside>
         </div>
 
-        {/* ── Offers — copy the code, or send it straight to the cart ── */}
-        {couponOffers.length > 0 && (
-          <div className="product-desc-section">
-            <h4 className="product-description">Available Offers</h4>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-              {couponOffers.map((o) => (
-                <div
-                  key={o.code}
-                  style={{
-                    flex: "1 1 260px", minWidth: 0,
-                    border: "1px dashed #fdba74", background: "#fff7ed",
-                    borderRadius: 12, padding: "12px 14px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{
-                      fontSize: 12, fontWeight: 800, letterSpacing: 0.5,
-                      background: "#fff", color: "#9a3412",
-                      border: "1px dashed #fb923c", borderRadius: 5, padding: "3px 8px",
-                    }}>
-                      {o.code}
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#15803d" }}>{o.headline}</span>
-                  </div>
-
-                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 5 }}>
-                    {o.minOrderAmount > 0
-                      ? `On orders above ₹${o.minOrderAmount}`
-                      : "On any order"}
-                    {o.expiryDate && (
-                      <> · Valid till {new Date(o.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</>
-                    )}
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <button
-                      type="button"
-                      onClick={() => copyCoupon(o.code)}
-                      style={{
-                        background: "#fff", color: "#9a3412", border: "1.5px solid #fdba74",
-                        borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {copiedCode === o.code ? "Copied" : "Copy code"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyCouponLater(o.code)}
-                      style={{
-                        background: "#c2410c", color: "#fff", border: "none",
-                        borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>
-              Codes are applied on the cart, where the saving is calculated on your order total.
-            </p>
-          </div>
-        )}
 
         {/* ── Ratings & reviews — written by buyers whose order was delivered ── */}
         <div className="product-desc-section">

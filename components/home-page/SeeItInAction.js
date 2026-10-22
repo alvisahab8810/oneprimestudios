@@ -213,8 +213,23 @@ export default function SeeItInAction() {
             className="action-mute"
             onClick={toggleMute}
             aria-label={muted ? "Unmute video" : "Mute video"}
+            title={muted ? "Unmute" : "Mute"}
           >
-            {muted ? "🔇 Unmute" : "🔊 Mute"}
+            {/* Speaker, with a cross beside it while the sound is off */}
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M11 4.5 6.6 8.2H3.6v7.6h3L11 19.5z" />
+              {muted ? (
+                <g>
+                  <path d="M15.4 9.3 20.2 14.7" />
+                  <path d="M20.2 9.3 15.4 14.7" />
+                </g>
+              ) : (
+                <g>
+                  <path d="M15.6 9.1a4 4 0 0 1 0 5.8" />
+                  <path d="M18.3 6.6a7.6 7.6 0 0 1 0 10.8" />
+                </g>
+              )}
+            </svg>
           </button>
         )}
 

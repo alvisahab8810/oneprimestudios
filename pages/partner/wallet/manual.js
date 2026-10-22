@@ -23,6 +23,7 @@ const STATUS_STYLE = {
   pending: { bg: "#fffbeb", color: "#b45309", border: "#fde68a", label: "Pending" },
   approved: { bg: "#ecfdf5", color: "#047857", border: "#a7f3d0", label: "Approved" },
   rejected: { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca", label: "Rejected" },
+  refunded: { bg: "#eef2ff", color: "#4338ca", border: "#c7d2fe", label: "Refunded" },
 };
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -375,7 +376,22 @@ export default function ManualWalletTopup() {
                         <StatusPill status={r.status} />
                       </td>
                       <td style={{ maxWidth: 240, whiteSpace: "normal" }}>
-                        {r.adminRemarks || "—"}
+                        {r.status === "refunded" ? (
+                          <>
+                            <div style={{ color: "#4338ca", fontWeight: 600 }}>
+                              {money(r.refund?.amount)} refunded to your bank
+                              {r.refund?.mode ? ` by ${r.refund.mode}` : ""}
+                            </div>
+                            {r.refund?.reference && (
+                              <div style={{ fontSize: 12, color: "#6b7280" }}>
+                                Ref: {r.refund.reference}
+                              </div>
+                            )}
+                            {r.refund?.remarks && <div>{r.refund.remarks}</div>}
+                          </>
+                        ) : (
+                          r.adminRemarks || "—"
+                        )}
                       </td>
                     </tr>
                   ))}

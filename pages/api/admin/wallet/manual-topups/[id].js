@@ -29,8 +29,10 @@ export default async function handler(req, res) {
   const action = String(req.body?.action || "").trim();
   const remarks = String(req.body?.remarks || "").trim().slice(0, 500);
 
-  if (action !== "approve" && action !== "reject") {
-    return res.status(400).json({ message: "Action must be approve or reject" });
+  if (!["approve", "reject", "refund"].includes(action)) {
+    return res
+      .status(400)
+      .json({ message: "Action must be approve, reject or refund" });
   }
 
   try {
@@ -41,6 +43,124 @@ export default async function handler(req, res) {
     if (!request) {
       return res.status(404).json({ message: "Request not found" });
     }
+    /* ── REFUND: the money has been sent back from the bank ──────────── */
+    // Allowed from any state but a refund that already happened. An approved
+    // request also has to give the credited amount back, or the partner would
+    // keep the balance as well as the money.
+    if (action === "refund") {
+      if (request.status === "refunded") {
+        return res.status(400).json({ message: "This request was already refunded" });
+      }
+      if (!remarks) {
+        return res.status(400).json({
+          message: "Please write a note so the partner knows about the refund",
+        });
+      }
+
+      const amount = Number(req.body?.refundAmount ?? request.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ message: "Enter a refund amount greater than zero" });
+      }
+      if (amount > request.amount) {
+        return res.status(400).json({
+          message: `The refund cannot be more than the ₹${request.amount} paid`,
+        });
+      }
+
+      const refundedFrom = request.status;
+      const refund = {
+        amount,
+        mode: String(req.body?.refundMode || "").trim().slice(0, 40),
+        reference: String(req.body?.refundReference || "").trim().slice(0, 100),
+        remarks,
+        refundedFrom,
+        at: new Date(),
+        by: admin.id,
+        walletTransaction: null,
+      };
+
+      // Only an approved request ever put money into the wallet
+      if (refundedFrom === "approved") {
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            const claimed = await WalletTopupRequest.findOneAndUpdate(
+              { _id: request._id, status: "approved" },
+              { $set: { status: "refunded", refund } },
+              { new: true, session }
+            );
+            if (!claimed) throw new Error("ALREADY_PROCESSED");
+
+            // The condition is part of the update so two refunds cannot race
+            const wallet = await Wallet.findOneAndUpdate(
+              { user: request.user?._id || request.user, balance: { $gte: amount } },
+              { $inc: { balance: -amount } },
+              { new: true, session }
+            );
+            if (!wallet) throw new Error("INSUFFICIENT");
+
+            const [txn] = await WalletTransaction.create(
+              [
+                {
+                  user: request.user?._id || request.user,
+                  type: "debit",
+                  amount,
+                  description: `Wallet top-up refunded to bank (${request.requestNumber})`,
+                  referenceType: "refund",
+                  referenceId: request.requestNumber,
+                  status: "success",
+                },
+              ],
+              { session }
+            );
+
+            await WalletTopupRequest.updateOne(
+              { _id: request._id },
+              { $set: { "refund.walletTransaction": txn._id } },
+              { session }
+            );
+          });
+        } finally {
+          await session.endSession();
+        }
+      } else {
+        const claimed = await WalletTopupRequest.findOneAndUpdate(
+          { _id: request._id, status: refundedFrom },
+          { $set: { status: "refunded", refund } },
+          { new: true }
+        );
+        if (!claimed) throw new Error("ALREADY_PROCESSED");
+      }
+
+      const refunded = await WalletTopupRequest.findById(id)
+        .populate("user", "name companyName email")
+        .lean();
+
+      res.status(200).json({
+        message: `₹${amount} marked as refunded`,
+        request: refunded,
+      });
+
+      logActivity(
+        req,
+        "wallet_topup_refunded",
+        `Manual top-up ${request.requestNumber} refunded ₹${amount} to ${
+          request.user?.companyName || request.user?.name || "partner"
+        }`,
+        {
+          entity: "wallet_topup",
+          entityId: String(request._id),
+          meta: {
+            amount,
+            refundedFrom,
+            reference: refund.reference,
+            walletDebited: refundedFrom === "approved",
+          },
+        }
+      );
+      return;
+    }
+
     if (request.status !== "pending") {
       return res.status(400).json({
         message: `This request was already ${request.status}`,
@@ -163,6 +283,12 @@ export default async function handler(req, res) {
   } catch (err) {
     if (err?.message === "ALREADY_PROCESSED") {
       return res.status(400).json({ message: "This request was already processed" });
+    }
+    if (err?.message === "INSUFFICIENT") {
+      return res.status(400).json({
+        message:
+          "The partner has already spent this money — deduct it from the wallet first, then mark the refund",
+      });
     }
     console.error("Manual top-up review error:", err);
     return res.status(500).json({ message: "Could not process this request" });

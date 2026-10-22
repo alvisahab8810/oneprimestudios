@@ -5565,37 +5565,61 @@ ease;
   background: #0d0d0d;
 }
 
-/* Sound control for the slide on screen; only put up when it is a video */
+/* Round mute toggle sitting on the top-right corner of the active video.
+   The card is centred and min(800px, 46vw) wide, so the offset is measured
+   from the middle of the slider. */
 .action-mute {
   position: absolute;
   z-index: 3;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 18px;
+  top: 18px;
+  left: calc(50% + min(800px, 46vw) / 2 - 62px);
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
+  justify-content: center;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.62);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
   cursor: pointer;
   backdrop-filter: blur(4px);
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.action-mute svg {
+  width: 20px;
+  height: 20px;
+}
+
+.action-mute svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.action-mute svg > path:first-child {
+  fill: currentColor;
 }
 
 .action-mute:hover {
   background: #e10600;
+  transform: scale(1.06);
 }
 
-@media (max-width: 575px) {
+@media (max-width: 991px) {
   .action-mute {
-    bottom: 10px;
-    padding: 6px 13px;
-    font-size: 12px;
+    top: 12px;
+    left: calc(50% + 62vw / 2 - 52px);
+    width: 38px;
+    height: 38px;
+  }
+
+  .action-mute svg {
+    width: 17px;
+    height: 17px;
   }
 }

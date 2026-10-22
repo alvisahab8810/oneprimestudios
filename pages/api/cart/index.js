@@ -242,8 +242,10 @@ export default async function handler(req, res) {
       cart.items = [];
     }
 
-    // Retail only: adding the same product with the same options again bumps the
-    // quantity on the existing line instead of creating a duplicate row
+    // Adding the same product again bumps the quantity on the line already in
+    // the cart instead of creating a duplicate row. For a partner the order
+    // name is part of what makes a line: two jobs named differently stay apart,
+    // the same job added twice simply adds up.
     const attrKey = (attrs) =>
       JSON.stringify(
         Object.keys(attrs || {})
@@ -276,16 +278,23 @@ export default async function handler(req, res) {
       return res.json(cart.items);
     }
 
-    const existingLine =
-      !isPartnerCart && !hasNewFiles
-        ? cart.items.find(
-            (item) =>
-              String(item.product) === String(productId) &&
-              (item.uploadedFiles || []).length === 0 &&
-              (item.uploadedAttributeFiles || []).length === 0 &&
-              attrKey(item.selectedAttrs) === attrKey(selectedAttrs)
-          )
-        : null;
+    const sameLine = (item) =>
+      String(item.product) === String(productId) &&
+      attrKey(item.selectedAttrs) === attrKey(selectedAttrs) &&
+      String(item.orderName || "") === String(orderName || "");
+
+    // A partner's line also merges when artwork is attached — the files are
+    // carried onto the line it merges into, so nothing uploaded is lost.
+    const existingLine = isPartnerCart
+      ? cart.items.find(sameLine)
+      : !hasNewFiles
+      ? cart.items.find(
+          (item) =>
+            sameLine(item) &&
+            (item.uploadedFiles || []).length === 0 &&
+            (item.uploadedAttributeFiles || []).length === 0
+        )
+      : null;
 
     if (existingLine) {
       const mergedQty = Number(existingLine.quantity || 0) + Number(quantity);
@@ -302,6 +311,27 @@ export default async function handler(req, res) {
       }).unitPrice;
       if (remarks) existingLine.remarks = remarks;
       if (orderName) existingLine.orderName = orderName;
+
+      if (hasNewFiles) {
+        // A fresh upload for the same attribute slot replaces the old one;
+        // every other file already on the line is kept
+        const slotOf = (f) => f?.attributeKey || f?.attributeName || f?.url;
+        const newSlots = new Set((uploadedAttributeFiles || []).map(slotOf));
+        existingLine.uploadedAttributeFiles = [
+          ...(existingLine.uploadedAttributeFiles || []).filter(
+            (f) => !newSlots.has(slotOf(f))
+          ),
+          ...(uploadedAttributeFiles || []),
+        ];
+
+        const seenUrls = new Set(
+          (existingLine.uploadedFiles || []).map((f) => f?.url || f)
+        );
+        existingLine.uploadedFiles = [
+          ...(existingLine.uploadedFiles || []),
+          ...(uploadedFiles || []).filter((f) => !seenUrls.has(f?.url || f)),
+        ];
+      }
     } else {
       cart.items.push({
         product: productId,

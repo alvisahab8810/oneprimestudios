@@ -1051,6 +1051,14 @@ useEffect(() => {
   // name; left off, nothing changes for an ordinary shopper
   const [wantsGstInvoice, setWantsGstInvoice] = useState(false);
 
+  // Once the business details are in, the card shows them as a line with a
+  // "Change" link instead of keeping two input boxes open
+  const [gstEditing, setGstEditing] = useState(false);
+
+  const gstDetailsReady =
+    formData.companyName.trim().length > 1 &&
+    /^[0-9A-Z]{15}$/.test(formData.gstNumber.trim().toUpperCase());
+
   // Every retail product offers cash on delivery unless an admin turned it off
   // for that product; the server checks this again before placing the order
   const codAllowed = userType === "customer" && cartAllowsCod(cartItems);
@@ -1688,63 +1696,317 @@ const placeOrder = async (method, payment = null) => {
 
                 {/* Retail buyers who need the bill in a business name */}
                 {userType === "customer" && (
-                  <div className="gst-invoice-block mt-3">
-                    <label
-                      className="d-flex align-items-center gap-2 fw-semibold mb-0"
-                      style={{ cursor: "pointer" }}
-                    >
+                  <div
+                    className={`gst-card mt-3${wantsGstInvoice ? " is-on" : ""}`}
+                  >
+                    <label className="gst-card-head">
                       <input
                         type="checkbox"
+                        className="gst-check"
                         checked={wantsGstInvoice}
-                        onChange={(e) => setWantsGstInvoice(e.target.checked)}
+                        onChange={(e) => {
+                          setWantsGstInvoice(e.target.checked);
+                          if (e.target.checked) setGstEditing(!gstDetailsReady);
+                        }}
                       />
-                      I need a GST invoice (optional)
+                      <span className="gst-head-text">
+                        <span className="gst-title">Get GST invoice for this order</span>
+                        <span className="gst-sub">
+                          Buying for a business? Get the bill in your company&apos;s name
+                          and claim input tax credit.
+                        </span>
+                      </span>
+                      <span className="gst-art" aria-hidden="true">
+                        <svg viewBox="0 0 48 48" width="44" height="44" fill="none">
+                          <rect
+                            x="9"
+                            y="5"
+                            width="26"
+                            height="34"
+                            rx="3"
+                            fill="#eef3ff"
+                            stroke="#1A71F6"
+                            strokeWidth="1.6"
+                          />
+                          <path
+                            d="M15 14h14M15 20h14M15 26h9"
+                            stroke="#1A71F6"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                          <circle cx="34" cy="33" r="9" fill="#1A71F6" />
+                          <path
+                            d="m30.5 33.2 2.6 2.6 4.6-5"
+                            stroke="#fff"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
                     </label>
-                    <p className="mb-0 mt-1" style={{ fontSize: 12.5, color: "#6b7280" }}>
-                      Tick this if you are buying for a business and want the bill in the
-                      company&apos;s name.
-                    </p>
 
-                    {wantsGstInvoice && (
-                      <div className="row mt-3">
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label fw-semibold">Business Name *</label>
+                    {wantsGstInvoice &&
+                      !gstEditing &&
+                      gstDetailsReady &&
+                      !errors.companyName &&
+                      !errors.gstNumber && (
+                      <div className="gst-saved">
+                        <div>
+                          <div className="gst-saved-name">
+                            {formData.companyName.trim()}
+                          </div>
+                          <div className="gst-saved-gstin">
+                            GSTIN: {formData.gstNumber.trim().toUpperCase()}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="gst-change"
+                          onClick={() => setGstEditing(true)}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
+
+                    {wantsGstInvoice &&
+                      (gstEditing ||
+                        !gstDetailsReady ||
+                        errors.companyName ||
+                        errors.gstNumber) && (
+                      <div className="gst-fields">
+                        <div className="gst-field">
+                          <label className="gst-label">Business name</label>
                           <input
                             className={`form-control ${errors.companyName ? "is-invalid" : ""}`}
                             name="companyName"
                             value={formData.companyName}
                             onChange={handleChange}
-                            placeholder="Registered business name"
+                            placeholder="Name as registered under GST"
                           />
                           {errors.companyName && (
                             <div className="invalid-feedback">{errors.companyName}</div>
                           )}
                         </div>
 
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label fw-semibold">GST Number *</label>
+                        <div className="gst-field">
+                          <label className="gst-label">GSTIN</label>
                           <input
-                            className={`form-control ${errors.gstNumber ? "is-invalid" : ""}`}
+                            className={`form-control gst-gstin ${
+                              errors.gstNumber ? "is-invalid" : ""
+                            }`}
                             name="gstNumber"
                             value={formData.gstNumber}
                             onChange={handleChange}
-                            placeholder="15-character GSTIN"
+                            placeholder="22AAAAA0000A1Z5"
                             maxLength={15}
-                            style={{ textTransform: "uppercase" }}
                           />
                           {errors.gstNumber && (
                             <div className="invalid-feedback">{errors.gstNumber}</div>
                           )}
                         </div>
+
+                        <div className="gst-actions">
+                          <button
+                            type="button"
+                            className="gst-save"
+                            disabled={!gstDetailsReady}
+                            onClick={() => setGstEditing(false)}
+                          >
+                            Save details
+                          </button>
+                          <span className="gst-hint">
+                            15 characters, exactly as on your GST certificate.
+                          </span>
+                        </div>
                       </div>
                     )}
 
                     <style jsx global>{`
-                      .gst-invoice-block {
-                        border: 1px solid #e7e7e7;
-                        border-radius: 12px;
-                        padding: 14px 16px;
-                        background: #fafbfc;
+                      .gst-card {
+                        border: 1px solid #e5e7eb;
+                        border-radius: 14px;
+                        background: #fff;
+                        overflow: hidden;
+                        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+                      }
+
+                      .gst-card.is-on {
+                        border-color: #1a71f6;
+                        box-shadow: 0 0 0 3px rgba(26, 113, 246, 0.08);
+                      }
+
+                      .gst-card-head {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                        margin: 0;
+                        padding: 16px 18px;
+                        cursor: pointer;
+                      }
+
+                      .gst-check {
+                        width: 18px;
+                        height: 18px;
+                        margin-top: 2px;
+                        flex: 0 0 auto;
+                        accent-color: #1a71f6;
+                        cursor: pointer;
+                      }
+
+                      .gst-head-text {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 3px;
+                        flex: 1 1 auto;
+                        min-width: 0;
+                      }
+
+                      .gst-title {
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #111827;
+                        line-height: 1.3;
+                      }
+
+                      .gst-sub {
+                        font-size: 12.5px;
+                        color: #6b7280;
+                        line-height: 1.45;
+                      }
+
+                      .gst-art {
+                        flex: 0 0 auto;
+                        line-height: 0;
+                      }
+
+                      .gst-saved {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 12px;
+                        margin: 0 18px 16px;
+                        padding: 12px 14px;
+                        background: #f6f9ff;
+                        border: 1px solid #dbe7fd;
+                        border-radius: 10px;
+                      }
+
+                      .gst-saved-name {
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #111827;
+                        text-transform: uppercase;
+                        letter-spacing: 0.2px;
+                      }
+
+                      .gst-saved-gstin {
+                        font-size: 12.5px;
+                        color: #4b5563;
+                        margin-top: 2px;
+                        letter-spacing: 0.4px;
+                      }
+
+                      .gst-change {
+                        border: 0;
+                        background: none;
+                        color: #1a71f6;
+                        font-size: 13.5px;
+                        font-weight: 700;
+                        padding: 0;
+                        cursor: pointer;
+                        white-space: nowrap;
+                      }
+
+                      .gst-fields {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 14px 16px;
+                        padding: 0 18px 18px;
+                        border-top: 1px solid #f1f2f4;
+                        padding-top: 16px;
+                      }
+
+                      .gst-field {
+                        min-width: 0;
+                      }
+
+                      .gst-label {
+                        display: block;
+                        font-size: 12px;
+                        font-weight: 700;
+                        letter-spacing: 0.3px;
+                        text-transform: uppercase;
+                        color: #6b7280;
+                        margin-bottom: 6px;
+                      }
+
+                      .gst-fields .form-control {
+                        height: 44px;
+                        border-radius: 10px;
+                        border-color: #e5e7eb;
+                        font-size: 14px;
+                      }
+
+                      .gst-fields .form-control:focus {
+                        border-color: #1a71f6;
+                        box-shadow: 0 0 0 3px rgba(26, 113, 246, 0.12);
+                      }
+
+                      .gst-gstin {
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                      }
+
+                      .gst-actions {
+                        grid-column: 1 / -1;
+                        display: flex;
+                        align-items: center;
+                        gap: 14px;
+                        flex-wrap: wrap;
+                      }
+
+                      .gst-save {
+                        border: 0;
+                        border-radius: 8px;
+                        background: #1a71f6;
+                        color: #fff;
+                        font-size: 13.5px;
+                        font-weight: 700;
+                        padding: 9px 20px;
+                        cursor: pointer;
+                      }
+
+                      .gst-save:disabled {
+                        background: #c7d7f5;
+                        cursor: not-allowed;
+                      }
+
+                      .gst-hint {
+                        font-size: 12px;
+                        color: #9ca3af;
+                      }
+
+                      @media (max-width: 575.98px) {
+                        .gst-card-head {
+                          padding: 14px;
+                          gap: 10px;
+                        }
+
+                        .gst-art svg {
+                          width: 36px;
+                          height: 36px;
+                        }
+
+                        .gst-fields {
+                          grid-template-columns: 1fr;
+                          padding: 14px 14px 16px;
+                        }
+
+                        .gst-saved {
+                          margin: 0 14px 14px;
+                        }
                       }
                     `}</style>
                   </div>
