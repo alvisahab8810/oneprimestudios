@@ -146,9 +146,9 @@ export default function ProductionLogPage() {
           font-variant-numeric: tabular-nums;
         }
         .opl-pill {
-          background: #dcfce7;
-          color: #15803d;
-          border: 1px solid #bbf7d0;
+          background: #fdecea;
+          color: #b50500;
+          border: 1px solid #f7c7c4;
           border-radius: 999px;
           padding: 6px 15px;
           font-size: 12px;
@@ -184,9 +184,9 @@ export default function ProductionLogPage() {
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background: #16a34a;
+          background: #E10600;
           border: 2px solid #fff;
-          box-shadow: 0 0 0 2px #bbf7d0;
+          box-shadow: 0 0 0 2px #f7c7c4;
         }
         .opl-step strong {
           display: block;
@@ -212,7 +212,7 @@ export default function ProductionLogPage() {
           margin-top: 4px;
           font-size: 12px;
           font-weight: 600;
-          color: #16a34a;
+          color: #E10600;
         }
         @media (max-width: 575px) {
           .opl-head,

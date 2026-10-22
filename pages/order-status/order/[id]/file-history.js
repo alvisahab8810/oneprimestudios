@@ -211,7 +211,7 @@ export default function FileHistoryPage() {
           margin-top: 4px;
           font-size: 24px;
           font-weight: 700;
-          color: #16a34a;
+          color: #E10600;
           font-variant-numeric: tabular-nums;
         }
         .ofh-card {
@@ -225,7 +225,7 @@ export default function FileHistoryPage() {
           font-weight: 700;
           letter-spacing: 0.08em;
           text-transform: uppercase;
-          color: #16a34a;
+          color: #E10600;
           margin: 0 20px 12px;
         }
         .ofh-table-wrap {
@@ -299,7 +299,7 @@ export default function FileHistoryPage() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: #16a34a;
+          background: #E10600;
           color: #fff;
           border-radius: 5px;
           padding: 7px 13px;
@@ -308,7 +308,7 @@ export default function FileHistoryPage() {
           white-space: nowrap;
         }
         .ofh-dl:hover {
-          background: #15803d;
+          background: #b50500;
           color: #fff;
         }
         .ofh-note {

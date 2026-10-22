@@ -344,9 +344,9 @@ export default function OrderStatusDetailPage() {
           color: #6b7280;
         }
         .osd-pill {
-          background: #dcfce7;
-          color: #15803d;
-          border: 1px solid #bbf7d0;
+          background: #fdecea;
+          color: #b50500;
+          border: 1px solid #f7c7c4;
           border-radius: 999px;
           padding: 6px 16px;
           font-size: 12px;
@@ -362,7 +362,7 @@ export default function OrderStatusDetailPage() {
           font-weight: 700;
           letter-spacing: 0.08em;
           text-transform: uppercase;
-          color: #16a34a;
+          color: #E10600;
           margin: 0 0 14px;
         }
         .osd-muted {
@@ -434,7 +434,7 @@ export default function OrderStatusDetailPage() {
           background: #fff;
         }
         .osd-asset:hover {
-          border-color: #16a34a;
+          border-color: #E10600;
         }
         .osd-asset-preview {
           aspect-ratio: 16 / 10;
@@ -497,7 +497,7 @@ export default function OrderStatusDetailPage() {
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          background: #16a34a;
+          background: #E10600;
           color: #fff;
           border: none;
           border-radius: 6px;
@@ -508,19 +508,22 @@ export default function OrderStatusDetailPage() {
         }
         .osd-btn:hover {
           color: #fff;
-          background: #15803d;
+          background: #b50500;
         }
         .osd-btn-alt {
-          background: #0ea5e9;
+          background: #111111;
         }
         .osd-btn-alt:hover {
-          background: #0284c7;
+          background: #000000;
         }
         .osd-btn-dark {
-          background: #111827;
+          background: #fff;
+          color: #111111;
+          border: 1px solid #111111;
         }
         .osd-btn-dark:hover {
-          background: #1f2937;
+          background: #111111;
+          color: #fff;
         }
         .osd-btn:disabled {
           opacity: 0.55;

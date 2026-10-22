@@ -384,12 +384,12 @@ export default function OrderStatusSearch({ mode = "stage" }) {
           font-weight: 500;
         }
         .osx-stage:hover {
-          border-color: #16a34a;
-          color: #15803d;
+          border-color: #E10600;
+          color: #b50500;
         }
         .osx-stage.is-active {
-          background: #16a34a;
-          border-color: #16a34a;
+          background: #E10600;
+          border-color: #E10600;
           color: #fff;
         }
         .osx-stage.is-active span {
@@ -433,14 +433,14 @@ export default function OrderStatusSearch({ mode = "stage" }) {
         .osx-field input:focus,
         .osx-field select:focus {
           outline: none;
-          border-color: #16a34a;
-          box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+          border-color: #E10600;
+          box-shadow: 0 0 0 3px rgba(225, 6, 0, 0.12);
         }
         .osx-btn {
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          background: #16a34a;
+          background: #E10600;
           color: #fff;
           border: none;
           border-radius: 6px;
@@ -504,7 +504,7 @@ export default function OrderStatusSearch({ mode = "stage" }) {
         }
         .osx-details-btn {
           display: inline-block;
-          background: #16a34a;
+          background: #E10600;
           color: #fff;
           border-radius: 5px;
           padding: 7px 16px;
@@ -513,7 +513,7 @@ export default function OrderStatusSearch({ mode = "stage" }) {
           white-space: nowrap;
         }
         .osx-details-btn:hover {
-          background: #15803d;
+          background: #b50500;
           color: #fff;
         }
         .osx-empty {
