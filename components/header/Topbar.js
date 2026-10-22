@@ -428,14 +428,18 @@ export default function Topbar() {
 
               {/* Order Status — a partner tool, so only partners see it */}
               {isPartner && (
-                <li className="nav-item dropdown" ref={orderStatusRef}>
+                <li
+                  className={`nav-item dropdown ops-order-status ${openOrderStatus ? "is-open" : ""}`}
+                  ref={orderStatusRef}
+                >
                   <button
                     type="button"
-                    className="nav-link dropdown-toggle ops-order-status-toggle"
+                    className="nav-link ops-order-status-toggle"
                     aria-expanded={openOrderStatus}
                     onClick={() => setOpenOrderStatus((open) => !open)}
                   >
                     Order Status
+                    <span className="ops-order-status-caret" aria-hidden="true" />
                   </button>
                   <ul className={`dropdown-menu ops-order-status-menu ${openOrderStatus ? "show" : ""}`}>
                     <li>

@@ -14,13 +14,30 @@ import fs from "fs";
 function sizeOf(url) {
   if (!url || !url.startsWith("/")) return 0;
   const root = path.join(process.cwd(), "public");
-  const full = path.join(root, url.split("?")[0]);
-  if (!full.startsWith(root)) return 0;
+  const bare = url.split("?")[0];
+
+  // A file saved with spaces or brackets in its name is stored with those
+  // characters escaped in the URL, so the escaped and the plain spelling are
+  // both tried before giving up
+  const candidates = [bare];
   try {
-    return fs.statSync(full).size;
+    const decoded = decodeURIComponent(bare);
+    if (decoded !== bare) candidates.push(decoded);
   } catch {
-    return 0;
+    // a stray % in the name — the plain spelling is all there is
   }
+
+  for (const candidate of candidates) {
+    const full = path.join(root, candidate);
+    if (!full.startsWith(root)) continue;
+    try {
+      return fs.statSync(full).size;
+    } catch {
+      // try the next spelling
+    }
+  }
+
+  return 0;
 }
 
 export default async function handler(req, res) {
@@ -60,6 +77,11 @@ export default async function handler(req, res) {
     const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
     const staff = [...new Set(files.map((f) => f.uploadedBy).filter(Boolean))];
 
+    // A file that was uploaded on another machine is not on this disk, so its
+    // size cannot be read. When none of them can be, the screen drops the size
+    // column rather than showing a column of dashes.
+    const sizeKnown = files.some((file) => file.size > 0);
+
     return res.json({
       orderNumber: order.orderNumber || "",
       files,
@@ -67,6 +89,7 @@ export default async function handler(req, res) {
         uploads: files.length,
         sizeMB: Math.round((totalBytes / (1024 * 1024)) * 100) / 100,
         staff: staff.length,
+        sizeKnown,
       },
     });
   } catch (err) {

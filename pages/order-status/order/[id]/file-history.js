@@ -54,7 +54,11 @@ export default function FileHistoryPage() {
   }, [id, router]);
 
   const files = data?.files || [];
-  const totals = data?.totals || { uploads: 0, sizeMB: 0, staff: 0 };
+  const totals = data?.totals || { uploads: 0, sizeMB: 0, staff: 0, sizeKnown: false };
+  // Files uploaded from another machine are not on this server's disk, so
+  // their size cannot be read — the column is dropped rather than left empty
+  const showSize = !!totals.sizeKnown;
+  const columns = showSize ? 9 : 8;
 
   return (
     <>
@@ -73,7 +77,7 @@ export default function FileHistoryPage() {
 
           <div className="ofh-stats">
             <Stat label="Total Uploads" value={totals.uploads} />
-            <Stat label="Total Size (MB)" value={totals.sizeMB} />
+            {showSize && <Stat label="Total Size (MB)" value={totals.sizeMB} />}
             <Stat label="Staff Involved" value={totals.staff} />
           </div>
 
@@ -87,7 +91,7 @@ export default function FileHistoryPage() {
                     <th>Preview</th>
                     <th>File Name</th>
                     <th>Type</th>
-                    <th>Size (MB)</th>
+                    {showSize && <th>Size (MB)</th>}
                     <th>Uploaded By</th>
                     <th>Date &amp; Time</th>
                     <th>Remarks</th>
@@ -97,7 +101,7 @@ export default function FileHistoryPage() {
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={9} className="ofh-note">
+                      <td colSpan={columns} className="ofh-note">
                         Loading…
                       </td>
                     </tr>
@@ -105,7 +109,7 @@ export default function FileHistoryPage() {
 
                   {!loading && files.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="ofh-note">
+                      <td colSpan={columns} className="ofh-note">
                         No files have been uploaded on this order.
                       </td>
                     </tr>
@@ -131,7 +135,7 @@ export default function FileHistoryPage() {
                         </td>
                         <td className="ofh-name">{file.name}</td>
                         <td>{file.ext || "—"}</td>
-                        <td className="ofh-mono">{mb(file.size)}</td>
+                        {showSize && <td className="ofh-mono">{mb(file.size)}</td>}
                         <td>{file.uploadedBy || "—"}</td>
                         <td className="ofh-mono">{fmtWhen(file.at)}</td>
                         <td className="ofh-remark">
