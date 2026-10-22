@@ -1,30 +1,73 @@
-// Puts the three photos that ship with the website into the slider list, so an
-// admin can reorder, hide or delete them like anything they upload themselves.
+// Puts the content that ships with the website into a section's list, so an
+// admin can reorder, hide or delete it like anything they add themselves.
 // Running it twice adds nothing new.
 import fs from "fs";
 import path from "path";
 import dbConnect from "@/lib/dbConnect";
-import ActionMedia from "@/models/ActionMedia";
+import ActionMedia, { sectionQuery } from "@/models/ActionMedia";
 import { requireAdminPermission } from "@/lib/adminAuth";
+import { isSection, DEFAULT_SECTION, sectionKind } from "@/lib/actionMediaRules";
 
 // Bundled file -> the copy this route creates under /public/uploads/action
-const DEFAULTS = [
-  {
-    bundled: "item.webp",
-    file: "default-screen-printing.webp",
-    alt: "Screen printing in action",
-  },
-  {
-    bundled: "item1.webp",
-    file: "default-offset-press.webp",
-    alt: "Offset press run",
-  },
-  {
-    bundled: "item2.webp",
-    file: "default-finishing.webp",
-    alt: "Finishing and binding",
-  },
-];
+const DEFAULTS = {
+  action: [
+    {
+      bundled: ["action", "item.webp"],
+      file: "default-screen-printing.webp",
+      alt: "Screen printing in action",
+    },
+    {
+      bundled: ["action", "item1.webp"],
+      file: "default-offset-press.webp",
+      alt: "Offset press run",
+    },
+    {
+      bundled: ["action", "item2.webp"],
+      file: "default-finishing.webp",
+      alt: "Finishing and binding",
+    },
+  ],
+  "hero-desktop": [
+    {
+      bundled: ["hero", "banner.webp"],
+      file: "default-home-banner.webp",
+      alt: "Custom printing and corporate gifting solutions",
+      link: "/products",
+    },
+  ],
+  "hero-mobile": [
+    {
+      bundled: ["hero", "banner-mobile.png"],
+      file: "default-home-banner-mobile.png",
+      alt: "Custom printing and corporate gifting solutions",
+      link: "/products",
+    },
+  ],
+};
+
+// The notices the products page shows today, as editable rows
+const TEXT_DEFAULTS = {
+  "products-info": [
+    {
+      tag: "Partner Update",
+      title: "Exclusive Partner Pricing Active",
+      description:
+        "You are seeing partner rates on every product. Prices shown already include your agreed discount.",
+    },
+    {
+      tag: "GST Information",
+      title: "GST Is Optional at Checkout",
+      description:
+        "Add your GSTIN at checkout to claim input credit, or continue without it.",
+    },
+    {
+      tag: "Bulk Orders",
+      title: "Better Prices on Higher Quantities",
+      description:
+        "Rates improve as quantities grow. Check the rate list for slab pricing.",
+    },
+  ],
+};
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -37,57 +80,91 @@ export default async function handler(req, res) {
   const me = await requireAdminPermission(req, res, "homepage_media");
   if (!me) return;
 
+  const section = isSection(req.query.section || req.body?.section)
+    ? req.query.section || req.body.section
+    : DEFAULT_SECTION;
+
   try {
-    const sourceDir = path.join(
-      process.cwd(),
-      "public",
-      "assets",
-      "images",
-      "action"
-    );
     const uploadDir = path.join(process.cwd(), "public", "uploads", "action");
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-    const last = await ActionMedia.findOne({}).sort({ order: -1 }).lean();
+    const last = await ActionMedia.findOne(sectionQuery(section))
+      .sort({ order: -1 })
+      .lean();
     let order = (last?.order ?? -1) + 1;
 
     let added = 0;
     let skipped = 0;
     const missing = [];
 
-    for (const entry of DEFAULTS) {
-      const src = `/uploads/action/${entry.file}`;
+    if (sectionKind(section) === "text") {
+      for (const entry of TEXT_DEFAULTS[section] || []) {
+        const exists = await ActionMedia.findOne({
+          ...sectionQuery(section),
+          title: entry.title,
+        }).lean();
+        if (exists) {
+          skipped += 1;
+          continue;
+        }
 
-      // Already listed, whether live or hidden — leave the admin's copy alone
-      const exists = await ActionMedia.findOne({ src }).lean();
-      if (exists) {
-        skipped += 1;
-        continue;
+        await ActionMedia.create({
+          section,
+          type: "text",
+          src: "",
+          tag: entry.tag,
+          title: entry.title,
+          description: entry.description,
+          order: order++,
+          isActive: true,
+        });
+
+        added += 1;
       }
+    } else {
+      for (const entry of DEFAULTS[section] || []) {
+        const src = `/uploads/action/${entry.file}`;
 
-      const from = path.join(sourceDir, entry.bundled);
-      if (!fs.existsSync(from)) {
-        missing.push(entry.bundled);
-        continue;
+        // Already listed, whether live or hidden — leave the admin's copy alone
+        const exists = await ActionMedia.findOne({ src }).lean();
+        if (exists) {
+          skipped += 1;
+          continue;
+        }
+
+        const from = path.join(
+          process.cwd(),
+          "public",
+          "assets",
+          "images",
+          ...entry.bundled
+        );
+        if (!fs.existsSync(from)) {
+          missing.push(entry.bundled[entry.bundled.length - 1]);
+          continue;
+        }
+
+        const to = path.join(uploadDir, entry.file);
+        if (!fs.existsSync(to)) fs.copyFileSync(from, to);
+
+        await ActionMedia.create({
+          section,
+          type: "image",
+          src,
+          alt: entry.alt,
+          link: entry.link || "",
+          size: fs.statSync(to).size,
+          order: order++,
+          isActive: true,
+        });
+
+        added += 1;
       }
-
-      const to = path.join(uploadDir, entry.file);
-      if (!fs.existsSync(to)) fs.copyFileSync(from, to);
-
-      await ActionMedia.create({
-        type: "image",
-        src,
-        alt: entry.alt,
-        size: fs.statSync(to).size,
-        order: order++,
-        isActive: true,
-      });
-
-      added += 1;
     }
 
+    const noun = sectionKind(section) === "text" ? "notice" : "item";
     const parts = [];
-    if (added) parts.push(`${added} photo${added > 1 ? "s" : ""} added`);
+    if (added) parts.push(`${added} ${noun}${added > 1 ? "s" : ""} added`);
     if (skipped) parts.push(`${skipped} already in the list`);
     if (missing.length) parts.push(`${missing.length} file not found on server`);
 

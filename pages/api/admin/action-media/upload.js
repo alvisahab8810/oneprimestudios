@@ -1,6 +1,7 @@
-// Receives one photo or video for the homepage "See it in Action" slider and
-// stores it on the server under /public/uploads/action, the same way order
+// Receives one photo, video or banner image for a managed area of the website
+// and stores it on the server under /public/uploads/action, the same way order
 // artwork is stored. The database row is created by the sibling index route.
+// The area arrives as ?section= because the body itself is a multipart stream.
 import fs from "fs";
 import path from "path";
 import multer from "multer";
@@ -11,7 +12,12 @@ import {
   mediaKind,
   VIDEO_MAX_BYTES,
   formatBytes,
+  isSection,
+  DEFAULT_SECTION,
 } from "@/lib/actionMediaRules";
+
+const sectionOf = (req) =>
+  isSection(req.query?.section) ? req.query.section : DEFAULT_SECTION;
 
 const uploadDir = path.join(process.cwd(), "public", "uploads", "action");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -33,9 +39,9 @@ const upload = multer({
   // The larger of the two caps; the per-kind limit is checked in fileFilter
   limits: { fileSize: VIDEO_MAX_BYTES, files: 1 },
   fileFilter: (req, file, cb) => {
-    const kind = mediaKind(file.mimetype, file.originalname);
+    const kind = mediaKind(file.mimetype, file.originalname, sectionOf(req));
     if (!kind) {
-      cb(new Error("Only WebP images and MP4 or WebM videos can be uploaded."));
+      cb(new Error("That kind of file cannot be used here."));
       return;
     }
     cb(null, true);
@@ -78,6 +84,7 @@ export default async function handler(req, res) {
     mime: file.mimetype,
     filename: file.originalname,
     size: file.size,
+    section: sectionOf(req),
   });
 
   if (problem) {
@@ -87,7 +94,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     success: true,
-    type: mediaKind(file.mimetype, file.originalname),
+    type: mediaKind(file.mimetype, file.originalname, sectionOf(req)),
     src: `/uploads/action/${file.filename}`,
     size: file.size,
   });

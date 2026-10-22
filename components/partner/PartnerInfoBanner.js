@@ -4,59 +4,65 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
+import useSectionMedia from "@/lib/useSectionMedia";
+
+// Shown until notices are added from the dashboard
+const BUILT_IN = [
+  {
+    _id: "built-in-1",
+    tag: "Partner Update",
+    title: "Exclusive Partner Pricing Active",
+    description:
+      "You are viewing special B2B prices available only for registered partners.",
+  },
+  {
+    _id: "built-in-2",
+    tag: "GST Information",
+    title: "GST Is Optional at Checkout",
+    description:
+      "Add GST only if you need a tax invoice. You can proceed without it.",
+  },
+  {
+    _id: "built-in-3",
+    tag: "Bulk Orders",
+    title: "Better Prices on Higher Quantities",
+    description: "Bulk discounts apply automatically based on quantity.",
+  },
+];
 
 const PartnerInfoSlider = () => {
+  const managed = useSectionMedia("products-info");
+  const slides = managed.length ? managed : BUILT_IN;
+
   return (
     <section className="partner-info-slider">
       <div className="container">
         <Swiper
-        modules={[Autoplay, Navigation]}
-        autoplay={{ delay: 3500, disableOnInteraction: false }}
-        loop={true}
-        navigation={{
-          prevEl: ".partner-prev-btn",
-          nextEl: ".partner-next-btn",
-        }}
-        className="partner-slider"
-      >
-        {/* SLIDE 1 */}
-        <SwiperSlide>
-          <div className="partner-slide">
-            <p className="tag">Partner Update</p>
-            <h3>Exclusive Partner Pricing Active</h3>
-            <p className="desc">
-              You are viewing special B2B prices available only for registered
-              partners.
-            </p>
-          </div>
-        </SwiperSlide>
+          modules={[Autoplay, Navigation]}
+          autoplay={{ delay: 3500, disableOnInteraction: false }}
+          loop={true}
+          navigation={{
+            prevEl: ".partner-prev-btn",
+            nextEl: ".partner-next-btn",
+          }}
+          className="partner-slider"
+        >
+          {slides.map((slide) => (
+            <SwiperSlide key={slide._id}>
+              <div className="partner-slide">
+                {slide.tag ? <p className="tag">{slide.tag}</p> : null}
+                <h3>{slide.title}</h3>
+                {slide.description ? (
+                  <p className="desc">{slide.description}</p>
+                ) : null}
+              </div>
+            </SwiperSlide>
+          ))}
 
-        {/* SLIDE 2 */}
-        <SwiperSlide>
-          <div className="partner-slide">
-            <p className="tag">GST Information</p>
-            <h3>GST Is Optional at Checkout</h3>
-            <p className="desc">
-              Add GST only if you need a tax invoice. You can proceed without it.
-            </p>
-          </div>
-        </SwiperSlide>
-
-        {/* SLIDE 3 */}
-        <SwiperSlide>
-          <div className="partner-slide">
-            <p className="tag">Bulk Orders</p>
-            <h3>Better Prices on Higher Quantities</h3>
-            <p className="desc">
-              Bulk discounts apply automatically based on quantity.
-            </p>
-          </div>
-        </SwiperSlide>
-
-        {/* Navigation */}
-        <div className="partner-nav-btn partner-prev-btn">❮</div>
-        <div className="partner-nav-btn partner-next-btn">❯</div>
-      </Swiper>
+          {/* Navigation */}
+          <div className="partner-nav-btn partner-prev-btn">❮</div>
+          <div className="partner-nav-btn partner-next-btn">❯</div>
+        </Swiper>
       </div>
     </section>
   );

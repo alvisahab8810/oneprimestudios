@@ -382,13 +382,13 @@ export default function Sidebar({ sidebarOpen }) {
           </Link>
         )}
 
-        {/* ================= HOMEPAGE "SEE IT IN ACTION" ================= */}
+        {/* ================= BANNERS & SITE MEDIA ================= */}
         {canAccess(user, "homepage_media") && (
           <Link
             href="/dashboard/admin/action-media"
             className={`ops-item ${isActive("/dashboard/admin/action-media") ? "active" : ""}`}
           >
-            <FaPhotoVideo className="me-2" /> See it in Action
+            <FaPhotoVideo className="me-2" /> Banners &amp; Media
           </Link>
         )}
 

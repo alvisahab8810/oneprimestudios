@@ -1,6 +1,8 @@
-// What the homepage "See it in Action" slider reads. Public and read-only.
+// What the managed areas of the website read: the home page "See it in Action"
+// slider, the home page banners and the products page notices. Public, read-only.
 import dbConnect from "@/lib/dbConnect";
-import ActionMedia from "@/models/ActionMedia";
+import ActionMedia, { sectionQuery } from "@/models/ActionMedia";
+import { isSection, DEFAULT_SECTION } from "@/lib/actionMediaRules";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -8,12 +10,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
+  const section = isSection(req.query.section) ? req.query.section : DEFAULT_SECTION;
+
   try {
     await dbConnect();
 
     const items = await ActionMedia.find(
-      { isActive: true },
-      { type: 1, src: 1, alt: 1 }
+      { ...sectionQuery(section), isActive: true },
+      { type: 1, src: 1, alt: 1, tag: 1, title: 1, description: 1, link: 1 }
     )
       .sort({ order: 1, createdAt: 1 })
       .lean();
@@ -24,7 +28,7 @@ export default async function handler(req, res) {
     return res.json({ items });
   } catch (err) {
     console.error("Action media fetch error:", err);
-    // The homepage falls back to its built-in slides rather than breaking
+    // The page falls back to its built-in slides rather than breaking
     return res.status(200).json({ items: [] });
   }
 }

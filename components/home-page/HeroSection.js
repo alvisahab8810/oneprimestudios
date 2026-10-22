@@ -1,10 +1,25 @@
+"use client";
 import React from "react";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation  } from "swiper/modules";
 import "swiper/css";
+import useSectionMedia from "@/lib/useSectionMedia";
+
+// Shown until a banner is added from the dashboard
+const BUILT_IN = [
+  {
+    _id: "built-in",
+    src: "/assets/images/hero/banner.webp",
+    alt: "Custom printing and corporate gifting solutions",
+    link: "/products",
+  },
+];
 
 export default function HeroSection() {
+  const managed = useSectionMedia("hero-desktop");
+  const slides = managed.length ? managed : BUILT_IN;
+
   return (
     <>
       <section className="hero mobile-none">
@@ -54,12 +69,13 @@ export default function HeroSection() {
             </div>
           </SwiperSlide> */}
 
-          {/* SLIDE 2 */}
-          <SwiperSlide>
+          {/* The banners managed from the dashboard, or the built-in one */}
+          {slides.map((slide) => (
+          <SwiperSlide key={slide._id}>
             <div
               className="hero-slide"
               style={{
-                backgroundImage: "url('/assets/images/hero/banner.webp')",
+                backgroundImage: `url('${slide.src}')`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 height: "629px",
@@ -67,13 +83,13 @@ export default function HeroSection() {
                 borderRadius: "33px"
               }}
             >
-              {/* Sirf "Explore Corporate Gifts" button ka area clickable —
-                  poora banner nahi. Coords % me hain to banner resize hone pe
-                  hotspot bhi usi jagah rahega. */}
+              {/* Only the area of the call-to-action button is clickable, not the
+                  whole banner. The coordinates are percentages, so the hotspot
+                  stays in place when the banner is resized. */}
               <Link
-                href="/products"
+                href={slide.link || "/products"}
                 className="hero-cta-hotspot"
-                aria-label="Explore Corporate Gifts"
+                aria-label={slide.alt || "Explore Corporate Gifts"}
               />
 
               {/* <div className="hero-text">
@@ -92,6 +108,7 @@ export default function HeroSection() {
               </div> */}
             </div>
           </SwiperSlide>
+          ))}
 
 
               {/* SLIDE 3*/}
