@@ -64,6 +64,21 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
               </li>
             )}
 
+            {/* Order Status — the same three searches as the desktop menu */}
+            {user?.userType === "partner" && (
+              <>
+                <li>
+                  <Link href="/order-status/order-number">Search By Order Number</Link>
+                </li>
+                <li>
+                  <Link href="/order-status/stage">Search by Order Stage</Link>
+                </li>
+                <li>
+                  <Link href="/order-status/date">Search by Date</Link>
+                </li>
+              </>
+            )}
+
             
              <li>
               <Link href="/orders">My Orders</Link>

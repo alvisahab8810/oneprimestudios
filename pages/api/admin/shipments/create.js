@@ -7,6 +7,7 @@ import Product from "@/models/Product";
 import User from "@/models/User";
 import { requireAdminPermission } from "@/lib/adminAuth";
 import { logActivity } from "@/lib/logActivity";
+import { addHistory } from "@/lib/orderHistory";
 import {
   createShiprocketOrder, assignAwb, requestPickup, generateLabel,
   isShiprocketConfigured, SHIPROCKET_PICKUP_LOCATION, ShiprocketError,
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     const order = await Order.findById(orderId)
-      .populate("user", "name email phone")
+      .populate("user", "name email phone userType")
       .populate("items.product", "name sku hsnCode shipping");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
@@ -114,11 +115,21 @@ export default async function handler(req, res) {
       console.error("Shiprocket label error:", labelErr?.message);
     }
 
-    // Booking a courier means the order is on its way out
-    order.dispatchRequest = "approved";
+    // Booking a courier means the order is on its way out. The dispatch request
+    // itself belongs to the partner (B2B) flow, so a retail order keeps its flag
+    // clear and only the status moves.
+    if (String(order.user?.userType || "").toLowerCase() === "partner") {
+      order.dispatchRequest = "approved";
+    }
     if (!["Order Dispatched", "Order Delivered", "Delivered"].includes(order.status)) {
       order.status = "Order Dispatched";
     }
+
+    addHistory(order, {
+      status: "Order Dispatched",
+      note: `Booked with ${order.shipment.courierName || "courier"} (AWB ${awbCode})`,
+      by: admin?.name || "Office",
+    });
     await order.save();
 
     logActivity(req, "shipment_created",
@@ -126,7 +137,12 @@ export default async function handler(req, res) {
       { entity: "order", entityId: String(order._id), meta: { awbCode, courier: order.shipment.courierName } }
     );
 
-    return res.status(200).json({ message: "Shipment booked", shipment: order.shipment, status: order.status });
+    return res.status(200).json({
+      message: "Shipment booked",
+      shipment: order.shipment,
+      status: order.status,
+      dispatchRequest: order.dispatchRequest,
+    });
   } catch (err) {
     if (err instanceof ShiprocketError) {
       return res.status(err.status === 401 ? 502 : err.status).json({ message: err.message });

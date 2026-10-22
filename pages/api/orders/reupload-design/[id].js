@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import getUserFromToken from "@/lib/getUserFromToken";
 import Order from "@/models/Order";
+import { addHistory } from "@/lib/orderHistory";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -73,6 +74,11 @@ export default async function handler(req, res) {
     const fileUrl = `/uploads/reuploads/${req.file.filename}`;
 
     order.reuploadedFiles.push({ fileUrl });
+    addHistory(order, {
+      status: "File Uploaded",
+      note: "Customer uploaded a new design file",
+      by: "Customer",
+    });
     // OLD: order.status = "In Progress"; // was auto-advancing status after re-upload
     // NEW: stay "Pending" so admin reviews the new file before advancing
     order.status = "Pending";

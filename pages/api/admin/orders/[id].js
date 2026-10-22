@@ -17,6 +17,7 @@ import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission, canViewPayments } from "@/lib/hasPermission";
 import { logActivity } from "@/lib/logActivity";
 import { canAdminCancelOrder } from "@/lib/orderRules";
+import { addHistory } from "@/lib/orderHistory";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -35,6 +36,8 @@ export default async function handler(req, res) {
 
   // Load admin / ops user from DB
   const adminUser = await Admin.findById(decoded.id, {
+    // The name goes into the order's production log
+    name: 1,
     role: 1,
     permissions: 1,
   });
@@ -130,7 +133,7 @@ export default async function handler(req, res) {
       }
 
       const order = await Order.findById(id)
-        .populate("user", "name email")
+        .populate("user", "name email userType")
         .populate("items.product", "name");
 
       if (!order) {
@@ -142,7 +145,17 @@ export default async function handler(req, res) {
       }
 
       /* ===== EXISTING STATUS LOGIC (UNCHANGED) ===== */
+      const previousStatus = order.status;
       order.status = status;
+
+      // One step in the production log the buyer can follow
+      if (previousStatus !== status) {
+        addHistory(order, {
+          status,
+          note: remarks ? String(remarks).slice(0, 300) : "",
+          by: adminUser?.name || "Office",
+        });
+      }
 
       if (status === "Design Rejected" && remarks) {
         order.remarks = remarks;
@@ -150,13 +163,21 @@ export default async function handler(req, res) {
         order.remarks = "";
       }
 
-      /* ===== DISPATCH REQUEST FLOW (UNCHANGED) ===== */
-      if (status === "Order Ready") {
-        order.dispatchRequest = "none";
-      }
+      /* ===== DISPATCH REQUEST FLOW ===== */
+      // A dispatch request is part of the partner (B2B) flow only. A retail order
+      // ships on its own, so its flag is left at "none" and it never shows up as
+      // a dispatch request anywhere.
+      const isPartnerOrder =
+        String(order.user?.userType || "").toLowerCase() === "partner";
 
-      if (status === "Order Dispatched") {
-        order.dispatchRequest = "approved";
+      if (isPartnerOrder) {
+        if (status === "Order Ready") {
+          order.dispatchRequest = "none";
+        }
+
+        if (status === "Order Dispatched") {
+          order.dispatchRequest = "approved";
+        }
       }
 
       /* ===== CANCEL + WALLET REFUND ===== */

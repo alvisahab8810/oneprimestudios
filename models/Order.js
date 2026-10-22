@@ -278,6 +278,19 @@ const OrderSchema = new mongoose.Schema(
       default: "Pending",
     },
 
+    // Every step this order has been through, oldest first. It is what the
+    // buyer's production log is drawn from, so an entry is added wherever the
+    // order moves — a status change, a dispatch request, a re-uploaded file.
+    statusHistory: [
+      {
+        status: { type: String, default: "" },
+        note: { type: String, default: "" },
+        // Who moved it: an admin's name, or "Customer" / "System"
+        by: { type: String, default: "System" },
+        at: { type: Date, default: Date.now },
+      },
+    ],
+
     // Mirrors the latest return/refund request on this order, so the admin
     // order list can be filtered without a second query. "none" = no request.
     returnStatus: {

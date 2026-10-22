@@ -34,3 +34,33 @@ select,
 textarea {
   font-family: inherit;
 }
+
+/* Order Status menu in the header — the toggle is a button so it works from
+   the keyboard, but it has to look like the other nav links */
+.ops-order-status-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.ops-order-status-menu {
+  min-width: 230px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.1);
+}
+
+.ops-order-status-menu .dropdown-item {
+  border-radius: 6px;
+  font-size: 14px;
+  padding: 9px 12px;
+}
+
+.ops-order-status-menu .dropdown-item:hover {
+  background: #f0fdf4;
+  color: #15803d;
+}

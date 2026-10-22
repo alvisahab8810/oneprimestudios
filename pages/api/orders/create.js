@@ -337,6 +337,26 @@ export default async function handler(req, res) {
             orderNumber,
             // NEW: B2B order name entered by customer on product page
             orderName: orderName || "",
+
+            // First steps of the production log the buyer can follow
+            statusHistory: [
+              {
+                status: "Order Booked",
+                note: "Order placed online (#" + orderNumber + ")",
+                by: "Customer",
+                at: new Date(),
+              },
+              ...(items.some((i) => (i.uploadedFiles || []).length)
+                ? [
+                    {
+                      status: "File Uploaded",
+                      note: "Print files received with the order",
+                      by: "Customer",
+                      at: new Date(),
+                    },
+                  ]
+                : []),
+            ],
           },
         ],
         { session }

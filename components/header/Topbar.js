@@ -246,11 +246,15 @@ export default function Topbar() {
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [openProfileCard, setOpenProfileCard] = useState(false);
+  // The Order Status menu is opened from React rather than Bootstrap's own
+  // dropdown script, so it works however late that bundle loads
+  const [openOrderStatus, setOpenOrderStatus] = useState(false);
 
   const isPartner = user?.userType === "partner";
 
   // const dropdownRef = useRef(null);x
   const desktopDropdownRef = useRef(null);
+  const orderStatusRef = useRef(null);
   const mobileDropdownRef = useRef(null);
 
   useEffect(() => {
@@ -303,6 +307,10 @@ export default function Topbar() {
       }
 
       setOpenProfileCard(false);
+
+      if (!(orderStatusRef.current && orderStatusRef.current.contains(e.target))) {
+        setOpenOrderStatus(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -418,9 +426,52 @@ export default function Topbar() {
               </li>
 
 
+              {/* Order Status — a partner tool, so only partners see it */}
+              {isPartner && (
+                <li className="nav-item dropdown" ref={orderStatusRef}>
+                  <button
+                    type="button"
+                    className="nav-link dropdown-toggle ops-order-status-toggle"
+                    aria-expanded={openOrderStatus}
+                    onClick={() => setOpenOrderStatus((open) => !open)}
+                  >
+                    Order Status
+                  </button>
+                  <ul className={`dropdown-menu ops-order-status-menu ${openOrderStatus ? "show" : ""}`}>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        href="/order-status/order-number"
+                        onClick={() => setOpenOrderStatus(false)}
+                      >
+                        Search By Order Number
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        href="/order-status/stage"
+                        onClick={() => setOpenOrderStatus(false)}
+                      >
+                        Search by Order Stage
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        href="/order-status/date"
+                        onClick={() => setOpenOrderStatus(false)}
+                      >
+                        Search by Date
+                      </Link>
+                    </li>
+                  </ul>
+                </li>
+              )}
+
               <li className="nav-item">
                 <Link className="nav-link" href="/contact-us">
-                  Blog 
+                  Blog
                 </Link>
               </li>
             </ul>

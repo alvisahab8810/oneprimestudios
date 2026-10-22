@@ -63,7 +63,13 @@ export default function ShipmentPanel({ order, onOrderChange }) {
         { orderId: order._id, courierId, ...pkg, schedulePickup },
         { withCredentials: true });
       toast.success("Shipment booked");
-      onOrderChange({ ...order, shipment: res.data.shipment, status: res.data.status, dispatchRequest: "approved" });
+      // The server decides the dispatch flag; a retail order never gets one
+      onOrderChange({
+        ...order,
+        shipment: res.data.shipment,
+        status: res.data.status,
+        dispatchRequest: res.data.dispatchRequest ?? order.dispatchRequest,
+      });
       setCouriers([]);
     } catch (err) {
       toast.error(err.response?.data?.message || "Could not book the shipment");

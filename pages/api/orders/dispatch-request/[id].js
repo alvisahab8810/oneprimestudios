@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import getUserFromToken from "@/lib/getUserFromToken";
+import { addHistory } from "@/lib/orderHistory";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -22,6 +23,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Order is not ready yet" });
 
     order.dispatchRequest = "pending";
+    addHistory(order, {
+      status: "Dispatch Requested",
+      note: "Partner asked for the order to be dispatched",
+      by: user.name || "Customer",
+    });
     await order.save();
 
     return res.status(200).json({ message: "Dispatch request sent" });
