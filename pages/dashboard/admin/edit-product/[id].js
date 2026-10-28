@@ -145,6 +145,23 @@ export default function EditProductPage() {
       }))
     : [],
 
+  // normalize the rate a measured attribute is charged at
+  measureRules:
+    attr.type === "measure"
+      ? {
+          unit: attr.measureRules?.unit || "",
+          ratePerUnit: attr.measureRules?.ratePerUnit ?? "",
+          min: attr.measureRules?.min ?? "",
+          max: attr.measureRules?.max ?? "",
+          step: attr.measureRules?.step ?? 1,
+          slabs: (attr.measureRules?.slabs || []).map((slab) => ({
+            from: slab?.from ?? "",
+            to: slab?.to ?? "",
+            ratePerUnit: slab?.ratePerUnit ?? "",
+          })),
+        }
+      : undefined,
+
   // normalize upload rules
   uploadRules:
     attr.type === "upload"
@@ -379,6 +396,23 @@ export default function EditProductPage() {
     type: attr.type || "select",
     values,
     required: !!attr.required,
+    measureRules:
+      attr.type === "measure"
+        ? {
+            unit: String(attr.measureRules?.unit || "").trim(),
+            ratePerUnit: Number(attr.measureRules?.ratePerUnit || 0),
+            min: Number(attr.measureRules?.min || 0),
+            max: Number(attr.measureRules?.max || 0),
+            step: Number(attr.measureRules?.step || 1) || 1,
+            slabs: (attr.measureRules?.slabs || [])
+              .filter((slab) => slab && String(slab.ratePerUnit ?? "") !== "")
+              .map((slab) => ({
+                from: Number(slab.from || 0),
+                to: Number(slab.to || 0),
+                ratePerUnit: Number(slab.ratePerUnit || 0),
+              })),
+          }
+        : undefined,
     uploadRules:
       attr.type === "upload"
         ? {
@@ -814,7 +848,9 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                             <option value="text">Text</option>
                             <option value="number">Number</option>
                             <option value="upload">Upload File</option>{" "}
-                            {/* ⭐ NEW */}
+                            {/* Sold by area or length — the buyer types the
+                                figure and it is priced at the rate below */}
+                            <option value="measure">Measured (rate × amount)</option>
                           </select>
 
                           <div className="form-check">
@@ -841,8 +877,10 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
 
                         {/* Attribute Options */}
                         <div className="options-section ms-3">
-                          <label className="fw-bold">Options:</label>
-                          {attr.options?.map((opt, j) => (
+                          {attr.type !== "measure" && (
+                            <label className="fw-bold">Options:</label>
+                          )}
+                          {(attr.type === "measure" ? [] : attr.options)?.map((opt, j) => (
                             <div key={j} className="mb-3 p-2 border rounded" style={{ background: "#f9f9f9" }}>
                               {/* ── Option label + default price ── */}
                               <div className="d-flex align-items-center gap-2 mb-1">
@@ -901,6 +939,155 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                               </div>
                             </div>
                           ))}
+
+                          {/* A measured attribute is priced from a rate, so it
+                              has no options to list */}
+                          {attr.type === "measure" && (
+                            <div className="measure-rules-section mt-2 p-3 border rounded bg-light">
+                              <h6 className="fw-bold mb-2">Measured Pricing</h6>
+                              <p className="text-muted mb-3" style={{ fontSize: 12 }}>
+                                The buyer types how much they need and it is charged at the rate
+                                below. A rate of ₹3 per sqft on 1000 sqft is ₹3,000.
+                              </p>
+
+                              <div className="row g-2">
+                                <div className="col-md-3">
+                                  <label className="form-label mb-1" style={{ fontSize: 12 }}>Unit</label>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="sqft"
+                                    value={attr.measureRules?.unit ?? ""}
+                                    onChange={(e) =>
+                                      updateAttribute(i, {
+                                        measureRules: { ...(attr.measureRules || {}), unit: e.target.value },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="col-md-3">
+                                  <label className="form-label mb-1" style={{ fontSize: 12 }}>Rate per unit (₹)</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    className="form-control"
+                                    placeholder="3"
+                                    value={attr.measureRules?.ratePerUnit ?? ""}
+                                    onChange={(e) =>
+                                      updateAttribute(i, {
+                                        measureRules: { ...(attr.measureRules || {}), ratePerUnit: e.target.value },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="col-md-2">
+                                  <label className="form-label mb-1" style={{ fontSize: 12 }}>Minimum</label>
+                                  <input
+                                    type="number"
+                                    className="form-control"
+                                    placeholder="1"
+                                    value={attr.measureRules?.min ?? ""}
+                                    onChange={(e) =>
+                                      updateAttribute(i, {
+                                        measureRules: { ...(attr.measureRules || {}), min: e.target.value },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="col-md-2">
+                                  <label className="form-label mb-1" style={{ fontSize: 12 }}>Maximum</label>
+                                  <input
+                                    type="number"
+                                    className="form-control"
+                                    placeholder="1000"
+                                    value={attr.measureRules?.max ?? ""}
+                                    onChange={(e) =>
+                                      updateAttribute(i, {
+                                        measureRules: { ...(attr.measureRules || {}), max: e.target.value },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div className="col-md-2">
+                                  <label className="form-label mb-1" style={{ fontSize: 12 }}>Step</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    className="form-control"
+                                    placeholder="1"
+                                    value={attr.measureRules?.step ?? 1}
+                                    onChange={(e) =>
+                                      updateAttribute(i, {
+                                        measureRules: { ...(attr.measureRules || {}), step: e.target.value },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="mt-2" style={{ fontSize: 12, color: "#374151" }}>
+                                Leave Maximum at 0 for no upper limit. Step 1 allows whole units
+                                only; use 0.01 where part units are ordered.
+                              </div>
+
+                              {/* A different rate for a different range */}
+                              <div className="mt-3">
+                                <label className="fw-bold" style={{ fontSize: 13 }}>Rate Slabs (optional)</label>
+                                <p className="text-muted mb-2" style={{ fontSize: 12 }}>
+                                  1 to 1000 at ₹3, 1001 to 2000 at ₹2.50, and so on. The slab the
+                                  typed figure falls in sets the rate. Leave To at 0 on the last slab
+                                  to cover everything above it. With no slab matching, the rate above
+                                  applies.
+                                </p>
+
+                                {(attr.measureRules?.slabs || []).length > 0 && (
+                                  <div className="d-flex align-items-center gap-2 mb-1">
+                                    <div className="fw-bold" style={{ flex: 1, fontSize: 12 }}>From</div>
+                                    <div className="fw-bold" style={{ flex: 1, fontSize: 12 }}>To</div>
+                                    <div className="fw-bold" style={{ flex: 1, fontSize: 12 }}>Rate per unit (₹)</div>
+                                    <div style={{ width: 38 }} />
+                                  </div>
+                                )}
+
+                                {(attr.measureRules?.slabs || []).map((slab, s) => (
+                                  <div key={s} className="d-flex align-items-center gap-2 mb-2">
+                                    <input type="number" className="form-control" placeholder="From"
+                                      value={slab.from ?? ""}
+                                      onChange={(e) => {
+                                        const slabs = [...(attr.measureRules?.slabs || [])];
+                                        slabs[s] = { ...slabs[s], from: e.target.value };
+                                        updateAttribute(i, { measureRules: { ...(attr.measureRules || {}), slabs } });
+                                      }} />
+                                    <input type="number" className="form-control" placeholder="To"
+                                      value={slab.to ?? ""}
+                                      onChange={(e) => {
+                                        const slabs = [...(attr.measureRules?.slabs || [])];
+                                        slabs[s] = { ...slabs[s], to: e.target.value };
+                                        updateAttribute(i, { measureRules: { ...(attr.measureRules || {}), slabs } });
+                                      }} />
+                                    <input type="number" step="0.01" className="form-control" placeholder="Rate (₹)"
+                                      value={slab.ratePerUnit ?? ""}
+                                      onChange={(e) => {
+                                        const slabs = [...(attr.measureRules?.slabs || [])];
+                                        slabs[s] = { ...slabs[s], ratePerUnit: e.target.value };
+                                        updateAttribute(i, { measureRules: { ...(attr.measureRules || {}), slabs } });
+                                      }} />
+                                    <button type="button" className="btn btn-sm btn-outline-danger"
+                                      onClick={() => {
+                                        const slabs = (attr.measureRules?.slabs || []).filter((_, s2) => s2 !== s);
+                                        updateAttribute(i, { measureRules: { ...(attr.measureRules || {}), slabs } });
+                                      }}>✕</button>
+                                  </div>
+                                ))}
+
+                                <button type="button" className="btn btn-sm btn-outline-primary"
+                                  onClick={() => {
+                                    const slabs = [...(attr.measureRules?.slabs || []), { from: "", to: "", ratePerUnit: "" }];
+                                    updateAttribute(i, { measureRules: { ...(attr.measureRules || {}), slabs } });
+                                  }}>+ Add Slab</button>
+                              </div>
+                            </div>
+                          )}
 
                           {attr.type === "upload" && (
                             <div className="upload-rules-section mt-3 p-3 border rounded bg-light">
@@ -1062,17 +1249,19 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                             </div>
                           )}
 
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-primary mt-2"
-                            onClick={() => {
-                              updateAttribute(i, {
-                                options: [...(attr.options || []), { label: "", priceModifier: 0, pricingTiers: [] }],
-                              });
-                            }}
-                          >
-                            ➕ Add Option
-                          </button>
+                          {attr.type !== "measure" && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary mt-2"
+                              onClick={() => {
+                                updateAttribute(i, {
+                                  options: [...(attr.options || []), { label: "", priceModifier: 0, pricingTiers: [] }],
+                                });
+                              }}
+                            >
+                              ➕ Add Option
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

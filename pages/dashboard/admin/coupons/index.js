@@ -9,6 +9,7 @@ import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import { FaWhatsapp } from "react-icons/fa";
+import CouponProductPicker from "@/components/admin-panel/CouponProductPicker";
 import {
   FiTag, FiPlus, FiSearch, FiEdit2, FiTrash2, FiDownload, FiRefreshCw, FiX, FiUsers,
   FiShoppingCart, FiPercent, FiTrendingUp, FiTrendingDown, FiClock, FiMail, FiExternalLink,
@@ -386,6 +387,13 @@ function EditModal({ coupon, onClose, onSaved }) {
     allowedUserTypes: coupon.allowedUserTypes || [],
     isActive: !!coupon.isActive,
   });
+  // The products this coupon is tied to; empty means it works on every product
+  const [products, setProducts] = useState(() =>
+    (coupon.products || []).map((item) => ({
+      _id: String(item?._id || item),
+      name: item?.name || "",
+    }))
+  );
   const [saving, setSaving] = useState(false);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -405,12 +413,13 @@ function EditModal({ coupon, onClose, onSaved }) {
       perUserLimit: Number(form.perUserLimit),
       allowedUserTypes: form.allowedUserTypes,
       isActive: form.isActive,
+      products: products.map((item) => String(item._id)),
     };
     try {
       setSaving(true);
       await axios.put("/api/admin/coupons/update", payload, { withCredentials: true });
       toast.success("Coupon updated");
-      onSaved({ ...coupon, ...payload, _id: coupon._id });
+      onSaved({ ...coupon, ...payload, products, _id: coupon._id });
     } catch (err) {
       toast.error(err?.response?.data?.message || "Could not update the coupon");
     } finally {
@@ -446,6 +455,11 @@ function EditModal({ coupon, onClose, onSaved }) {
             <span style={S.fieldLabel}>Uses per customer</span>
             <input id="edit-per-user" type="number" min="1" style={S.input} value={form.perUserLimit} onChange={(e) => set({ perUserLimit: e.target.value })} />
           </label>
+
+          <div style={{ ...S.field, gridColumn: "1 / -1" }}>
+            <span style={S.fieldLabel}>Applies to</span>
+            <CouponProductPicker selected={products} onChange={setProducts} />
+          </div>
 
           <div style={{ ...S.field, gridColumn: "1 / -1" }}>
             <span style={S.fieldLabel}>Who can use it</span>
@@ -906,6 +920,17 @@ export default function AdminCoupons() {
                                 <div style={{ marginTop: 5, display: "flex", gap: 5, flexWrap: "wrap" }}>
                                   <Badge bg={st.bg} fg={st.fg}>{st.label}</Badge>
                                   {(c.allowedUserTypes || []).map((t) => <Badge key={t} bg="#f5f3ff" fg="#6d28d9">{t === "partner" ? "Partners" : "Customers"}</Badge>)}
+                                  {(c.products || []).length > 0 && (
+                                    <Badge
+                                      bg="#fdeaea"
+                                      fg="#E10600"
+                                      title={(c.products || []).map((pr) => pr?.name || String(pr?._id || pr)).join(", ")}
+                                    >
+                                      {(c.products || []).length === 1
+                                        ? "1 product only"
+                                        : (c.products || []).length + " products only"}
+                                    </Badge>
+                                  )}
                                 </div>
                               </td>
                               <td style={S.td}>

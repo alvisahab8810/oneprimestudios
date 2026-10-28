@@ -15,6 +15,7 @@ import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
 import { checkOrderable } from "@/lib/stockRules";
 import { checkDeliverable } from "@/lib/deliveryZones";
 import { isCodAvailable } from "@/lib/codRules";
+import { couponEligibleTotal, isProductCoupon } from "@/lib/couponRules";
 import {
   checkPaymentMatchesOrder,
   fetchPayment,
@@ -125,17 +126,22 @@ export default async function handler(req, res) {
       });
       if (userUsageCount >= (coupon.perUserLimit || 1))
         return res.status(400).json({ message: "Coupon already used by you" });
-      if (subtotal < (coupon.minOrderAmount || 0))
+      // A coupon tied to particular products only discounts those products'
+      // lines; one tied to none works on the whole order, as before
+      const eligibleTotal = couponEligibleTotal(coupon, items, subtotal);
+      if (isProductCoupon(coupon) && eligibleTotal <= 0)
+        return res.status(400).json({ message: "This coupon is only for selected products" });
+      if (eligibleTotal < (coupon.minOrderAmount || 0))
         return res.status(400).json({ message: `Minimum order ₹${coupon.minOrderAmount} required` });
 
       let discountAmount = 0;
       if (coupon.discountType === "percentage") {
-        discountAmount = (subtotal * coupon.discountValue) / 100;
+        discountAmount = (eligibleTotal * coupon.discountValue) / 100;
         if (coupon.maxDiscount) discountAmount = Math.min(discountAmount, coupon.maxDiscount);
       } else {
         discountAmount = coupon.discountValue;
       }
-      discountAmount = Math.min(discountAmount, subtotal);
+      discountAmount = Math.min(discountAmount, eligibleTotal);
 
       couponData = {
         code: coupon.code,

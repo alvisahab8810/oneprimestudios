@@ -42,6 +42,13 @@ const CouponSchema = new mongoose.Schema(
       default: 1,
     },
 
+  // Products this coupon is limited to. Empty means it works on the whole
+  // cart, which is how every coupon made before this behaved.
+  products: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    default: [],
+  },
+
   allowedUserTypes: {
   type: [String],
   enum: ["customer", "partner"],

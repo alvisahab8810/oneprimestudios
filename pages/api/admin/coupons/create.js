@@ -2,6 +2,14 @@ import dbConnect from "@/lib/dbConnect";
 import Coupon from "@/models/Coupon";
 import { requireAdminPermission } from "@/lib/adminAuth";
 
+// Only real product ids are stored, so a bad value can never silently turn a
+// product coupon into one that works on everything
+const parseProducts = (list) =>
+  (Array.isArray(list) ? list : [])
+    .map((id) => String(id || "").trim())
+    .filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
+
+
 export default async function handler(req, res) {
   await dbConnect();
 
@@ -32,6 +40,7 @@ export default async function handler(req, res) {
       usageLimit,
       perUserLimit,
       allowedUserTypes,
+      products,
     } = req.body;
 
     const discountValue = discountValueFromBody ?? value;
@@ -69,6 +78,8 @@ if (!code || !discountType) {
   usageLimit,
   perUserLimit,
   allowedUserTypes,
+  // Empty means the coupon works on the whole cart
+  products: parseProducts(products),
 });
 
 

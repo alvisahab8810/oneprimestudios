@@ -155,11 +155,36 @@ const AttributeSchema = new mongoose.Schema(
     name: { type: String, required: true },
     type: {
       type: String,
-      enum: ["text", "number", "select", "checkbox", "upload"], // <-- added upload
+      // "measure" is for anything sold by area or length — the buyer types how
+      // much they need and the rate below turns it into a price
+      enum: ["text", "number", "select", "checkbox", "upload", "measure"],
       default: "select",
     },
     values: [AttributeValueSchema],
     required: { type: Boolean, default: false },
+
+    // Only read for a "measure" attribute; every other type ignores it
+    measureRules: {
+      // What the buyer is typing in — "sqft", "running ft", "inch"
+      unit: { type: String, default: "" },
+      // Price of one of those units, e.g. 3 for ₹3 per sqft
+      ratePerUnit: { type: Number, default: 0 },
+      // The range the buyer may enter. A max of 0 means no ceiling.
+      min: { type: Number, default: 0 },
+      max: { type: Number, default: 0 },
+      // 1 for whole units, 0.01 where part units are ordered
+      step: { type: Number, default: 1 },
+      // Rate bands: 1-1000 sqft at one rate, 1001-2000 at another. The band
+      // the typed figure falls in sets the rate; with none matching, the
+      // ratePerUnit above applies. A "to" of 0 means that band has no ceiling.
+      slabs: [
+        {
+          from: { type: Number, default: 0 },
+          to: { type: Number, default: 0 },
+          ratePerUnit: { type: Number, default: 0 },
+        },
+      ],
+    },
 
     // NEW optional upload rules (safe for existing data)
     uploadRules: {

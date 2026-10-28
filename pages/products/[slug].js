@@ -15,6 +15,7 @@ import styles from "@/styles/ProductDetails.module.css";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
+import MeasureField from "@/components/product/MeasureField";
 import { priceForQuantity } from "@/lib/productPricing";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
@@ -662,6 +663,16 @@ export default function ProductDetails() {
                               {attr.type === "number" && (
                                 <input type="number" placeholder={`Enter ${attr.name}`} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
                               )}
+                              {/* Measured by area or length: the figure typed here is priced
+                                  at the rate the admin set */}
+                              {attr.type === "measure" && (
+                                <MeasureField
+                                  attr={attr}
+                                  value={selectedAttrs[attr.name]}
+                                  onChange={(v) => handleAttrChange(attr.name, v)}
+                                  inputClassName={styles.inputField}
+                                />
+                              )}
                               {attr.type === "select" && (
                                 <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
                                   <option value="">Select {attr.name}</option>
@@ -799,6 +810,16 @@ export default function ProductDetails() {
                               )}
                               {attr.type === "number" && (
                                 <input type="number" placeholder={`Enter ${attr.name}`} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                              )}
+                              {/* Measured by area or length: the figure typed here is priced
+                                  at the rate the admin set */}
+                              {attr.type === "measure" && (
+                                <MeasureField
+                                  attr={attr}
+                                  value={selectedAttrs[attr.name]}
+                                  onChange={(v) => handleAttrChange(attr.name, v)}
+                                  inputClassName={styles.inputField}
+                                />
                               )}
                               {attr.type === "select" && (
                                 <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
@@ -1052,6 +1073,16 @@ export default function ProductDetails() {
                     )}
                     {attr.type === "number" && (
                       <input type="number" placeholder={`Enter ${attr.name}`} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)} className={styles.inputField} />
+                    )}
+                    {/* Measured by area or length: the figure typed here is priced
+                        at the rate the admin set */}
+                    {attr.type === "measure" && (
+                      <MeasureField
+                        attr={attr}
+                        value={selectedAttrs[attr.name]}
+                        onChange={(v) => handleAttrChange(attr.name, v)}
+                        inputClassName={styles.inputField}
+                      />
                     )}
                     {attr.type === "select" && (
                       <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>

@@ -9,8 +9,15 @@
 import dbConnect from "@/lib/dbConnect";
 import Coupon from "@/models/Coupon";
 import Order from "@/models/Order";
+import Cart from "@/models/Cart";
 import getUserFromToken from "@/lib/getUserFromToken";
-import { couponDiscount, couponBlockReason, couponHeadline } from "@/lib/couponRules";
+import {
+  couponDiscount,
+  couponBlockReason,
+  couponHeadline,
+  couponEligibleTotal,
+  isProductCoupon,
+} from "@/lib/couponRules";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -46,11 +53,24 @@ export default async function handler(req, res) {
       : [];
     const usedByCode = usage.reduce((acc, row) => ({ ...acc, [row._id]: row.count }), {});
 
+    // Read once: a coupon tied to particular products is only worth listing
+    // when one of those products is actually in this cart
+    const hasProductCoupon = coupons.some(isProductCoupon);
+    const cartItems = hasProductCoupon
+      ? ((await Cart.findOne({ user: user._id }).lean())?.items || [])
+      : [];
+
     const offers = [];
 
     for (const coupon of coupons) {
       const userUsage = usedByCode[coupon.code] || 0;
-      const reason = couponBlockReason(coupon, { cartTotal, userType: user.userType, userUsage });
+      const eligibleTotal = couponEligibleTotal(coupon, cartItems, cartTotal);
+      const reason = couponBlockReason(coupon, {
+        cartTotal,
+        userType: user.userType,
+        userUsage,
+        eligibleTotal,
+      });
 
       // Nothing the buyer can do about these, so they are not shown at all
       const permanentlyOut =
@@ -58,6 +78,7 @@ export default async function handler(req, res) {
         reason === "Coupon usage limit reached" ||
         reason === "Coupon expired" ||
         reason === "Coupon not allowed for this user" ||
+        reason === "This coupon is only for selected products" ||
         reason === "This coupon is no longer available";
       if (permanentlyOut) continue;
 
@@ -70,7 +91,7 @@ export default async function handler(req, res) {
         minOrderAmount: coupon.minOrderAmount || 0,
         expiryDate: coupon.expiryDate || null,
         // What the buyer would save on the cart as it stands
-        discount: reason ? 0 : couponDiscount(coupon, cartTotal),
+        discount: reason ? 0 : couponDiscount(coupon, eligibleTotal),
         eligible: !reason,
         reason: reason || "",
       });

@@ -7,6 +7,7 @@ import Sidebar from "@/components/admin-panel/Sidebar";
 import { useRouter } from "next/router";
 import { FaTags, FaSave, FaArrowLeft } from "react-icons/fa";
 import Link from "next/link";
+import CouponProductPicker from "@/components/admin-panel/CouponProductPicker";
 
 export default function CreateCoupon() {
   const router = useRouter();
@@ -31,6 +32,9 @@ export default function CreateCoupon() {
     allowedUserTypes: ["customer"],
     isActive: true,
   });
+
+  // Products this coupon is limited to. Left empty, the coupon works everywhere.
+  const [products, setProducts] = useState([]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -78,6 +82,7 @@ export default function CreateCoupon() {
             ? Number(form.minOrderAmount)
             : undefined,
           perUserLimit: Number(form.perUserLimit),
+          products: products.map((item) => String(item._id)),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -231,6 +236,12 @@ export default function CreateCoupon() {
                 value={form.perUserLimit}
                 onChange={handleChange}
               />
+            </div>
+
+            {/* PRODUCT RESTRICTION */}
+            <div className="mb-3">
+              <label className="form-label">Applies To</label>
+              <CouponProductPicker selected={products} onChange={setProducts} />
             </div>
 
             {/* USER TYPES */}
