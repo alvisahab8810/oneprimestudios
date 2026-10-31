@@ -74,6 +74,23 @@
 
 import mongoose from "mongoose";
 
+// A shopper can keep as many delivery addresses as they like and pick one at
+// checkout. Exactly one of them is the default, which is the one checkout
+// starts on.
+const AddressSchema = new mongoose.Schema(
+  {
+    label: { type: String, enum: ["Home", "Work", "Other"], default: "Home" },
+    name: { type: String, required: true },
+    phone: { type: String, required: true },
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pinCode: { type: String, required: true },
+    isDefault: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -86,6 +103,10 @@ const UserSchema = new mongoose.Schema(
     city: { type: String },
     state: { type: String },
     pinCode: { type: String },
+
+    // The address book. The old single-address fields above stay in step with
+    // whichever entry is the default.
+    addresses: { type: [AddressSchema], default: [] },
 
 
     

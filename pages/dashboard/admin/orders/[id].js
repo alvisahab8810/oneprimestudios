@@ -252,7 +252,19 @@ export default function AdminOrderDetail() {
                     ? "Cash on Delivery"
                     : order.paymentMethod || "Not available"}
                 </div>
-                <div>Transaction ID: {order.transactionId || "—"}</div>
+                {/* Razorpay's own payment id is the reference support and the
+                    gateway dashboard both go by; a wallet order has no gateway
+                    reference, and COD is never charged online */}
+                <div>
+                  Transaction ID:{" "}
+                  {order.razorpay?.paymentId ||
+                    (order.paymentMethod === "Wallet" ? "Paid from wallet" : "—")}
+                </div>
+                {order.razorpay?.orderId && (
+                  <div className="text-muted" style={{ fontSize: 12 }}>
+                    Razorpay order: {order.razorpay.orderId}
+                  </div>
+                )}
                 {/* Cash on delivery is collected by the courier, so the money
                     is only in hand once the order is marked paid */}
                 <div>
@@ -264,7 +276,7 @@ export default function AdminOrderDetail() {
                         : "fw-semibold text-warning"
                     }
                   >
-                    ₹{order.total}
+                    ₹{Number(order.total || 0).toFixed(2)}
                   </span>
                 </div>
               </div>

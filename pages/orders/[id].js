@@ -6,7 +6,7 @@ import Topbar from "@/components/header/Topbar";
 import Footer from "@/components/footer/Footer";
 import { toast } from "react-hot-toast";
 import Offcanvas from "@/components/header/Offcanvas";
-import { canUserCancelOrder, isDelivered } from "@/lib/orderRules";
+import { canUserCancelOrder, hasNoReturnItem, isDelivered } from "@/lib/orderRules";
 import {
   canRequestReturn,
   checkReturnEligibility,
@@ -544,6 +544,7 @@ export default function OrderDetailPage() {
 
   const c = scfg(order.status);
   const canCancel = canUserCancelOrder(order);
+  const finalSale = hasNoReturnItem(order);
 
   // Returns are for retail (B2C) orders only — partners are handled by sales
   const isRetailOrder = String(order.user?.userType || "customer").toLowerCase() === "customer";
@@ -608,6 +609,14 @@ export default function OrderDetailPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Why there is no Cancel button on a final-sale order */}
+                {finalSale && (
+                  <p style={{ margin: "8px 0 0", fontSize: 12, color: "#9ca3af", textAlign: "right" }}>
+                    An item on this order is sold as final, so it cannot be
+                    cancelled, returned or refunded.
+                  </p>
+                )}
               </div>
             </div>
           </div>

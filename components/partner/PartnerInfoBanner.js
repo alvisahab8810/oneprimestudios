@@ -1,12 +1,14 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import useSectionMedia from "@/lib/useSectionMedia";
 
-// Shown until notices are added from the dashboard
+// Shown until pictures are added from the dashboard. Rows saved before this
+// strip took pictures carry wording instead of a file, and still render.
 const BUILT_IN = [
   {
     _id: "built-in-1",
@@ -49,13 +51,33 @@ const PartnerInfoSlider = () => {
         >
           {slides.map((slide) => (
             <SwiperSlide key={slide._id}>
-              <div className="partner-slide">
-                {slide.tag ? <p className="tag">{slide.tag}</p> : null}
-                <h3>{slide.title}</h3>
-                {slide.description ? (
-                  <p className="desc">{slide.description}</p>
-                ) : null}
-              </div>
+              {slide.src ? (
+                <div className="partner-slide partner-slide--image">
+                  {slide.link ? (
+                    <Link href={slide.link} className="partner-slide__link">
+                      <img
+                        src={slide.src}
+                        alt={slide.alt || ""}
+                        className="partner-slide__img"
+                      />
+                    </Link>
+                  ) : (
+                    <img
+                      src={slide.src}
+                      alt={slide.alt || ""}
+                      className="partner-slide__img"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="partner-slide">
+                  {slide.tag ? <p className="tag">{slide.tag}</p> : null}
+                  <h3>{slide.title}</h3>
+                  {slide.description ? (
+                    <p className="desc">{slide.description}</p>
+                  ) : null}
+                </div>
+              )}
             </SwiperSlide>
           ))}
 

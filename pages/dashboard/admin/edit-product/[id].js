@@ -39,6 +39,7 @@ export default function EditProductPage() {
     minOrderQty: 1,
     lowStockThreshold: "",
     isFeatured: false,
+    noReturns: false,
     freeDelivery: false,
     gstPercent: 0,
     hsnCode: "",       // NEW: HSN/SAC code for invoicing
@@ -199,6 +200,7 @@ export default function EditProductPage() {
         minOrderQty: p.minOrderQty || 1,
         lowStockThreshold: p.lowStockThreshold === null || p.lowStockThreshold === undefined ? "" : String(p.lowStockThreshold),
         isFeatured: !!p.isFeatured,
+        noReturns: !!p.noReturns,
         freeDelivery: !!p.freeDelivery,
         gstPercent: p.gstPercent || 0,
         hsnCode: p.hsnCode || "",         // NEW
@@ -361,6 +363,7 @@ export default function EditProductPage() {
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
+      fd.append("noReturns", String(form.noReturns));
       fd.append("freeDelivery", String(form.freeDelivery));
       fd.append(
         "freeDeliveryPincodes",
@@ -606,6 +609,19 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     <label className="ms-3">
                       <input type="checkbox" name="freeDelivery" checked={form.freeDelivery} onChange={handleChange} /> Free Delivery
                     </label>
+                    {/* Work that cannot be taken back once it is made. The
+                        product page says so, and the buyer can neither cancel
+                        the order nor raise a return or refund on it. */}
+                    <label className="ms-3">
+                      <input type="checkbox" name="noReturns" checked={form.noReturns} onChange={handleChange} /> No returns or refunds
+                    </label>
+                    {form.noReturns && (
+                      <div className="small text-muted mt-1 w-100">
+                        The product page will say this item is final. The buyer
+                        cannot cancel the order, and cannot raise a return or
+                        refund once it is delivered.
+                      </div>
+                    )}
                     {/* Nobody can order this product while stock is below the minimum */}
                     {Number(form.stock) > 0 && Number(form.minOrderQty) > Number(form.stock) && (
                       <div className="small text-warning mt-1 w-100">

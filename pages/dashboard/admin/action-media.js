@@ -9,6 +9,7 @@ import {
   getSection,
   sectionKind,
   sectionHint,
+  sectionSize,
   acceptAttr,
   checkMedia,
   formatBytes,
@@ -19,10 +20,7 @@ const SEED_LABEL = {
   action: "Add the 3 built-in photos",
   "hero-desktop": "Use the current banner",
   "hero-mobile": "Use the current banner",
-  "products-info": "Add the 3 current notices",
 };
-
-const emptyText = { tag: "", title: "", description: "" };
 
 export default function SiteMediaPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -33,13 +31,13 @@ export default function SiteMediaPage() {
   const [busyId, setBusyId] = useState("");
   const [alt, setAlt] = useState("");
   const [link, setLink] = useState("");
-  const [text, setText] = useState(emptyText);
   const [seeding, setSeeding] = useState(false);
 
   const fileRef = useRef(null);
 
   const info = getSection(section);
   const kind = sectionKind(section);
+  const size = sectionSize(section);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,7 +65,6 @@ export default function SiteMediaPage() {
     setItems([]);
     setAlt("");
     setLink("");
-    setText(emptyText);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -122,35 +119,6 @@ export default function SiteMediaPage() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  const addNotice = async () => {
-    if (!text.title.trim()) {
-      toast.error("A notice needs a heading");
-      return;
-    }
-
-    try {
-      setUploading(true);
-      await axios.post(
-        "/api/admin/action-media",
-        {
-          section,
-          type: "text",
-          tag: text.tag.trim(),
-          title: text.title.trim(),
-          description: text.description.trim(),
-        },
-        { withCredentials: true }
-      );
-      toast.success("Notice added");
-      setText(emptyText);
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Could not add the notice");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -212,10 +180,9 @@ export default function SiteMediaPage() {
   };
 
   const removeItem = async (item) => {
-    const warning =
-      kind === "text"
-        ? "Remove this notice?"
-        : "Remove this from the website? The file is deleted from the server.";
+    const warning = item.src
+      ? "Remove this from the website? The file is deleted from the server."
+      : "Remove this from the website?";
     if (!confirm(warning)) return;
 
     try {
@@ -276,131 +243,86 @@ export default function SiteMediaPage() {
           {/* ADD */}
           <div className="card p-3 mb-4">
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-              <h6 className="fw-semibold mb-0">
-                {kind === "text" ? "Add a notice" : "Add to this area"}
-              </h6>
+              <h6 className="fw-semibold mb-0">Add to this area</h6>
 
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-primary"
-                disabled={seeding}
-                onClick={addDefaults}
-              >
-                {seeding ? "Adding..." : SEED_LABEL[section] || "Add built-in content"}
-              </button>
+              {SEED_LABEL[section] && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-primary"
+                  disabled={seeding}
+                  onClick={addDefaults}
+                >
+                  {seeding ? "Adding..." : SEED_LABEL[section]}
+                </button>
+              )}
             </div>
 
             <p className="text-muted mb-3" style={{ fontSize: 13 }}>
-              {info.label} shows only the list below once it has anything in it,
-              so use that button to start from what the website shows today.{" "}
+              {info.label} shows only the list below once it has anything in it.{" "}
+              {SEED_LABEL[section]
+                ? "Use the button above to start from what the website shows today. "
+                : ""}
               {sectionHint(section)}
             </p>
 
-            {kind === "text" ? (
-              <div className="row g-2 align-items-end">
-                <div className="col-md-3">
-                  <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                    Small label (optional)
-                  </label>
-                  <input
-                    className="form-control"
-                    value={text.tag}
-                    onChange={(e) => setText({ ...text, tag: e.target.value })}
-                    placeholder="e.g. Bulk Orders"
-                    maxLength={60}
-                  />
-                </div>
+            {/* The exact artwork size, so a picture never arrives stretched or blurred */}
+            <div className="size-note mb-3">
+              <span className="size-note__dim">{size.label}</span>
+              <span className="size-note__shape">{size.shape}</span>
+              {size.now ? <span className="size-note__now">{size.now}</span> : null}
+            </div>
 
-                <div className="col-md-4">
-                  <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                    Heading
-                  </label>
-                  <input
-                    className="form-control"
-                    value={text.title}
-                    onChange={(e) => setText({ ...text, title: e.target.value })}
-                    placeholder="e.g. Better Prices on Higher Quantities"
-                    maxLength={120}
-                  />
-                </div>
-
-                <div className="col-md-3">
-                  <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                    Details (optional)
-                  </label>
-                  <input
-                    className="form-control"
-                    value={text.description}
-                    onChange={(e) => setText({ ...text, description: e.target.value })}
-                    placeholder="One line of explanation"
-                    maxLength={300}
-                  />
-                </div>
-
-                <div className="col-md-2">
-                  <button
-                    type="button"
-                    className="btn btn-primary w-100"
-                    disabled={uploading}
-                    onClick={addNotice}
-                  >
-                    {uploading ? "Adding..." : "Add notice"}
-                  </button>
-                </div>
+            <div className="row g-2 align-items-end">
+              <div className="col-md-4">
+                <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                  Description (optional)
+                </label>
+                <input
+                  className="form-control"
+                  value={alt}
+                  onChange={(e) => setAlt(e.target.value)}
+                  placeholder="e.g. Offset press run"
+                  maxLength={160}
+                />
               </div>
-            ) : (
-              <div className="row g-2 align-items-end">
-                <div className="col-md-4">
+
+              {kind === "banner" && (
+                <div className="col-md-3">
                   <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                    Description (optional)
+                    Opens page (optional)
                   </label>
                   <input
                     className="form-control"
-                    value={alt}
-                    onChange={(e) => setAlt(e.target.value)}
-                    placeholder="e.g. Offset press run"
-                    maxLength={160}
+                    value={link}
+                    onChange={(e) => setLink(e.target.value)}
+                    placeholder="/products"
+                    maxLength={200}
                   />
                 </div>
+              )}
 
-                {kind === "banner" && (
-                  <div className="col-md-3">
-                    <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                      Opens page (optional)
-                    </label>
-                    <input
-                      className="form-control"
-                      value={link}
-                      onChange={(e) => setLink(e.target.value)}
-                      placeholder="/products"
-                      maxLength={200}
-                    />
-                  </div>
+              <div className={kind === "banner" ? "col-md-4" : "col-md-6"}>
+                <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                  Picture
+                </label>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  className="form-control"
+                  accept={acceptAttr(section)}
+                  disabled={uploading}
+                  onChange={handleUpload}
+                />
+              </div>
+
+              <div className="col-md-1">
+                {uploading && (
+                  <span className="text-muted" style={{ fontSize: 13 }}>
+                    Uploading...
+                  </span>
                 )}
-
-                <div className={kind === "banner" ? "col-md-4" : "col-md-6"}>
-                  <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                    File
-                  </label>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    className="form-control"
-                    accept={acceptAttr(section)}
-                    disabled={uploading}
-                    onChange={handleUpload}
-                  />
-                </div>
-
-                <div className="col-md-1">
-                  {uploading && (
-                    <span className="text-muted" style={{ fontSize: 13 }}>
-                      Uploading...
-                    </span>
-                  )}
-                </div>
               </div>
-            )}
+            </div>
 
             {kind === "media" && (
               <p className="text-muted mb-0 mt-2" style={{ fontSize: 13 }}>
@@ -423,10 +345,10 @@ export default function SiteMediaPage() {
                 <thead className="table-light">
                   <tr>
                     <th style={{ width: 70 }}>Order</th>
-                    {kind !== "text" && <th style={{ width: 170 }}>Preview</th>}
-                    <th>{kind === "text" ? "Wording" : "Description"}</th>
+                    <th style={{ width: 170 }}>Preview</th>
+                    <th>Description</th>
                     {kind === "banner" && <th style={{ width: 160 }}>Opens page</th>}
-                    {kind !== "text" && <th style={{ width: 100 }}>Size</th>}
+                    <th style={{ width: 100 }}>Size</th>
                     <th style={{ width: 110 }}>Status</th>
                     <th style={{ width: 120 }}>Action</th>
                   </tr>
@@ -456,28 +378,31 @@ export default function SiteMediaPage() {
                         </div>
                       </td>
 
-                      {kind !== "text" && (
-                        <td>
-                          {item.type === "video" ? (
-                            <video
-                              src={item.src}
-                              style={{ width: 150, height: 75, objectFit: "cover", borderRadius: 8, background: "#111" }}
-                              muted
-                              controls
-                              preload="metadata"
-                            />
-                          ) : (
-                            <img
-                              src={item.src}
-                              alt={item.alt || ""}
-                              style={{ width: 150, height: 75, objectFit: "cover", borderRadius: 8 }}
-                            />
-                          )}
-                        </td>
-                      )}
+                      <td>
+                        {item.type === "video" ? (
+                          <video
+                            src={item.src}
+                            style={{ width: 150, height: 75, objectFit: "cover", borderRadius: 8, background: "#111" }}
+                            muted
+                            controls
+                            preload="metadata"
+                          />
+                        ) : item.src ? (
+                          <img
+                            src={item.src}
+                            alt={item.alt || ""}
+                            style={{ width: 150, height: 75, objectFit: "cover", borderRadius: 8 }}
+                          />
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: 12 }}>
+                            Wording only. Delete this row once a picture has taken
+                            its place.
+                          </span>
+                        )}
+                      </td>
 
                       <td>
-                        {kind === "text" ? (
+                        {item.type === "text" ? (
                           <div className="d-flex flex-column gap-1">
                             <input
                               className="form-control form-control-sm"
@@ -543,9 +468,7 @@ export default function SiteMediaPage() {
                         </td>
                       )}
 
-                      {kind !== "text" && (
-                        <td>{item.size ? formatBytes(item.size) : "-"}</td>
-                      )}
+                      <td>{item.size ? formatBytes(item.size) : "-"}</td>
 
                       <td>
                         {item.isActive ? (
@@ -586,6 +509,34 @@ export default function SiteMediaPage() {
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .size-note {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          border: 1px solid #f1c3c1;
+          border-left: 4px solid #e10600;
+          border-radius: 8px;
+          background: #fff6f6;
+          font-size: 13px;
+        }
+        .size-note__dim {
+          font-weight: 700;
+          font-size: 15px;
+          color: #111111;
+          letter-spacing: 0.3px;
+        }
+        .size-note__shape {
+          color: #6b4b4b;
+        }
+        .size-note__now {
+          flex: 1 1 220px;
+          color: #6c757d;
+        }
+      `}</style>
     </div>
   );
 }

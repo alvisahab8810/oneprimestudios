@@ -91,6 +91,7 @@ handler.post(
         lowStockThreshold,
         isFeatured,
 
+        noReturns,
         freeDelivery,
         freeDeliveryPincodes,
         gstPercent,
@@ -190,6 +191,8 @@ parsedAttributes.forEach(attr => {
         lowStockThreshold: parseLowStockThreshold(lowStockThreshold),
         isFeatured: isFeatured === "true" || isFeatured === true,
 
+        // Sold as final: no cancellation, return or refund on this product
+        noReturns: noReturns === "true" || noReturns === true,
         freeDelivery: freeDelivery === "true" || freeDelivery === true,
         // Empty list means free everywhere; listed PIN codes limit it to those
         freeDeliveryPincodes: parsePincodeList(freeDeliveryPincodes),

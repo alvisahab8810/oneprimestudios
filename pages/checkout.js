@@ -871,6 +871,7 @@ import DealBanner from "@/components/home-page/Cta";
 import Offcanvas from "@/components/header/Offcanvas";
 import { toast } from "react-hot-toast";
 import { cartAllowsCod } from "@/lib/codRules";
+import { isValidGstin, gstinError, normalizeGstin } from "@/lib/gstin";
 export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -903,6 +904,11 @@ export default function CheckoutPage() {
   const [prefilled, setPrefilled] = useState({});
   const [errors, setErrors] = useState({});
 
+  // Every address the shopper has saved, and the one this order ships to.
+  // Picking one here does not change their default on the account.
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+
   // A saved address is shown locked so it is not changed by accident. Retail
   // shoppers can unlock it for this order, and keep the change on their account.
   const [editAddress, setEditAddress] = useState(false);
@@ -930,21 +936,31 @@ export default function CheckoutPage() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/user/address", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          phone: formData.phone,
-          street: formData.street,
-          city: formData.city,
-          state: formData.state,
-          pinCode: formData.zip,
-        }),
-      });
+      const body = {
+        label: "Home",
+        name: formData.name,
+        phone: formData.phone,
+        street: formData.street,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.zip,
+      };
+
+      // An edited address updates the entry it came from; a brand new one is
+      // added to the book rather than overwriting whatever was selected
+      const res = await fetch(
+        selectedAddressId
+          ? `/api/user/addresses/${selectedAddressId}`
+          : "/api/user/addresses",
+        {
+          method: selectedAddressId ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(body),
+        }
+      );
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1025,6 +1041,89 @@ export default function CheckoutPage() {
     fetchUser();
   }, [router]);
 
+  // Fills the shipping form from a saved address, and marks those fields as
+  // coming from the account so they stay locked until "Edit address" is used
+  const applyAddress = (address) => {
+    if (!address) return;
+
+    setSelectedAddressId(String(address._id || ""));
+    setFormData((prev) => ({
+      ...prev,
+      name: address.name || "",
+      phone: address.phone || "",
+      street: address.street || "",
+      city: address.city || "",
+      state: address.state || "",
+      zip: address.pinCode || "",
+    }));
+    setPrefilled((prev) => ({
+      ...prev,
+      name: !!address.name,
+      phone: !!address.phone,
+      street: !!address.street,
+      city: !!address.city,
+      state: !!address.state,
+      zip: !!address.pinCode,
+    }));
+    setErrors({});
+    setEditAddress(false);
+  };
+
+  // Starts a one-off address. It is added to the book only if the shopper
+  // leaves "save this address" ticked when the order goes through.
+  const startNewAddress = () => {
+    setSelectedAddressId("");
+    setFormData((prev) => ({
+      ...prev,
+      name: "",
+      phone: "",
+      street: "",
+      city: "",
+      state: "",
+      zip: "",
+    }));
+    setPrefilled((prev) => ({
+      ...prev,
+      name: false,
+      phone: false,
+      street: false,
+      city: false,
+      state: false,
+      zip: false,
+    }));
+    setErrors({});
+    setEditAddress(true);
+  };
+
+  // Retail shoppers keep an address book; a partner has the one address on
+  // their profile, which the form is already prefilled from
+  useEffect(() => {
+    if (userType !== "customer") return;
+
+    const loadAddresses = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/user/addresses", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        const data = await res.json();
+        if (!res.ok) return;
+
+        const list = data.addresses || [];
+        setSavedAddresses(list);
+
+        const chosen = list.find((a) => a.isDefault) || list[0];
+        if (chosen) applyAddress(chosen);
+      } catch (err) {
+        console.error("Address book skipped:", err.message);
+      }
+    };
+
+    loadAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userType]);
+
 
   useEffect(() => {
   if (userType === "partner") {
@@ -1048,8 +1147,7 @@ export default function CheckoutPage() {
   const [gstEditing, setGstEditing] = useState(false);
 
   const gstDetailsReady =
-    formData.companyName.trim().length > 1 &&
-    /^[0-9A-Z]{15}$/.test(formData.gstNumber.trim().toUpperCase());
+    formData.companyName.trim().length > 1 && isValidGstin(formData.gstNumber);
 
   // Every retail product offers cash on delivery unless an admin turned it off
   // for that product; the server checks this again before placing the order
@@ -1170,7 +1268,8 @@ export default function CheckoutPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const clean = name === "gstNumber" ? normalizeGstin(value).slice(0, 15) : value;
+    setFormData({ ...formData, [name]: clean });
     setErrors({ ...errors, [name]: "" });
   };
 
@@ -1203,11 +1302,8 @@ export default function CheckoutPage() {
       if (!companyName.trim()) {
         newErrors.companyName = "Business name is required for a GST invoice.";
       }
-      if (!gstNumber.trim()) {
-        newErrors.gstNumber = "GST number is required for a GST invoice.";
-      } else if (!/^[0-9A-Z]{15}$/.test(gstNumber.trim().toUpperCase())) {
-        newErrors.gstNumber = "Invalid GST number format.";
-      }
+      const gstProblem = gstinError(gstNumber);
+      if (gstProblem) newErrors.gstNumber = gstProblem;
     }
 
     if (userType === "partner") {
@@ -1215,9 +1311,9 @@ export default function CheckoutPage() {
         newErrors.companyName = "Company name is required for partners.";
       }
 
-      // ✅ GST validation ONLY if user entered it
-      if (gstNumber && !/^[0-9A-Z]{15}$/.test(gstNumber)) {
-        newErrors.gstNumber = "Invalid GST number format.";
+      // A partner may leave it blank, but a typed one has to be real
+      if (gstNumber.trim() && !isValidGstin(gstNumber)) {
+        newErrors.gstNumber = gstinError(gstNumber);
       }
     }
 
@@ -1578,6 +1674,119 @@ const placeOrder = async (method, payment = null) => {
               font-size: 16px;
             }
           }
+        .co-addr {
+          margin-bottom: 20px;
+        }
+        .co-addr-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 12px;
+          margin-bottom: 9px;
+        }
+        .co-addr-t {
+          font-size: 12.5px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #6b7280;
+        }
+        .co-addr-manage {
+          font-size: 12.5px;
+          font-weight: 600;
+          color: #111111;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          white-space: nowrap;
+        }
+        .co-addr-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+          gap: 10px;
+        }
+        .co-addr-card {
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          background: #fff;
+          padding: 12px;
+          margin: 0;
+          cursor: pointer;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .co-addr-card:hover {
+          border-color: #c9cdd3;
+        }
+        .co-addr-card-on {
+          border-color: #111111;
+          box-shadow: inset 0 0 0 1px #111111;
+        }
+        .co-addr-radio {
+          margin-top: 2px;
+          width: 16px;
+          height: 16px;
+          accent-color: #111111;
+          flex: none;
+        }
+        .co-addr-body {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+        .co-addr-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .co-addr-name {
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #111111;
+        }
+        .co-addr-tag {
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          background: #f3f4f6;
+          color: #4b5563;
+          border-radius: 4px;
+          padding: 2px 6px;
+        }
+        .co-addr-lines {
+          font-size: 12.5px;
+          color: #4b5563;
+          line-height: 1.5;
+        }
+        .co-addr-phone {
+          font-size: 12px;
+          color: #6b7280;
+        }
+        .co-addr-new {
+          border: 1px dashed #c9cdd3;
+          border-radius: 10px;
+          background: #fafbfc;
+          color: #111111;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 12px;
+          min-height: 74px;
+          cursor: pointer;
+          transition: border-color 0.15s, background 0.15s;
+        }
+        .co-addr-new:hover {
+          border-color: #111111;
+          background: #f6f7f9;
+        }
+        @media (max-width: 575px) {
+          .co-addr-list {
+            grid-template-columns: 1fr;
+          }
+        }
         `}</style>
       </div>
     );
@@ -1615,6 +1824,62 @@ const placeOrder = async (method, payment = null) => {
                     </button>
                   )}
                 </div>
+
+                {/* Saved addresses, picked the way any shopping app does it.
+                    Partners have a single profile address, so they see none. */}
+                {canEditAddress && savedAddresses.length > 0 && (
+                  <div className="co-addr">
+                    <div className="co-addr-head">
+                      <span className="co-addr-t">Deliver this order to</span>
+                      <Link href="/address" className="co-addr-manage">
+                        Manage addresses
+                      </Link>
+                    </div>
+
+                    <div className="co-addr-list">
+                      {savedAddresses.map((address) => {
+                        const id = String(address._id);
+                        const on = id === selectedAddressId;
+
+                        return (
+                          <label
+                            key={id}
+                            className={`co-addr-card${on ? " co-addr-card-on" : ""}`}
+                          >
+                            <input
+                              type="radio"
+                              name="checkoutAddress"
+                              className="co-addr-radio"
+                              checked={on}
+                              onChange={() => applyAddress(address)}
+                            />
+                            <span className="co-addr-body">
+                              <span className="co-addr-row">
+                                <span className="co-addr-name">{address.name}</span>
+                                <span className="co-addr-tag">{address.label || "Home"}</span>
+                              </span>
+                              <span className="co-addr-lines">
+                                {address.street}, {address.city}, {address.state}{" "}
+                                {address.pinCode}
+                              </span>
+                              <span className="co-addr-phone">{address.phone}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        className={`co-addr-new${
+                          selectedAddressId ? "" : " co-addr-card-on"
+                        }`}
+                        onClick={startNewAddress}
+                      >
+                        + Deliver to a new address
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Name & Phone */}
                 <div className="row">
@@ -1732,8 +1997,8 @@ const placeOrder = async (method, payment = null) => {
                   </div>
                 </div>
 
-                {/* Keeping an edited address, so the next order starts from it */}
-                {canEditAddress && hasSavedAddress && editAddress && (
+                {/* Keeping the address, so the next order starts from it */}
+                {canEditAddress && editAddress && (
                   <label className="d-flex align-items-start gap-2 mb-2">
                     <input
                       type="checkbox"
@@ -1741,7 +2006,9 @@ const placeOrder = async (method, payment = null) => {
                       onChange={(e) => setSaveAddress(e.target.checked)}
                     />
                     <span style={{ fontSize: 13 }}>
-                      Save this address to my account for future orders
+                      {selectedAddressId
+                        ? "Save these changes to my address book"
+                        : "Save this address to my address book for future orders"}
                     </span>
                   </label>
                 )}

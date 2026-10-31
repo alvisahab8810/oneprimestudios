@@ -145,6 +145,11 @@ const OrderSchema = new mongoose.Schema(
     // Snapshot of product name at time of order — preserved even if product is deleted
     productName: { type: String, default: "" },
 
+    // Whether this product was sold as final — no cancellation, return or
+    // refund. Snapshotted too, so changing the product later never changes
+    // what was promised on an order already placed.
+    noReturns: { type: Boolean, default: false },
+
     quantity: {
       type: Number,
       required: true,

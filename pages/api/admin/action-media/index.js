@@ -50,29 +50,20 @@ export default async function handler(req, res) {
       link: linkValue,
     };
 
-    if (kind === "text") {
-      if (!fields.title) {
-        return res.status(400).json({ message: "A notice needs a heading." });
-      }
-      fields.type = "text";
-      fields.src = "";
-      fields.size = 0;
-    } else {
-      const allowed = kind === "banner" ? ["image"] : ["image", "video"];
-      if (!allowed.includes(type)) {
-        return res.status(400).json({ message: "Unknown media type." });
-      }
-
-      // Only the path this server handed back on upload is accepted, so a row
-      // can never be pointed at an arbitrary URL.
-      if (typeof src !== "string" || !/^\/uploads\/action\/[\w.-]+$/.test(src)) {
-        return res.status(400).json({ message: "Invalid file path." });
-      }
-
-      fields.type = type;
-      fields.src = src;
-      fields.size = Number(size) || 0;
+    const allowed = kind === "banner" ? ["image"] : ["image", "video"];
+    if (!allowed.includes(type)) {
+      return res.status(400).json({ message: "Unknown media type." });
     }
+
+    // Only the path this server handed back on upload is accepted, so a row
+    // can never be pointed at an arbitrary URL.
+    if (typeof src !== "string" || !/^\/uploads\/action\/[\w.-]+$/.test(src)) {
+      return res.status(400).json({ message: "Invalid file path." });
+    }
+
+    fields.type = type;
+    fields.src = src;
+    fields.size = Number(size) || 0;
 
     // New items go to the end of their own section
     const last = await ActionMedia.findOne(sectionQuery(section)).sort({ order: -1 }).lean();

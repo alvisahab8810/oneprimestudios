@@ -3491,6 +3491,35 @@ ease;
   padding: 12px 16px;
 }
 
+/* A picture slide keeps the 4:1 shape the artwork is prepared at, so the
+   strip is the same height whether it holds a picture or wording. */
+.partner-slide--image {
+  padding: 0;
+  overflow: hidden;
+}
+
+.partner-slide__link {
+  display: block;
+  width: 100%;
+}
+
+.partner-slide__img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 1;
+  min-height: 290px;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .partner-slide--image {
+    min-height: 0;
+  }
+  .partner-slide__img {
+    min-height: 0;
+  }
+}
+
 .partner-slide .tag {
   font-size: 18px;
   text-transform: uppercase;

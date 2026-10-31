@@ -551,43 +551,6 @@ export default function ProductDetails() {
               </div>
             )}
 
-            {/* ── GST Breakdown (B2B only) ── */}
-            {showB2BForm && Number(product.gstPercent) > 0 && (() => {
-              const gstPct = Number(product.gstPercent);
-              const gstAmt = finalPrice * gstPct / 100;
-              const totalWithGst = finalPrice + gstAmt;
-              return (
-                <div style={{
-                  background: "linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)",
-                  border: "1.5px solid #4f6ef7",
-                  borderRadius: "10px",
-                  padding: "14px 16px",
-                  margin: "12px 0 16px",
-                  fontSize: "13.5px",
-                }}>
-                  <div style={{ fontWeight: 700, color: "#3b4fb8", marginBottom: 8, fontSize: 13, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                    Price Breakdown (incl. GST)
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, color: "#444" }}>
-                    <span>Base Price (excl. GST)</span>
-                    <span>₹{finalPrice.toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, color: "#e67e22" }}>
-                    <span>GST ({gstPct}%){product.hsnCode ? ` · HSN ${product.hsnCode}` : ""}</span>
-                    <span>+ ₹{gstAmt.toFixed(2)}</span>
-                  </div>
-                  <div style={{
-                    display: "flex", justifyContent: "space-between",
-                    borderTop: "1px dashed #b0bef7", paddingTop: 8, marginTop: 4,
-                    fontWeight: 700, fontSize: 15, color: "#2d3a9a"
-                  }}>
-                    <span>Total (incl. GST)</span>
-                    <span>₹{totalWithGst.toFixed(2)}</span>
-                  </div>
-                </div>
-              );
-            })()}
-
             {/* Delivery is on us for this product, so the buyer is told up front.
                 Where free delivery is limited to certain PIN codes, the badge
                 answers for the PIN code the buyer checked above. */}
@@ -608,6 +571,35 @@ export default function ProductDetails() {
                 }}
               >
                 <FaTruck /> {freeHere.label}
+              </div>
+            )}
+
+            {/* Sold as final. Said plainly here so the buyer knows before
+                paying, not after the parcel arrives. */}
+            {product.noReturns && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  background: "#fff5f5",
+                  border: "1px solid #f3c6c4",
+                  borderLeft: "4px solid #E10600",
+                  color: "#7a1f1c",
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  fontSize: 13.5,
+                  lineHeight: 1.45,
+                  margin: "12px 0",
+                }}
+              >
+                <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                  No returns or refunds.
+                </span>
+                <span>
+                  This item is made to your order, so it cannot be cancelled once
+                  placed, and cannot be returned or refunded after delivery.
+                </span>
               </div>
             )}
 
@@ -743,6 +735,43 @@ export default function ProductDetails() {
                     <textarea rows={3} placeholder="Any special instructions for this order..." value={specialRemarks} onChange={(e) => setSpecialRemarks(e.target.value)} className={styles.inputField} />
                   </div>
                 </div>
+
+                {/* ── GST Breakdown (B2B only) ── */}
+                {Number(product.gstPercent) > 0 && (() => {
+                  const gstPct = Number(product.gstPercent);
+                  const gstAmt = finalPrice * gstPct / 100;
+                  const totalWithGst = finalPrice + gstAmt;
+                  return (
+                    <div style={{
+                      background: "linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)",
+                      border: "1.5px solid #4f6ef7",
+                      borderRadius: "10px",
+                      padding: "14px 16px",
+                      margin: "12px 0 16px",
+                      fontSize: "13.5px",
+                    }}>
+                      <div style={{ fontWeight: 700, color: "#3b4fb8", marginBottom: 8, fontSize: 13, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                        Price Breakdown (incl. GST)
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, color: "#444" }}>
+                        <span>Base Price (excl. GST)</span>
+                        <span>₹{finalPrice.toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, color: "#e67e22" }}>
+                        <span>GST ({gstPct}%){product.hsnCode ? ` · HSN ${product.hsnCode}` : ""}</span>
+                        <span>+ ₹{gstAmt.toFixed(2)}</span>
+                      </div>
+                      <div style={{
+                        display: "flex", justifyContent: "space-between",
+                        borderTop: "1px dashed #b0bef7", paddingTop: 8, marginTop: 4,
+                        fontWeight: 700, fontSize: 15, color: "#2d3a9a"
+                      }}>
+                        <span>Total (incl. GST)</span>
+                        <span>₹{totalWithGst.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="mobile-none b2b-add-to-cart">
                   <div className={styles.b2bOrderActions}>

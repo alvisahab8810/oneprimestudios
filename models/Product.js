@@ -268,6 +268,11 @@ const ProductSchema = new mongoose.Schema(
     gstPercent: { type: Number, default: 0 }, // GST % applicable on this product (0, 5, 12, 18, 28)
     hsnCode: { type: String, default: "" }, // NEW: HSN/SAC code for GST invoicing
 
+    // Some work cannot be taken back once it is made — personalised print, for
+    // instance. Marked here, the product page says so up front and the buyer
+    // can neither cancel the order nor raise a return or refund on it.
+    noReturns: { type: Boolean, default: false },
+
     // When the admin absorbs the courier cost for a product, the buyer is not
     // charged for its delivery and the product page says so instead
     freeDelivery: { type: Boolean, default: false },

@@ -38,6 +38,7 @@ export default function AddProduct() {
     minOrderQty: 1,
     lowStockThreshold: "",
     isFeatured: false,
+    noReturns: false,
     freeDelivery: false,
     gstPercent: 0,
     hsnCode: "",      // NEW: HSN/SAC code for invoicing
@@ -212,6 +213,7 @@ export default function AddProduct() {
       fd.append("minOrderQty", String(form.minOrderQty || 1));
       fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
+      fd.append("noReturns", String(form.noReturns));
       fd.append("freeDelivery", String(form.freeDelivery));
       fd.append(
         "freeDeliveryPincodes",
@@ -260,7 +262,7 @@ export default function AddProduct() {
       setForm({
         name: "", shortDescription: "", description: "", ourSpecialization: "",
         importantNotes: "", categoryId: "", basePrice: "", salePrice: "", sku: "",
-        stock: 0, stockStatus: "in_stock", minOrderQty: 1, lowStockThreshold: "", isFeatured: false, freeDelivery: false,
+        stock: 0, stockStatus: "in_stock", minOrderQty: 1, lowStockThreshold: "", isFeatured: false, noReturns: false, freeDelivery: false,
         gstPercent: 0, hsnCode: "", shippingWeight: "", shippingLength: "", shippingBreadth: "", shippingHeight: "",
         productFor: "b2b", status: "published", attributes: [], pricingTiersCSV: "", pricingTiers: [], cityPrices: [],
         deliveryMode: "all", deliveryPincodesCSV: "", deliveryMessage: "", freeDeliveryPincodesCSV: "",
@@ -674,6 +676,23 @@ export default function AddProduct() {
                         <input type="checkbox" name="freeDelivery" checked={form.freeDelivery} onChange={handleChange} />{" "}
                         Free Delivery
                       </label>
+                    </div>
+
+                    {/* Work that cannot be taken back once it is made. The
+                        product page says so, and the buyer can neither cancel
+                        the order nor raise a return or refund on it. */}
+                    <div className="min-order-row">
+                      <label>
+                        <input type="checkbox" name="noReturns" checked={form.noReturns} onChange={handleChange} />{" "}
+                        No returns or refunds
+                      </label>
+                      {form.noReturns && (
+                        <div className="small text-muted mt-1">
+                          The product page will say this item is final. The buyer
+                          cannot cancel the order, and cannot raise a return or
+                          refund once it is delivered.
+                        </div>
+                      )}
                     </div>
 
                     <div className="min-order-row">

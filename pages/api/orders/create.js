@@ -16,6 +16,7 @@ import { checkOrderable } from "@/lib/stockRules";
 import { checkDeliverable } from "@/lib/deliveryZones";
 import { isCodAvailable } from "@/lib/codRules";
 import { couponEligibleTotal, isProductCoupon } from "@/lib/couponRules";
+import { isValidGstin, normalizeGstin } from "@/lib/gstin";
 import {
   checkPaymentMatchesOrder,
   fetchPayment,
@@ -159,7 +160,7 @@ export default async function handler(req, res) {
     const productIds = items.map((i) => i.product);
     const productDocs = await Product.find(
       { _id: { $in: productIds } },
-      "name shipping freeDelivery freeDeliveryPincodes stockStatus minOrderQty stock b2cOptions deliveryZones"
+      "name shipping freeDelivery freeDeliveryPincodes stockStatus minOrderQty stock b2cOptions deliveryZones noReturns"
     ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });
@@ -250,9 +251,9 @@ export default async function handler(req, res) {
     // NEW: pre-generate orderNumber, create Order first, then create WalletTransaction with referenceId + full description
     // GST details typed at checkout are re-validated here; a partner's details
     // always come from their own profile instead
-    const typedGstin = String(req.body?.gstDetails?.gstin || "").trim().toUpperCase();
+    const typedGstin = normalizeGstin(req.body?.gstDetails?.gstin);
     const gstDetails =
-      fullUser.userType === "customer" && /^[0-9A-Z]{15}$/.test(typedGstin)
+      fullUser.userType === "customer" && isValidGstin(typedGstin)
         ? {
             gstin: typedGstin,
             businessName: String(req.body?.gstDetails?.businessName || "")
@@ -280,6 +281,7 @@ export default async function handler(req, res) {
             items: items.map((i) => ({
               product:     i.product,
               productName: productNameMap[String(i.product)] || "",
+              noReturns:   !!productMap[String(i.product)]?.noReturns,
               quantity:    i.quantity,
               price:       i.price,
               remarks:     i.remarks || "",

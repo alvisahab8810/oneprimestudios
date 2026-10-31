@@ -6,7 +6,7 @@ import path from "path";
 import dbConnect from "@/lib/dbConnect";
 import ActionMedia, { sectionQuery } from "@/models/ActionMedia";
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { isSection, DEFAULT_SECTION, sectionKind } from "@/lib/actionMediaRules";
+import { isSection, DEFAULT_SECTION } from "@/lib/actionMediaRules";
 
 // Bundled file -> the copy this route creates under /public/uploads/action
 const DEFAULTS = {
@@ -45,30 +45,6 @@ const DEFAULTS = {
   ],
 };
 
-// The notices the products page shows today, as editable rows
-const TEXT_DEFAULTS = {
-  "products-info": [
-    {
-      tag: "Partner Update",
-      title: "Exclusive Partner Pricing Active",
-      description:
-        "You are seeing partner rates on every product. Prices shown already include your agreed discount.",
-    },
-    {
-      tag: "GST Information",
-      title: "GST Is Optional at Checkout",
-      description:
-        "Add your GSTIN at checkout to claim input credit, or continue without it.",
-    },
-    {
-      tag: "Bulk Orders",
-      title: "Better Prices on Higher Quantities",
-      description:
-        "Rates improve as quantities grow. Check the rate list for slab pricing.",
-    },
-  ],
-};
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -97,74 +73,47 @@ export default async function handler(req, res) {
     let skipped = 0;
     const missing = [];
 
-    if (sectionKind(section) === "text") {
-      for (const entry of TEXT_DEFAULTS[section] || []) {
-        const exists = await ActionMedia.findOne({
-          ...sectionQuery(section),
-          title: entry.title,
-        }).lean();
-        if (exists) {
-          skipped += 1;
-          continue;
-        }
+    for (const entry of DEFAULTS[section] || []) {
+      const src = `/uploads/action/${entry.file}`;
 
-        await ActionMedia.create({
-          section,
-          type: "text",
-          src: "",
-          tag: entry.tag,
-          title: entry.title,
-          description: entry.description,
-          order: order++,
-          isActive: true,
-        });
-
-        added += 1;
+      // Already listed, whether live or hidden — leave the admin's copy alone
+      const exists = await ActionMedia.findOne({ src }).lean();
+      if (exists) {
+        skipped += 1;
+        continue;
       }
-    } else {
-      for (const entry of DEFAULTS[section] || []) {
-        const src = `/uploads/action/${entry.file}`;
 
-        // Already listed, whether live or hidden — leave the admin's copy alone
-        const exists = await ActionMedia.findOne({ src }).lean();
-        if (exists) {
-          skipped += 1;
-          continue;
-        }
-
-        const from = path.join(
-          process.cwd(),
-          "public",
-          "assets",
-          "images",
-          ...entry.bundled
-        );
-        if (!fs.existsSync(from)) {
-          missing.push(entry.bundled[entry.bundled.length - 1]);
-          continue;
-        }
-
-        const to = path.join(uploadDir, entry.file);
-        if (!fs.existsSync(to)) fs.copyFileSync(from, to);
-
-        await ActionMedia.create({
-          section,
-          type: "image",
-          src,
-          alt: entry.alt,
-          link: entry.link || "",
-          size: fs.statSync(to).size,
-          order: order++,
-          isActive: true,
-        });
-
-        added += 1;
+      const from = path.join(
+        process.cwd(),
+        "public",
+        "assets",
+        "images",
+        ...entry.bundled
+      );
+      if (!fs.existsSync(from)) {
+        missing.push(entry.bundled[entry.bundled.length - 1]);
+        continue;
       }
+
+      const to = path.join(uploadDir, entry.file);
+      if (!fs.existsSync(to)) fs.copyFileSync(from, to);
+
+      await ActionMedia.create({
+        section,
+        type: "image",
+        src,
+        alt: entry.alt,
+        link: entry.link || "",
+        size: fs.statSync(to).size,
+        order: order++,
+        isActive: true,
+      });
+
+      added += 1;
     }
 
-    const noun = sectionKind(section) === "text" ? "notice" : "item";
     const parts = [];
-    if (added) parts.push(`${added} ${noun}${added > 1 ? "s" : ""} added`);
+    if (added) parts.push(`${added} item${added > 1 ? "s" : ""} added`);
     if (skipped) parts.push(`${skipped} already in the list`);
     if (missing.length) parts.push(`${missing.length} file not found on server`);
 

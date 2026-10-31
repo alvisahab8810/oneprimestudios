@@ -195,17 +195,17 @@ const AuthForm = ({ popup = false, customerOnly = false, onSuccess }) => {
           <div className="toggle-buttons">
             <button
               type="button"
-              className={isPartner ? "active" : ""}
-              onClick={() => handleTabClick(true)}
-            >
-              {isSignup ? "Partner Signup" : "Partner Login"}
-            </button>
-            <button
-              type="button"
               className={!isPartner ? "active" : ""}
               onClick={() => handleTabClick(false)}
             >
               {isSignup ? "Customer Signup" : "Customer Login"}
+            </button>
+            <button
+              type="button"
+              className={isPartner ? "active" : ""}
+              onClick={() => handleTabClick(true)}
+            >
+              {isSignup ? "Partner Signup" : "Partner Login"}
             </button>
           </div>
         )}
