@@ -49,6 +49,13 @@ const CouponSchema = new mongoose.Schema(
     default: [],
   },
 
+  // Categories this coupon is limited to. The coupon then works on every
+  // product inside them, sub-categories included. Empty means no category limit.
+  categories: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+    default: [],
+  },
+
   allowedUserTypes: {
   type: [String],
   enum: ["customer", "partner"],

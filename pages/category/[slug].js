@@ -15,6 +15,7 @@ import Offcanvas from "@/components/header/Offcanvas";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import Footer from "@/components/footer/Footer";
 import axios from "axios";
+import { bogoApplies, bogoLabel } from "@/lib/bogo";
 
 // ── serialise Mongoose doc to plain JSON ──────────────────────────────────────
 function serializeDoc(doc) {
@@ -100,6 +101,9 @@ export default function CategoryPage({
   hasChildren,
   userType,
 }) {
+  // Buy 1 Get 1 is a retail offer, so the badge never shows on the partner catalogue
+  const bogoOpts = { isPartner: userType === "partner" };
+
   // Build href for a subcategory link (preserves userType)
   const subHref = (sub) => ({
     pathname: `/category/${sub.slug}`,
@@ -240,7 +244,23 @@ export default function CategoryPage({
                         borderRadius: "15px",
                       }}
                     />
-                    <h6 style={{ marginTop: "10px" }}>{p.name}</h6>
+                    <h6 style={{ marginTop: "10px", marginBottom: "6px" }}>{p.name}</h6>
+                    {bogoApplies(p, bogoOpts) && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          background: "#eafaf0",
+                          border: "1px solid #b7e4c7",
+                          color: "#1d7044",
+                          borderRadius: "999px",
+                          padding: "2px 10px",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {bogoLabel(p)}
+                      </span>
+                    )}
                   </Link>
                 </div>
               ))}

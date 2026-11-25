@@ -10,7 +10,8 @@ import dbConnect from "@/lib/dbConnect";
 import Coupon from "@/models/Coupon";
 import Order from "@/models/Order";
 import getUserFromToken from "@/lib/getUserFromToken";
-import { couponHeadline, isProductCoupon, couponProductIds } from "@/lib/couponRules";
+import { couponHeadline, isRestrictedCoupon, couponCoversProduct } from "@/lib/couponRules";
+import { loadCouponScope } from "@/lib/couponScope";
 import { normalizeAudience, B2B } from "@/lib/audience";
 
 export default async function handler(req, res) {
@@ -53,12 +54,13 @@ export default async function handler(req, res) {
     // A product page only advertises the coupons that work there: the ones
     // tied to no product at all, and the ones tied to this very product
     const productId = String(req.query.productId || "").trim();
+    const scope = await loadCouponScope(coupons, productId ? [productId] : []);
 
     const offers = coupons
       .filter((c) => {
-        if (isProductCoupon(c)) {
+        if (isRestrictedCoupon(c)) {
           if (!productId) return false;
-          if (!couponProductIds(c).includes(productId)) return false;
+          if (!couponCoversProduct(c, productId, scope)) return false;
         }
         if (c.usageLimit && c.usedCount >= c.usageLimit) return false;
         if (user && (usedByCode[c.code] || 0) >= Number(c.perUserLimit || 1)) return false;

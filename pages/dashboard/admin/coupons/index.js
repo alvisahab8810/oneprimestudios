@@ -9,7 +9,7 @@ import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import { FaWhatsapp } from "react-icons/fa";
-import CouponProductPicker from "@/components/admin-panel/CouponProductPicker";
+import CouponScopePicker from "@/components/admin-panel/CouponScopePicker";
 import {
   FiTag, FiPlus, FiSearch, FiEdit2, FiTrash2, FiDownload, FiRefreshCw, FiX, FiUsers,
   FiShoppingCart, FiPercent, FiTrendingUp, FiTrendingDown, FiClock, FiMail, FiExternalLink,
@@ -394,6 +394,16 @@ function EditModal({ coupon, onClose, onSaved }) {
       name: item?.name || "",
     }))
   );
+  // The categories this coupon is tied to; it works on every product in them
+  const [categories, setCategories] = useState(() =>
+    (coupon.categories || []).map((item) => ({
+      _id: String(item?._id || item),
+      name: item?.name || "",
+    }))
+  );
+  const [scopeMode, setScopeMode] = useState(() =>
+    (coupon.categories || []).length ? "categories" : (coupon.products || []).length ? "products" : "all"
+  );
   const [saving, setSaving] = useState(false);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -403,6 +413,8 @@ function EditModal({ coupon, onClose, onSaved }) {
     if (!(value > 0)) return toast.error("Enter a discount value greater than 0");
     if (coupon.discountType === "percentage" && value > 100) return toast.error("A percentage discount cannot be more than 100");
     if (!form.allowedUserTypes.length) return toast.error("Select at least one user type");
+    if (scopeMode === "products" && !products.length) return toast.error("Select at least one product for this coupon");
+    if (scopeMode === "categories" && !categories.length) return toast.error("Select at least one category for this coupon");
     if (!(Number(form.perUserLimit) >= 1)) return toast.error("Per customer limit must be at least 1");
 
     const payload = {
@@ -414,12 +426,13 @@ function EditModal({ coupon, onClose, onSaved }) {
       allowedUserTypes: form.allowedUserTypes,
       isActive: form.isActive,
       products: products.map((item) => String(item._id)),
+      categories: categories.map((item) => String(item._id)),
     };
     try {
       setSaving(true);
       await axios.put("/api/admin/coupons/update", payload, { withCredentials: true });
       toast.success("Coupon updated");
-      onSaved({ ...coupon, ...payload, products, _id: coupon._id });
+      onSaved({ ...coupon, ...payload, products, categories, _id: coupon._id });
     } catch (err) {
       toast.error(err?.response?.data?.message || "Could not update the coupon");
     } finally {
@@ -458,7 +471,13 @@ function EditModal({ coupon, onClose, onSaved }) {
 
           <div style={{ ...S.field, gridColumn: "1 / -1" }}>
             <span style={S.fieldLabel}>Applies to</span>
-            <CouponProductPicker selected={products} onChange={setProducts} />
+            <CouponScopePicker
+              products={products}
+              categories={categories}
+              onProductsChange={setProducts}
+              onCategoriesChange={setCategories}
+              onModeChange={setScopeMode}
+            />
           </div>
 
           <div style={{ ...S.field, gridColumn: "1 / -1" }}>
@@ -929,6 +948,17 @@ export default function AdminCoupons() {
                                       {(c.products || []).length === 1
                                         ? "1 product only"
                                         : (c.products || []).length + " products only"}
+                                    </Badge>
+                                  )}
+                                  {(c.categories || []).length > 0 && (
+                                    <Badge
+                                      bg="#fdeaea"
+                                      fg="#E10600"
+                                      title={(c.categories || []).map((cat) => cat?.name || String(cat?._id || cat)).join(", ")}
+                                    >
+                                      {(c.categories || []).length === 1
+                                        ? (c.categories[0]?.name || "1 category") + " only"
+                                        : (c.categories || []).length + " categories only"}
                                     </Badge>
                                   )}
                                 </div>

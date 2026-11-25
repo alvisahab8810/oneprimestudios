@@ -1,5 +1,6 @@
-// pages/dashboard/admin/returns/[id].js — Admin views one return/refund request,
-// approves or rejects it, moves it through pickup, and records the refund.
+// pages/dashboard/admin/returns/[id].js — Admin views one return, exchange or
+// refund request, approves or rejects it, moves it through pickup, and then
+// either records the refund or the replacement that goes back out.
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
@@ -8,7 +9,12 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import { FaArrowLeft, FaBell } from "react-icons/fa";
-import { NEXT_RETURN_STATUSES, RETURN_STATUS_STYLES } from "@/lib/returnRules";
+import {
+  EXCHANGE_SHIPPED_STATUS,
+  REQUEST_TYPE_LABELS,
+  RETURN_STATUS_STYLES,
+  nextStatusesFor,
+} from "@/lib/returnRules";
 
 const MANUAL_METHODS = ["Bank Transfer", "UPI", "Other"];
 
@@ -37,6 +43,10 @@ export default function AdminReturnDetailPage() {
   const [refundMethod, setRefundMethod] = useState("");
   const [refundReference, setRefundReference] = useState("");
   const [refundNote, setRefundNote] = useState("");
+  // The replacement shipment on an exchange
+  const [exchangeCourier, setExchangeCourier] = useState("");
+  const [exchangeAwb, setExchangeAwb] = useState("");
+  const [exchangeNote, setExchangeNote] = useState("");
   const [preview, setPreview] = useState(null);
 
   const load = async () => {
@@ -47,9 +57,19 @@ export default function AdminReturnDetailPage() {
       setRequest(data);
       setStatus("");
       setRemarks(data.adminRemarks || "");
+      // An exchange starts with nothing to refund. If it ends in a refund
+      // after all, offer what is left on the order instead of zero.
       setRefundAmount(
-        String(data.refund?.amount ?? data.refundContext?.refundable ?? data.order?.total ?? "")
+        String(
+          (Number(data.refund?.amount) > 0 ? data.refund.amount : null) ??
+            data.refundContext?.refundable ??
+            data.order?.total ??
+            ""
+        )
       );
+      setExchangeCourier(data.exchange?.courier || "");
+      setExchangeAwb(data.exchange?.awb || "");
+      setExchangeNote(data.exchange?.note || "");
       setRefundMethod(
         data.refund?.method || (data.refundContext?.canRefundAtGateway ? "Razorpay" : "")
       );
@@ -66,14 +86,22 @@ export default function AdminReturnDetailPage() {
     if (id) load();
   }, [id]);
 
-  const nextOptions = useMemo(
-    () => (request ? NEXT_RETURN_STATUSES[request.status] || [] : []),
-    [request]
-  );
+  // Each kind of request has its own path, so the dropdown offers only the
+  // steps that make sense for this one
+  const nextOptions = useMemo(() => (request ? nextStatusesFor(request) : []), [request]);
+  const isExchange = request?.type === "exchange";
 
   const save = async () => {
-    if (!status && remarks === (request.adminRemarks || "")) {
+    const shipmentChanged =
+      isExchange &&
+      (exchangeCourier !== (request.exchange?.courier || "") ||
+        exchangeAwb !== (request.exchange?.awb || "") ||
+        exchangeNote !== (request.exchange?.note || ""));
+    if (!status && !shipmentChanged && remarks === (request.adminRemarks || "")) {
       return toast.error("Nothing to save — choose a status or change the remarks");
+    }
+    if (status === EXCHANGE_SHIPPED_STATUS && (!exchangeCourier.trim() || !exchangeAwb.trim())) {
+      return toast.error("Enter the courier and the tracking (AWB) number for the replacement");
     }
     setSaving(true);
     try {
@@ -84,8 +112,13 @@ export default function AdminReturnDetailPage() {
         payload.refundMethod = refundMethod;
         payload.refundReference = refundReference;
         payload.refundNote = refundNote;
-      } else if (refundAmount !== "") {
+      } else if (refundAmount !== "" && !isExchange) {
         payload.refundAmount = Number(refundAmount);
+      }
+      if (isExchange) {
+        payload.exchangeCourier = exchangeCourier;
+        payload.exchangeAwb = exchangeAwb;
+        payload.exchangeNote = exchangeNote;
       }
       await axios.patch(`/api/admin/returns/${id}`, payload, { withCredentials: true });
       toast.success("Request updated");
@@ -113,7 +146,7 @@ export default function AdminReturnDetailPage() {
       <div className="main-area" style={{ flex: 1, minWidth: 0 }}>
         <nav style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "0 24px", height: 60, display: "flex", alignItems: "center", position: "sticky", top: 0, zIndex: 100 }}>
           <button onClick={() => setSidebarOpen((s) => !s)} style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: 8, padding: "6px 12px", cursor: "pointer", marginRight: 16 }}>☰</button>
-          <span style={{ fontWeight: 600, fontSize: 18 }}>Return Request</span>
+          <span style={{ fontWeight: 600, fontSize: 18 }}>{isExchange ? "Exchange Request" : "Return Request"}</span>
           <div style={{ marginLeft: "auto" }}><FaBell size={18} color="#888" /></div>
         </nav>
 
@@ -134,7 +167,9 @@ export default function AdminReturnDetailPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                     <span style={{ fontSize: 18, fontWeight: 700, color: "#6366f1" }}>{request.requestNumber}</span>
                     <span style={{ ...badge, borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 600 }}>{request.status}</span>
-                    <span style={{ fontSize: 12, color: "#888", textTransform: "capitalize" }}>{request.type} request</span>
+                    <span style={{ borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 600, background: isExchange ? "#ffedd5" : "#eef2ff", color: isExchange ? "#c2410c" : "#4338ca" }}>
+                      {REQUEST_TYPE_LABELS[request.type] || "Return"}
+                    </span>
                     <span style={{ marginLeft: "auto", fontSize: 12, color: "#888" }}>
                       Raised {new Date(request.createdAt).toLocaleString("en-IN")}
                     </span>
@@ -177,6 +212,14 @@ export default function AdminReturnDetailPage() {
                       <div style={label}>What the customer wrote</div>
                       <div style={{ color: "#555", whiteSpace: "pre-wrap" }}>{request.description}</div>
                     </>
+                  )}
+                  {isExchange && (
+                    <div style={{ marginTop: 12, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 14px" }}>
+                      <div style={label}>Wants in exchange</div>
+                      <div style={{ color: "#7c2d12", whiteSpace: "pre-wrap" }}>
+                        {request.exchange?.preference || "The same item, replaced"}
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -248,7 +291,52 @@ export default function AdminReturnDetailPage() {
                     />
                   </div>
 
-                  <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12, marginBottom: 12 }}>
+                  {isExchange && (
+                    <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12, marginBottom: 12 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Replacement shipment</div>
+
+                      {request.exchange?.shippedAt && (
+                        <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600, marginBottom: 10 }}>
+                          Shipped {new Date(request.exchange.shippedAt).toLocaleString("en-IN")}
+                          {request.exchange.deliveredAt
+                            ? ` · Delivered ${new Date(request.exchange.deliveredAt).toLocaleString("en-IN")}`
+                            : ""}
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={label}>Courier</div>
+                        <input
+                          id="exchange-courier"
+                          value={exchangeCourier}
+                          onChange={(e) => setExchangeCourier(e.target.value)}
+                          placeholder="Courier that carries the replacement"
+                          style={input}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={label}>Tracking / AWB number</div>
+                        <input
+                          id="exchange-awb"
+                          value={exchangeAwb}
+                          onChange={(e) => setExchangeAwb(e.target.value)}
+                          placeholder="The customer sees this on their order page"
+                          style={input}
+                        />
+                      </div>
+                      <div>
+                        <div style={label}>Internal note</div>
+                        <input id="exchange-note" value={exchangeNote} onChange={(e) => setExchangeNote(e.target.value)} style={input} />
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 12, color: "#888" }}>
+                        Courier and tracking number are needed to move the request to <strong>Replacement Shipped</strong>.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* On an exchange the refund form appears only when the admin
+                      decides to send the money back instead of a replacement */}
+                  <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12, marginBottom: 12, display: isExchange && status !== "Refunded" && !refundDone ? "none" : "block" }}>
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Refund</div>
 
                     {refundDone ? (

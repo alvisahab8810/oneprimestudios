@@ -14,6 +14,7 @@ import {
   FiClock, FiDownload, FiRepeat,
 } from "react-icons/fi";
 import { downloadFile } from "@/lib/downloadDocument";
+import { orderDeliveryView } from "@/lib/deliveryEstimate";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_TABS = [
@@ -561,6 +562,12 @@ export default function OrdersListPage() {
                           {o.orderNumber} &nbsp;&middot;&nbsp;
                           {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                         </div>
+                        {/* Retail only: when this order should arrive */}
+                        {!isPartner && orderDeliveryView(o) && (
+                          <div style={{ fontSize: 12, fontWeight: 600, marginTop: 4, color: orderDeliveryView(o).tone === "late" ? "#c2410c" : "#15803d" }}>
+                            {orderDeliveryView(o).tone === "late" ? "Running late" : orderDeliveryView(o).text}
+                          </div>
+                        )}
                       </div>
                       <span style={{
                         display: "inline-flex", alignItems: "center", gap: 6,

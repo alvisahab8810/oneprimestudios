@@ -150,6 +150,15 @@ const OrderSchema = new mongoose.Schema(
     // what was promised on an order already placed.
     noReturns: { type: Boolean, default: false },
 
+    // Whether this product could be exchanged. Snapshotted for the same
+    // reason: a later product edit must not change a placed order.
+    noExchange: { type: Boolean, default: false },
+
+    // How many of this line’s units came free under a Buy 1 Get 1 offer.
+    // Worked out on the server when the order is placed and kept here, so a
+    // later change to the offer never rewrites what this buyer was given.
+    freeQty: { type: Number, default: 0 },
+
     quantity: {
       type: Number,
       required: true,
@@ -243,6 +252,10 @@ const OrderSchema = new mongoose.Schema(
     total: { type: Number, required: true },
     gstAmount: { type: Number, default: 0 }, // GST included in total
 
+    // What the Buy 1 Get 1 offers on this order took off the goods total.
+    // Retail only, and worked out on the server, never sent by the browser.
+    bogoDiscount: { type: Number, default: 0 },
+
     // A retail buyer who wants the invoice made out to a business gives these
     // at checkout. Partners are not asked: theirs come from their own profile.
     gstDetails: {
@@ -257,6 +270,16 @@ const OrderSchema = new mongoose.Schema(
       pincode: { type: String, default: "" },
       weight: { type: Number, default: 0 },
       quotedAt: { type: Date },
+    },
+
+    // B2B only: the courier the partner chose for themselves on the product
+    // page. The admin sees it on the order and books that courier. Retail
+    // orders carry nothing here and are routed by the admin as before.
+    preferredCourier: {
+      courierId: { type: String, default: "" },
+      name: { type: String, default: "" },
+      etd: { type: String, default: "" },
+      chosenBy: { type: String, default: "" },
     },
 
     status: {
@@ -333,6 +356,15 @@ const OrderSchema = new mongoose.Schema(
 
     deliveredAt: {
       type: Date,
+    },
+
+    // Retail orders only: the delivery window promised to the buyer when the
+    // order was placed. Kept on the order so the promise does not move when
+    // the product or the courier quote changes later.
+    estimatedDelivery: {
+      dispatchBy: { type: Date },
+      from: { type: Date },
+      to: { type: Date },
     },
 
     paymentStatus: {

@@ -240,6 +240,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import axios from "axios";
 import CategoryNav from "./CategoryNav";
+import SearchOverlay from "./SearchOverlay";
 
 export default function Topbar() {
   const [user, setUser] = useState(null);
@@ -486,6 +487,9 @@ export default function Topbar() {
            
 
             <div className="d-flex align-items-center gap-3">
+              {/* SEARCH — opens the product search panel */}
+              <SearchOverlay />
+
               {/* CART */}
               <Link href="/cart" className="cart-btn position-relative">
                 <img src="/assets/images/icons/cart1.svg" alt="Cart" />
@@ -651,6 +655,8 @@ export default function Topbar() {
           {/* MOBILE NAV ICONS */}
           <div className="right-side desktop-none">
             <div className="d-flex align-items-center gap-3 mobile-top-icons">
+              <SearchOverlay />
+
               <Link href="/cart" className="cart-btn position-relative">
                 <img src="/assets/images/icons/cart.svg" alt="Cart" />
                 <span className="items-count">{cartCount}</span>

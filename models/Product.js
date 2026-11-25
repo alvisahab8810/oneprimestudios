@@ -273,6 +273,16 @@ const ProductSchema = new mongoose.Schema(
     // can neither cancel the order nor raise a return or refund on it.
     noReturns: { type: Boolean, default: false },
 
+    // Exchange is a separate promise from a refund: a product may be
+    // swappable but not refundable, or the other way round. Marked here,
+    // the buyer cannot raise an exchange request on it.
+    noExchange: { type: Boolean, default: false },
+
+    // Working days needed to get this product ready and handed to the
+    // courier. The estimated delivery date shown to retail buyers is this
+    // plus the courier transit time to their PIN code.
+    dispatchDays: { type: Number, default: 2, min: 0, max: 30 },
+
     // When the admin absorbs the courier cost for a product, the buyer is not
     // charged for its delivery and the product page says so instead
     freeDelivery: { type: Boolean, default: false },
@@ -338,6 +348,13 @@ const ProductSchema = new mongoose.Schema(
       // Cash on delivery is on for every retail product; this turns it off for
       // this one product only
       codDisabled: { type: Boolean, default: false },
+      // Buy 1 Get 1 and its bigger cousins. Retail only — a partner buys at
+      // B2B prices, so the offer is never applied to their order.
+      bogo: {
+        enabled: { type: Boolean, default: false },
+        buyQty: { type: Number, default: 1 },
+        getQty: { type: Number, default: 1 },
+      },
     },
   },
   { timestamps: true }

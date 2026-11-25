@@ -139,7 +139,14 @@ async function handleFileUpload(req, res) {
             attribute:     file.fieldname,
             attributeName: attrMap[file.fieldname] || file.fieldname,
           });
-          return savedDoc;
+          // The field each file belongs to is sent back explicitly. The cart
+          // refuses a required upload it cannot match to its attribute, so
+          // the answer must never depend on what the saved record kept.
+          return {
+            ...savedDoc.toObject(),
+            attribute: file.fieldname,
+            attributeName: attrMap[file.fieldname] || file.fieldname,
+          };
         })
       );
       return res.status(200).json({ success: true, data: saved, message: "Files uploaded" });

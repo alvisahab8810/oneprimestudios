@@ -871,6 +871,7 @@ import DealBanner from "@/components/home-page/Cta";
 import Offcanvas from "@/components/header/Offcanvas";
 import { toast } from "react-hot-toast";
 import { cartAllowsCod } from "@/lib/codRules";
+import { bogoChargeableQty, bogoFreeQty, cartBogoSaving } from "@/lib/bogo";
 import { isValidGstin, gstinError, normalizeGstin } from "@/lib/gstin";
 export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -1241,12 +1242,20 @@ export default function CheckoutPage() {
     0,
   );
 
+  // Buy 1 Get 1 is a retail offer: a partner buys at B2B prices and never
+  // gets it. The order route works the saving out again for itself, so what
+  // is shown here and what is charged can never drift apart.
+  const bogoOpts = { isPartner: userType === "partner" };
+  const bogoSaving = cartBogoSaving(cartItems, bogoOpts);
+
+  // A free unit is not charged, so it is not taxed either
   const gstAmount = cartItems.reduce((acc, item) => {
     const gstPct = Number(item.product?.gstPercent || 0);
-    return acc + (Number(item.price || 0) * Number(item.quantity || 1) * gstPct / 100);
+    const paidQty = bogoChargeableQty(item.product, item.quantity, bogoOpts);
+    return acc + (Number(item.price || 0) * paidQty * gstPct / 100);
   }, 0);
 
-  const discountedSubtotal = Math.max(total - discountAmount, 0);
+  const discountedSubtotal = Math.max(total - bogoSaving - discountAmount, 0);
   // Transport is charged to customers (B2C) only — partner orders ship free
   const transportApplies = userType !== "partner";
   const transportCharge =
@@ -1439,6 +1448,8 @@ const placeOrder = async (method, payment = null) => {
       couponCode: appliedCoupon?.code || null,
       paymentMethod: method,
       orderName: cartItems[0]?.orderName || "",
+      // B2B only: the courier the partner picked on the product page
+      preferredCourier: cartItems[0]?.preferredCourier || null,
       // Sent only when the buyer asked for a GST invoice
       gstDetails:
         userType === "customer" && wantsGstInvoice
@@ -1483,7 +1494,13 @@ const placeOrder = async (method, payment = null) => {
     }
 
     // ✅ Redirect ONCE
-    router.push(`/order-success?orderNumber=${data.order.orderNumber}`);
+    // The delivery window promised on this order goes along, so the
+    // confirmation page can show it without another request
+    const promised = data.order.estimatedDelivery;
+    const promisedQuery = promised?.to
+      ? `&from=${encodeURIComponent(promised.from || promised.to)}&to=${encodeURIComponent(promised.to)}`
+      : "";
+    router.push(`/order-success?orderNumber=${data.order.orderNumber}${promisedQuery}`);
 
   } catch (err) {
     console.error("Order error:", err);
@@ -2432,6 +2449,11 @@ const placeOrder = async (method, payment = null) => {
                         Qty: {item.quantity} × ₹{item.price} = ₹
                         {(item.quantity * item.price).toFixed(2)}
                       </p>
+                      {bogoFreeQty(item.product, item.quantity, bogoOpts) > 0 && (
+                        <p className="mb-0 small" style={{ color: "#1d7044", fontWeight: 600 }}>
+                          {bogoFreeQty(item.product, item.quantity, bogoOpts)} free with this offer
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -2440,6 +2462,13 @@ const placeOrder = async (method, payment = null) => {
                   <span>Subtotal</span>
                   <span>₹{total.toFixed(2)}</span>
                 </div>
+
+                {bogoSaving > 0 && (
+                  <div className="d-flex justify-content-between text-success">
+                    <span>Buy 1 Get 1 saving</span>
+                    <span>- ₹{bogoSaving.toFixed(2)}</span>
+                  </div>
+                )}
 
                 {appliedCoupon && (
                   <div className="d-flex justify-content-between text-success">
@@ -2478,6 +2507,14 @@ const placeOrder = async (method, payment = null) => {
                           : "—"}
                   </span>
                 </div>
+                )}
+
+                {/* Retail only: when the whole cart should arrive at this address */}
+                {transportApplies && !shippingLoading && shippingQuote?.serviceable && shippingQuote.estimatedDelivery?.label && (
+                  <div className="d-flex justify-content-between" style={{ fontSize: 13, color: "#1d7044", fontWeight: 600 }}>
+                    <span>Estimated delivery</span>
+                    <span>{shippingQuote.estimatedDelivery.label}</span>
+                  </div>
                 )}
 
                 {transportApplies && !shippingLoading && shippingQuote && !shippingQuote.serviceable && (

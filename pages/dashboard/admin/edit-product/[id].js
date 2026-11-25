@@ -40,6 +40,8 @@ export default function EditProductPage() {
     lowStockThreshold: "",
     isFeatured: false,
     noReturns: false,
+    noExchange: false,
+    dispatchDays: 2,
     freeDelivery: false,
     gstPercent: 0,
     hsnCode: "",       // NEW: HSN/SAC code for invoicing
@@ -67,6 +69,9 @@ export default function EditProductPage() {
     b2c_enabled: false,
     b2c_designUpload: true,
     b2c_codDisabled: false,
+    b2c_bogoEnabled: false,
+    b2c_bogoBuyQty: 1,
+    b2c_bogoGetQty: 1,
     b2c_whatsapp: true,
     b2c_quantityOptionsCSV: "",
   });
@@ -201,6 +206,8 @@ export default function EditProductPage() {
         lowStockThreshold: p.lowStockThreshold === null || p.lowStockThreshold === undefined ? "" : String(p.lowStockThreshold),
         isFeatured: !!p.isFeatured,
         noReturns: !!p.noReturns,
+        noExchange: !!p.noExchange,
+        dispatchDays: p.dispatchDays ?? 2,
         freeDelivery: !!p.freeDelivery,
         gstPercent: p.gstPercent || 0,
         hsnCode: p.hsnCode || "",         // NEW
@@ -225,6 +232,9 @@ export default function EditProductPage() {
         b2c_designUpload: !!(p.b2cOptions && p.b2cOptions.designUpload),
         b2c_whatsapp: !!(p.b2cOptions && p.b2cOptions.whatsappSupport),
         b2c_codDisabled: !!(p.b2cOptions && p.b2cOptions.codDisabled),
+        b2c_bogoEnabled: !!p.b2cOptions?.bogo?.enabled,
+        b2c_bogoBuyQty: Number(p.b2cOptions?.bogo?.buyQty) || 1,
+        b2c_bogoGetQty: Number(p.b2cOptions?.bogo?.getQty) || 1,
         // Loaded back so saving the form again does not wipe the stored options
         b2b_quantityOptionsCSV: (p.b2bOptions?.quantityOptions || []).join(","),
         b2c_quantityOptionsCSV: (p.b2cOptions?.quantityOptions || []).join(","),
@@ -364,6 +374,8 @@ export default function EditProductPage() {
       fd.append("lowStockThreshold", String(form.lowStockThreshold ?? ""));
       fd.append("isFeatured", String(form.isFeatured));
       fd.append("noReturns", String(form.noReturns));
+      fd.append("noExchange", String(form.noExchange));
+      fd.append("dispatchDays", String(form.dispatchDays ?? 2));
       fd.append("freeDelivery", String(form.freeDelivery));
       fd.append(
         "freeDeliveryPincodes",
@@ -465,6 +477,11 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
         whatsappSupport: !!form.b2c_whatsapp,
         codDisabled: !!form.b2c_codDisabled,
         quantityOptions: form.b2c_quantityOptionsCSV ? form.b2c_quantityOptionsCSV.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n)) : [],
+        bogo: {
+          enabled: !!form.b2c_bogoEnabled,
+          buyQty: Math.max(1, Number(form.b2c_bogoBuyQty) || 1),
+          getQty: Math.max(1, Number(form.b2c_bogoGetQty) || 1),
+        },
       };
       fd.append("b2cOptions", JSON.stringify(b2cOptions));
 
@@ -598,6 +615,17 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     </div>
                   </div>
 
+                  {/* Used for the estimated delivery date shown to retail buyers */}
+                  <div className="min-order-row">
+                    <label htmlFor="dispatch-days">Dispatch time (working days)</label>
+                    <input id="dispatch-days" name="dispatchDays" value={form.dispatchDays} onChange={handleChange} type="number" min="0" max="30" className="input-primary" />
+                    <div className="small text-muted mt-1 w-100">
+                      Days needed to get this product ready and handed to the courier.
+                      Retail buyers see an estimated delivery date of this plus the
+                      courier transit time to their PIN code.
+                    </div>
+                  </div>
+
                   <div className="min-order-row">
                     <label>Min Order Qty</label>
                     <input name="minOrderQty" value={form.minOrderQty} onChange={handleChange} type="number" className="input-primary" />
@@ -615,11 +643,22 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                     <label className="ms-3">
                       <input type="checkbox" name="noReturns" checked={form.noReturns} onChange={handleChange} /> No returns or refunds
                     </label>
+                    {/* Exchange is a separate promise from a refund, so it
+                        gets its own switch. */}
+                    <label className="ms-3">
+                      <input type="checkbox" name="noExchange" checked={form.noExchange} onChange={handleChange} /> No exchange
+                    </label>
                     {form.noReturns && (
                       <div className="small text-muted mt-1 w-100">
                         The product page will say this item is final. The buyer
                         cannot cancel the order, and cannot raise a return or
                         refund once it is delivered.
+                      </div>
+                    )}
+                    {form.noExchange && (
+                      <div className="small text-muted mt-1 w-100">
+                        The buyer cannot ask for a replacement of this item
+                        after delivery.
                       </div>
                     )}
                     {/* Nobody can order this product while stock is below the minimum */}
@@ -1314,6 +1353,23 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                         {/* COD is on for every retail product, so this is an opt-out */}
                         <label><input type="checkbox" name="b2c_codDisabled" checked={form.b2c_codDisabled} onChange={handleChange} /> Turn off Cash on Delivery (COD)</label>
                         <label><input type="checkbox" name="b2c_whatsapp" checked={form.b2c_whatsapp} onChange={handleChange} /> WhatsApp support</label>
+
+                        {/* Buy 1 Get 1 — retail buyers only */}
+                        <label><input type="checkbox" name="b2c_bogoEnabled" checked={form.b2c_bogoEnabled} onChange={handleChange} /> Buy 1 Get 1 Free offer</label>
+                        {form.b2c_bogoEnabled && (
+                          <div className="mt-2">
+                            <div className="d-flex align-items-center gap-2">
+                              <span className="small">Buy</span>
+                              <input type="number" min="1" name="b2c_bogoBuyQty" value={form.b2c_bogoBuyQty} onChange={handleChange} className="input-primary" style={{ width: 70 }} />
+                              <span className="small">Get</span>
+                              <input type="number" min="1" name="b2c_bogoGetQty" value={form.b2c_bogoGetQty} onChange={handleChange} className="input-primary" style={{ width: 70 }} />
+                              <span className="small">Free</span>
+                            </div>
+                            <p className="small text-muted mt-1 mb-0">
+                              Buy {Math.max(1, Number(form.b2c_bogoBuyQty) || 1)} Get {Math.max(1, Number(form.b2c_bogoGetQty) || 1)} Free. Partners never get this offer.
+                            </p>
+                          </div>
+                        )}
                         <input placeholder="Fixed quantity options (comma separated)" value={form.b2c_quantityOptionsCSV} onChange={(e) => setForm(f => ({ ...f, b2c_quantityOptionsCSV: e.target.value }))} className="input-primary mt-2" />
                       </>
                     )}

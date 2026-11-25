@@ -1,4 +1,5 @@
-// pages/dashboard/admin/returns/index.js — Admin return / refund requests list
+// pages/dashboard/admin/returns/index.js — Admin list of return, exchange
+// and refund requests. One desk for all three.
 "use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -6,13 +7,26 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import { FaBell, FaSearch, FaTimes } from "react-icons/fa";
-import { RETURN_STATUSES, RETURN_STATUS_STYLES } from "@/lib/returnRules";
+import {
+  REQUEST_TYPES,
+  REQUEST_TYPE_LABELS,
+  RETURN_STATUSES,
+  RETURN_STATUS_STYLES,
+} from "@/lib/returnRules";
+
+// One colour per kind of request, so an exchange is spotted at a glance
+const TYPE_STYLES = {
+  return: { background: "#eef2ff", color: "#4338ca" },
+  exchange: { background: "#ffedd5", color: "#c2410c" },
+  refund: { background: "#f1f5f9", color: "#475569" },
+};
 
 export default function AdminReturnsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -33,6 +47,7 @@ export default function AdminReturnsPage() {
     try {
       const params = new URLSearchParams({ page, limit: 15 });
       if (statusFilter) params.append("status", statusFilter);
+      if (typeFilter) params.append("type", typeFilter);
       if (searchQuery) params.append("search", searchQuery);
       const res = await axios.get(`/api/admin/returns?${params}`, { withCredentials: true });
       setRequests(res.data.data || []);
@@ -48,19 +63,21 @@ export default function AdminReturnsPage() {
 
   useEffect(() => {
     load();
-  }, [statusFilter, page, searchQuery]);
+  }, [statusFilter, typeFilter, page, searchQuery]);
 
-  const hasFilters = searchQuery || statusFilter;
+  const hasFilters = searchQuery || statusFilter || typeFilter;
   const clearFilters = () => {
     setSearchInput("");
     setSearchQuery("");
     setStatusFilter("");
+    setTypeFilter("");
     setPage(1);
   };
 
   const stats = [
     { label: "Total requests", value: summary.total || 0, color: "#6366f1" },
     { label: "Needs action", value: summary.open || 0, color: "#f59e0b" },
+    { label: "Exchanges", value: summary.byType?.exchange || 0, color: "#ea580c" },
     { label: "Refunded", value: summary.Refunded || 0, color: "#22c55e" },
     { label: "Rejected", value: summary.Rejected || 0, color: "#ef4444" },
   ];
@@ -71,7 +88,7 @@ export default function AdminReturnsPage() {
       <div className="main-area" style={{ flex: 1, minWidth: 0 }}>
         <nav style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "0 24px", height: 60, display: "flex", alignItems: "center", position: "sticky", top: 0, zIndex: 100 }}>
           <button onClick={() => setSidebarOpen((s) => !s)} style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: 8, padding: "6px 12px", cursor: "pointer", marginRight: 16 }}>☰</button>
-          <span style={{ fontWeight: 600, fontSize: 18 }}>Return &amp; Refund Requests</span>
+          <span style={{ fontWeight: 600, fontSize: 18 }}>Return, Exchange &amp; Refund Requests</span>
           <div style={{ marginLeft: "auto" }}><FaBell size={18} color="#888" /></div>
         </nav>
 
@@ -95,6 +112,16 @@ export default function AdminReturnsPage() {
                 style={{ width: "100%", paddingLeft: 32, height: 38, border: "1px solid #e0e0e0", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
               />
             </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => { setPage(1); setTypeFilter(e.target.value); }}
+              style={{ height: 38, border: "1px solid #e0e0e0", borderRadius: 8, padding: "0 12px", fontSize: 13, background: "#fff", minWidth: 140 }}
+            >
+              <option value="">All Types</option>
+              {REQUEST_TYPES.map((t) => (
+                <option key={t} value={t}>{REQUEST_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
             <select
               value={statusFilter}
               onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
@@ -125,7 +152,7 @@ export default function AdminReturnsPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: "#fafafa", borderBottom: "1px solid #f0f0f0" }}>
-                      {["Request No", "Order No", "Customer", "Reason", "Photos", "Refund", "Status", "Date", "Action"].map((h) => (
+                      {["Request No", "Type", "Order No", "Customer", "Reason", "Photos", "Refund", "Status", "Date", "Action"].map((h) => (
                         <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.4px" }}>{h}</th>
                       ))}
                     </tr>
@@ -133,7 +160,12 @@ export default function AdminReturnsPage() {
                   <tbody>
                     {requests.length > 0 ? requests.map((r, idx) => (
                       <tr key={r._id} style={{ borderBottom: "1px solid #f5f5f5", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
-                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#6366f1" }}>{r.requestNumber}</td>
+                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#6366f1", whiteSpace: "nowrap" }}>{r.requestNumber}</td>
+                        <td style={{ padding: "12px 14px" }}>
+                          <span style={{ ...(TYPE_STYLES[r.type] || TYPE_STYLES.return), borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
+                            {REQUEST_TYPE_LABELS[r.type] || "Return"}
+                          </span>
+                        </td>
                         <td style={{ padding: "12px 14px" }}>{r.orderNumber || "—"}</td>
                         <td style={{ padding: "12px 14px" }}>
                           <div style={{ fontWeight: 500 }}>{r.user?.name || "—"}</div>
@@ -146,7 +178,9 @@ export default function AdminReturnsPage() {
                         <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                           {r.refund?.refundedAt
                             ? <span style={{ color: "#15803d", fontWeight: 600 }}>₹{Number(r.refund.amount || 0).toFixed(2)}</span>
-                            : <span style={{ color: "#aaa" }}>₹{Number(r.refund?.amount || 0).toFixed(2)}</span>}
+                            : r.type === "exchange"
+                              ? <span style={{ color: "#aaa" }}>Replacement</span>
+                              : <span style={{ color: "#aaa" }}>₹{Number(r.refund?.amount || 0).toFixed(2)}</span>}
                         </td>
                         <td style={{ padding: "12px 14px" }}>
                           <span style={{ ...(RETURN_STATUS_STYLES[r.status] || {}), borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{r.status}</span>
@@ -163,8 +197,8 @@ export default function AdminReturnsPage() {
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={9} style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
-                          {hasFilters ? "No requests match your filters." : "No return or refund requests yet."}
+                        <td colSpan={10} style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
+                          {hasFilters ? "No requests match your filters." : "No return, exchange or refund requests yet."}
                         </td>
                       </tr>
                     )}

@@ -11,6 +11,10 @@ const DesignUploadSchema = new mongoose.Schema({
 
   fileUrl: { type: String, required: true },
   fileName: { type: String },
+  // Which upload field of the product this file answers: the form key and
+  // the attribute name the buyer saw
+  attribute: { type: String, default: "" },
+  attributeName: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
 });
 

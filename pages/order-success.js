@@ -30,11 +30,14 @@ import { useRouter } from "next/router";
 import React from "react";
 
 import { useEffect } from "react";
+import { formatEstimateRange } from "@/lib/deliveryEstimate";
 
 
 export default function OrderSuccess() {
   const router = useRouter();
   const { orderNumber } = router.query;
+  // Present on retail orders only; partner orders carry no estimate
+  const estimatedDelivery = formatEstimateRange({ from: router.query.from, to: router.query.to });
 
 
   useEffect(() => {
@@ -84,6 +87,12 @@ export default function OrderSuccess() {
             </p>
           ) : (
             <p className="text-muted">Fetching your order details...</p>
+          )}
+
+          {estimatedDelivery && (
+            <p className="mt-2 mb-0" style={{ color: "#1d7044", fontWeight: 600 }}>
+              Estimated delivery: {estimatedDelivery}
+            </p>
           )}
 
           <p className="text-secondary mt-3">

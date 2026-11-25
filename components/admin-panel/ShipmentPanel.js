@@ -12,6 +12,10 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleString("en-IN") : "—");
 export default function ShipmentPanel({ order, onOrderChange }) {
   const shipment = order?.shipment || {};
   const booked = !!shipment.awbCode;
+  // A partner picks their own courier on the product page. Retail orders carry
+  // nothing here and are routed from this panel as before.
+  const partnerCourierId = String(order?.preferredCourier?.courierId || "");
+  const partnerCourierName = order?.preferredCourier?.name || "";
 
   const [pkg, setPkg] = useState({ weight: "", length: "", breadth: "", height: "" });
   const [suggested, setSuggested] = useState(null);
@@ -43,8 +47,16 @@ export default function ShipmentPanel({ order, onOrderChange }) {
           height: String(data.pkg.height ?? ""),
         });
       }
-      const recommended = (data.couriers || []).find((c) => c.recommended) || (data.couriers || [])[0];
+      // The partner’s own choice wins over the cheapest and the recommended one
+      const partnerPick = partnerCourierId
+        ? (data.couriers || []).find((c) => c.courierId === partnerCourierId)
+        : null;
+      const recommended =
+        partnerPick || (data.couriers || []).find((c) => c.recommended) || (data.couriers || [])[0];
       setCourierId(recommended ? recommended.courierId : "");
+      if (partnerCourierId && !partnerPick && (data.couriers || []).length) {
+        toast.error(`${partnerCourierName || "The courier the partner chose"} is not available for this parcel. Pick another one.`);
+      }
       if (!(data.couriers || []).length && !(data.problems || []).length) {
         toast.error("No courier is available for this pincode");
       }
@@ -208,6 +220,14 @@ export default function ShipmentPanel({ order, onOrderChange }) {
               Package details come from the products in this order. Check them before booking.
             </p>
 
+            {partnerCourierId && (
+              <div className="alert alert-info py-2 px-3" style={{ fontSize: 13 }}>
+                The partner chose <strong>{partnerCourierName || "a courier"}</strong>
+                {order?.preferredCourier?.etd ? ` (by ${order.preferredCourier.etd})` : ""}. It is
+                selected for you once the rates load.
+              </div>
+            )}
+
             <div className="row g-2 mb-3">
               <div className="col-6 col-md-3">
                 <label className="form-label small mb-1">Weight (kg)</label>
@@ -264,6 +284,9 @@ export default function ShipmentPanel({ order, onOrderChange }) {
                           </td>
                           <td>
                             {c.name}
+                            {c.courierId === partnerCourierId && (
+                              <span className="badge bg-primary ms-2">Partner&apos;s choice</span>
+                            )}
                             {c.recommended && <span className="badge bg-success ms-2">Recommended</span>}
                           </td>
                           <td>₹{c.rate.toFixed(2)}</td>

@@ -16,8 +16,10 @@ import {
   couponBlockReason,
   couponHeadline,
   couponEligibleTotal,
-  isProductCoupon,
+  isRestrictedCoupon,
+  couponScopeMessage,
 } from "@/lib/couponRules";
+import { loadCouponScope, itemProductIds } from "@/lib/couponScope";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -55,16 +57,17 @@ export default async function handler(req, res) {
 
     // Read once: a coupon tied to particular products is only worth listing
     // when one of those products is actually in this cart
-    const hasProductCoupon = coupons.some(isProductCoupon);
+    const hasProductCoupon = coupons.some(isRestrictedCoupon);
     const cartItems = hasProductCoupon
       ? ((await Cart.findOne({ user: user._id }).lean())?.items || [])
       : [];
+    const scope = await loadCouponScope(coupons, itemProductIds(cartItems));
 
     const offers = [];
 
     for (const coupon of coupons) {
       const userUsage = usedByCode[coupon.code] || 0;
-      const eligibleTotal = couponEligibleTotal(coupon, cartItems, cartTotal);
+      const eligibleTotal = couponEligibleTotal(coupon, cartItems, cartTotal, scope);
       const reason = couponBlockReason(coupon, {
         cartTotal,
         userType: user.userType,
@@ -78,7 +81,7 @@ export default async function handler(req, res) {
         reason === "Coupon usage limit reached" ||
         reason === "Coupon expired" ||
         reason === "Coupon not allowed for this user" ||
-        reason === "This coupon is only for selected products" ||
+        reason === couponScopeMessage(coupon) ||
         reason === "This coupon is no longer available";
       if (permanentlyOut) continue;
 

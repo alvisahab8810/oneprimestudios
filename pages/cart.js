@@ -675,6 +675,14 @@ import Footer from "@/components/footer/Footer";
 import ProductSlider from "@/components/home-page/ProductSlider";
 import DealBanner from "@/components/home-page/Cta";
 import FaqAccordion from "@/components/home-page/Faq";
+import {
+  bogoChargeableQty,
+  bogoFreeQty,
+  bogoLineSaving,
+  bogoRule,
+  bogoUnitsToNextFree,
+  cartBogoSaving,
+} from "@/lib/bogo";
 import Offcanvas from "@/components/header/Offcanvas";
 import { buildQuantityLadder, getMinOrderQty, isOutOfStock } from "@/lib/stockRules";
 
@@ -708,6 +716,10 @@ export default function CartPage() {
   const pendingHandled = useRef(false);
 
   const [cartItems, setCartItems] = useState([]);
+  // Buy 1 Get 1 is a retail offer, so who is shopping decides whether it
+  // counts here at all. Anyone not loaded yet is treated as retail, which is
+  // what the order route works out again for itself anyway.
+  const [userType, setUserType] = useState("customer");
   const [tempQty, setTempQty] = useState({}); // { [index]: "123" } - string for free typing
   const [removingIndex, setRemovingIndex] = useState(null);
   const [confirmRemove, setConfirmRemove] = useState(null);
@@ -756,6 +768,15 @@ export default function CartPage() {
 
   useEffect(() => {
     fetchCart();
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    axios
+      .get("/api/user/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setUserType(res.data?.userType || "customer"))
+      .catch(() => {});
   }, []);
 
   // helper to refresh cart and keep tempQty in sync
@@ -867,18 +888,28 @@ export default function CartPage() {
     }
   };
 
+  const bogoOpts = { isPartner: userType === "partner" };
+
   const total = cartItems.reduce((acc, it) => {
     const unitPrice = Number(it.price || 0);
     const q = Number(it.quantity || 0);
     return acc + unitPrice * q;
   }, 0);
 
+  // What the Buy 1 Get 1 offers take off this cart
+  const bogoSaving = cartBogoSaving(cartItems, bogoOpts);
+
+  // GST follows the money: a free unit is not charged, so it is not taxed
   const gstAmount = cartItems.reduce((acc, it) => {
     const gstPct = Number(it.product?.gstPercent || 0);
-    return acc + (Number(it.price || 0) * Number(it.quantity || 0) * gstPct / 100);
+    const paidQty = bogoChargeableQty(it.product, it.quantity, bogoOpts);
+    return acc + (Number(it.price || 0) * paidQty * gstPct / 100);
   }, 0);
 
-  const discountedSubtotal = appliedCoupon ? Math.max(total - appliedCoupon.discount, 0) : total;
+  const afterBogo = Math.max(total - bogoSaving, 0);
+  const discountedSubtotal = appliedCoupon
+    ? Math.max(afterBogo - appliedCoupon.discount, 0)
+    : afterBogo;
   const finalAmount = discountedSubtotal + gstAmount;
 
   const getImageUrl = (imgPath) => {
@@ -1279,6 +1310,10 @@ export default function CartPage() {
               const unitPrice = Number(item.price || 0);
               const subtotal = unitPrice * Number(item.quantity || 0);
 
+              const lineFreeQty = bogoFreeQty(item.product, item.quantity, bogoOpts);
+              const lineSaving = bogoLineSaving(item.product, item.quantity, unitPrice, bogoOpts);
+              const lineToNextFree = bogoUnitsToNextFree(item.product, item.quantity, bogoOpts);
+
               return (
                 <div key={idx} className="cart-card">
                   {/* REMOVE BUTTON */}
@@ -1366,6 +1401,18 @@ export default function CartPage() {
                     
                     {/* <p className="cart-unit-price">₹{unitPrice.toFixed(2)}</p> */}
                     <div className="cart-subtotal">₹{subtotal.toFixed(2)}</div>
+
+                    {/* Buy 1 Get 1 — what this line has earned, and what is one step away */}
+                    {lineFreeQty > 0 && (
+                      <div style={{ color: "#1d7044", fontWeight: 600, fontSize: 13, marginTop: 4 }}>
+                        {lineFreeQty} free · you save ₹{lineSaving.toFixed(2)}
+                      </div>
+                    )}
+                    {lineToNextFree > 0 && (
+                      <div style={{ color: "#8a6d00", fontSize: 12, marginTop: 2 }}>
+                        Add {lineToNextFree} more to get {bogoRule(item.product).getQty} free
+                      </div>
+                    )}
 
                     {/* QTY BUTTONS */}
                     <div className="cart-qty-row">
@@ -1561,6 +1608,13 @@ export default function CartPage() {
               <span>Sub-total</span>
               <strong>₹{total.toFixed(2)}</strong>
             </div>
+
+            {bogoSaving > 0 && (
+              <div className="summary-line">
+                <span>Buy 1 Get 1 saving</span>
+                <strong className="text-success">-₹{bogoSaving.toFixed(2)}</strong>
+              </div>
+            )}
 
             <div className="summary-line">
               <span>Voucher</span>

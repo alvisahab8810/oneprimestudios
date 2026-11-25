@@ -67,6 +67,8 @@ handler.put(async (req, res) => {
       isFeatured,
 
       noReturns,
+      noExchange,
+      dispatchDays,
       freeDelivery,
       freeDeliveryPincodes,
       gstPercent,
@@ -151,6 +153,11 @@ handler.put(async (req, res) => {
 
       // Sold as final: no cancellation, return or refund on this product
       noReturns: noReturns === "true" || noReturns === true,
+      noExchange: noExchange === "true" || noExchange === true,
+      // Working days before dispatch; anything unreadable falls back to 2
+      dispatchDays: Number.isFinite(Number(dispatchDays)) && dispatchDays !== "" && dispatchDays !== undefined
+        ? Math.min(30, Math.max(0, Math.round(Number(dispatchDays))))
+        : 2,
       freeDelivery: freeDelivery === "true" || freeDelivery === true,
       // Empty list means free everywhere; listed PIN codes limit it to those
       freeDeliveryPincodes: parsePincodeList(freeDeliveryPincodes),

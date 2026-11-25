@@ -32,6 +32,15 @@ const CartItemSchema = new mongoose.Schema({
   remarks: { type: String, default: "" },
   // NEW: mandatory order name entered by B2B customer
   orderName: { type: String, default: "" },
+
+  // B2B only: the courier the partner picked themselves on the product page.
+  // Retail orders are routed by the admin in the dashboard, so for them this
+  // stays empty.
+  preferredCourier: {
+    courierId: { type: String, default: "" },
+    name:      { type: String, default: "" },
+    etd:       { type: String, default: "" },
+  },
 });
 
 // timestamps: updatedAt tells the admin abandoned-cart report when the cart was last touched.

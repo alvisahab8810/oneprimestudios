@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
-// A return / refund request raised by a B2C customer for a delivered order.
+// A return, exchange or refund request raised by a B2C customer for a
+// delivered order. All three share this one record and one admin panel,
+// because the first half of the journey — approve, collect the item, check
+// it — is identical. They part ways afterwards: money goes back on a
+// return/refund, a replacement goes out on an exchange.
 // Partners (B2B) are not allowed to raise these — see lib/returnRules.js.
 const ReturnRequestSchema = new mongoose.Schema(
   {
@@ -11,7 +15,7 @@ const ReturnRequestSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["return", "refund"],
+      enum: ["return", "exchange", "refund"],
       default: "return",
     },
 
@@ -28,12 +32,29 @@ const ReturnRequestSchema = new mongoose.Schema(
         "Pickup Scheduled",
         "Item Received",
         "Refunded",
+        "Replacement Shipped",
+        "Replacement Delivered",
         "Closed",
       ],
       default: "Requested",
     },
 
     adminRemarks: { type: String, default: "" },
+
+    // Filled on an exchange: what the buyer wants instead, and how the
+    // replacement is travelling back to them. Stays empty on a return or
+    // refund request.
+    exchange: {
+      // What the customer asked for in place of the item they received
+      preference: { type: String, default: "" },
+      // The replacement shipment. Booked outside the app today, so the
+      // courier name and tracking number are recorded by hand.
+      courier: { type: String, default: "" },
+      awb: { type: String, default: "" },
+      shippedAt: { type: Date },
+      deliveredAt: { type: Date },
+      note: { type: String, default: "" },
+    },
 
     // Filled when the money actually goes back to the customer
     refund: {
@@ -74,7 +95,10 @@ ReturnRequestSchema.pre("save", async function (next) {
     const count = await mongoose.model("ReturnRequest").countDocuments();
     const d = new Date();
     const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-    this.requestNumber = `RET-${stamp}-${String(count + 1).padStart(4, "0")}`;
+    // An exchange carries its own prefix, so the number itself says which
+    // kind of request it is wherever it is quoted.
+    const prefix = this.type === "exchange" ? "EXC" : "RET";
+    this.requestNumber = `${prefix}-${stamp}-${String(count + 1).padStart(4, "0")}`;
   }
   next();
 });

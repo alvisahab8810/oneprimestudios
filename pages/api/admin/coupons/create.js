@@ -41,6 +41,7 @@ export default async function handler(req, res) {
       perUserLimit,
       allowedUserTypes,
       products,
+      categories,
     } = req.body;
 
     const discountValue = discountValueFromBody ?? value;
@@ -80,6 +81,8 @@ if (!code || !discountType) {
   allowedUserTypes,
   // Empty means the coupon works on the whole cart
   products: parseProducts(products),
+  // Same id check as products; these are category ids
+  categories: parseProducts(categories),
 });
 
 

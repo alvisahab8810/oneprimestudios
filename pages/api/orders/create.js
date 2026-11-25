@@ -12,11 +12,15 @@ import Coupon from "@/models/Coupon";
 import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import { quoteShipping, shippingQuoteMessage } from "@/lib/shippingQuote";
+import { bogoFreeQty, bogoLineSaving } from "@/lib/bogo";
 import { checkOrderable } from "@/lib/stockRules";
 import { checkDeliverable } from "@/lib/deliveryZones";
 import { isCodAvailable } from "@/lib/codRules";
-import { couponEligibleTotal, isProductCoupon } from "@/lib/couponRules";
+import { couponEligibleTotal, isRestrictedCoupon, couponScopeMessage } from "@/lib/couponRules";
+import { loadCouponScope, itemProductIds } from "@/lib/couponScope";
 import { isValidGstin, normalizeGstin } from "@/lib/gstin";
+import { getLiveCouriers } from "@/lib/courierRates";
+import { buildEstimate, cartDispatchDays, transitRange } from "@/lib/deliveryEstimate";
 import {
   checkPaymentMatchesOrder,
   fetchPayment,
@@ -41,6 +45,10 @@ export default async function handler(req, res) {
     // OLD: const { items, subtotal, gstAmount = 0, paymentMethod, couponCode } = req.body;
     // NEW: also extract orderName (B2B mandatory field)
     const { items, subtotal, gstAmount = 0, paymentMethod, couponCode, orderName = "" } = req.body;
+    // B2B only: the courier the partner chose on the product page, carried
+    // here from their cart. Retail orders are routed by the admin instead, so
+    // anything sent for them is ignored.
+    const chosenCourier = req.body?.preferredCourier || null;
 
     // Razorpay Checkout hands these three back to the browser; we never trust
     // them as proof of payment until the signature and the amount are verified.
@@ -127,11 +135,12 @@ export default async function handler(req, res) {
       });
       if (userUsageCount >= (coupon.perUserLimit || 1))
         return res.status(400).json({ message: "Coupon already used by you" });
-      // A coupon tied to particular products only discounts those products'
-      // lines; one tied to none works on the whole order, as before
-      const eligibleTotal = couponEligibleTotal(coupon, items, subtotal);
-      if (isProductCoupon(coupon) && eligibleTotal <= 0)
-        return res.status(400).json({ message: "This coupon is only for selected products" });
+      // A coupon tied to particular products or categories only discounts
+      // those lines; one tied to none works on the whole order, as before
+      const couponScope = await loadCouponScope(coupon, itemProductIds(items));
+      const eligibleTotal = couponEligibleTotal(coupon, items, subtotal, couponScope);
+      if (isRestrictedCoupon(coupon) && eligibleTotal <= 0)
+        return res.status(400).json({ message: couponScopeMessage(coupon) });
       if (eligibleTotal < (coupon.minOrderAmount || 0))
         return res.status(400).json({ message: `Minimum order ₹${coupon.minOrderAmount} required` });
 
@@ -160,7 +169,7 @@ export default async function handler(req, res) {
     const productIds = items.map((i) => i.product);
     const productDocs = await Product.find(
       { _id: { $in: productIds } },
-      "name shipping freeDelivery freeDeliveryPincodes stockStatus minOrderQty stock b2cOptions deliveryZones noReturns"
+      "name shipping freeDelivery freeDeliveryPincodes stockStatus minOrderQty stock b2cOptions deliveryZones noReturns noExchange dispatchDays"
     ).lean();
     const productMap = {};
     productDocs.forEach((p) => { productMap[String(p._id)] = p; });
@@ -169,6 +178,28 @@ export default async function handler(req, res) {
     for (const item of items) {
       const problem = checkOrderable(productMap[String(item.product)], item.quantity);
       if (problem) return res.status(400).json({ message: problem });
+    }
+
+    // BUY 1 GET 1 — worked out here from the products themselves, so what the
+    // browser shows can never decide what the offer is worth. The subtotal
+    // sent up is the full goods total; the saving comes off it below, which
+    // is also why a partner can never pick up a retail offer.
+    const isPartnerBuyer = fullUser.userType === "partner";
+    const bogoFor = (item) =>
+      bogoFreeQty(productMap[String(item.product)], item.quantity, { isPartner: isPartnerBuyer });
+    const bogoDiscount = Math.round(
+      items.reduce(
+        (sum, item) =>
+          sum +
+          bogoLineSaving(productMap[String(item.product)], item.quantity, item.price, {
+            isPartner: isPartnerBuyer,
+          }),
+        0
+      ) * 100
+    ) / 100;
+
+    if (bogoDiscount > 0) {
+      finalTotal = Math.max(finalTotal - bogoDiscount, 0);
     }
 
     if (normalizedPaymentMethod === "cod") {
@@ -216,6 +247,30 @@ export default async function handler(req, res) {
 
       shippingCharge = shippingQuote.charge;
       finalTotal += shippingCharge;
+    }
+
+    // ESTIMATED DELIVERY — retail orders only. The window promised on the
+    // product page is worked out again here for the whole cart and the real
+    // delivery address, then kept on the order. A failure to reach the
+    // courier never blocks the order; the default transit time is used.
+    let estimatedDelivery;
+    if (fullUser.userType === "customer") {
+      let etds = [];
+      try {
+        etds = (await getLiveCouriers(deliveryPincode)).map((c) => c.etd);
+      } catch (err) {
+        console.error("Delivery estimate courier lookup error:", err?.message);
+      }
+      if (!etds.length && shippingQuote?.etd) etds = [shippingQuote.etd];
+      const estimate = buildEstimate({
+        dispatchDays: cartDispatchDays(items.map((i) => productMap[String(i.product)])),
+        transit: transitRange(etds),
+      });
+      estimatedDelivery = {
+        dispatchBy: new Date(estimate.dispatchBy),
+        from: new Date(estimate.from),
+        to: new Date(estimate.to),
+      };
     }
 
     // ── RAZORPAY: the captured amount must equal the total we just computed ──
@@ -282,6 +337,8 @@ export default async function handler(req, res) {
               product:     i.product,
               productName: productNameMap[String(i.product)] || "",
               noReturns:   !!productMap[String(i.product)]?.noReturns,
+              noExchange:  !!productMap[String(i.product)]?.noExchange,
+              freeQty:     bogoFor(i),
               quantity:    i.quantity,
               price:       i.price,
               remarks:     i.remarks || "",
@@ -298,6 +355,7 @@ export default async function handler(req, res) {
 
             subtotal,
             gstAmount: Number(gstAmount || 0),
+            bogoDiscount,
             gstDetails,
             shippingCharge,
             shippingQuote: {
@@ -306,8 +364,18 @@ export default async function handler(req, res) {
               weight: shippingQuote?.weight || 0,
               quotedAt: new Date(),
             },
+            preferredCourier:
+              fullUser.userType === "partner" && chosenCourier?.courierId
+                ? {
+                    courierId: String(chosenCourier.courierId).trim().slice(0, 40),
+                    name: String(chosenCourier.name || "").trim().slice(0, 120),
+                    etd: String(chosenCourier.etd || "").trim().slice(0, 60),
+                    chosenBy: "partner",
+                  }
+                : { courierId: "", name: "", etd: "", chosenBy: "" },
             total: finalTotal,
             coupon: couponData,
+            estimatedDelivery,
             customerRemarks,
 
             shipping: {

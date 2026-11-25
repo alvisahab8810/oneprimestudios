@@ -156,6 +156,7 @@ import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/li
 import { checkOrderable } from "@/lib/stockRules";
 import { checkDeliverable } from "@/lib/deliveryZones";
 import { priceForQuantity } from "@/lib/productPricing";
+import { findLiveCourier, LIVE_PREFIX } from "@/lib/courierRates";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -186,6 +187,8 @@ export default async function handler(req, res) {
   remarks = "",
   // NEW: B2B mandatory order name
   orderName = "",
+  // B2B only: the courier the partner picked on the product page
+  preferredCourier = null,
 } = req.body;
 
       if (!productId) return res.status(400).json({ message: "productId required" });
@@ -222,6 +225,20 @@ export default async function handler(req, res) {
         selectedAttrs,
         city: user.city,
       }).unitPrice;
+
+      // A partner picks their own courier on the product page. The choice is
+      // checked against the live list for their PIN code here, so an id typed
+      // into the request cannot put a courier on the order that does not serve
+      // them. Retail buyers do not choose at all — the admin routes their order.
+      let courierChoice = { courierId: "", name: "", etd: "" };
+      const wantedCourierId = String(preferredCourier?.courierId || "").trim();
+      if (wantedCourierId && user.userType === "partner") {
+        const match = await findLiveCourier(`${LIVE_PREFIX}${wantedCourierId}`, user.pinCode);
+        if (!match) {
+          return res.status(400).json({ message: "That courier is not available for your PIN code. Please pick another one." });
+        }
+        courierChoice = { courierId: wantedCourierId, name: match.name, etd: match.etd || "" };
+      }
 
       // get or create cart
       let cart = await Cart.findOne({ user: user._id });
@@ -311,6 +328,8 @@ export default async function handler(req, res) {
       }).unitPrice;
       if (remarks) existingLine.remarks = remarks;
       if (orderName) existingLine.orderName = orderName;
+      // A fresh courier choice replaces the one on the line it merges into
+      if (courierChoice.courierId) existingLine.preferredCourier = courierChoice;
 
       if (hasNewFiles) {
         // A fresh upload for the same attribute slot replaces the old one;
@@ -343,6 +362,7 @@ export default async function handler(req, res) {
         remarks: remarks || "",
         // NEW: order name stored per cart item, carried through to order
         orderName: orderName || "",
+        preferredCourier: courierChoice,
         createdAt: new Date(),
       });
     }

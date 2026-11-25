@@ -18,6 +18,7 @@ import ProductFileUpload from "@/components/ProductFileUpload";
 import MeasureField from "@/components/product/MeasureField";
 import { priceForQuantity } from "@/lib/productPricing";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
+import { bogoApplies, bogoFreeQty, bogoLabel, bogoUnitsToNextFree } from "@/lib/bogo";
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
 import {
   deliveryStatus,
@@ -94,6 +95,16 @@ export default function ProductDetails() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [selectedAttrs, setSelectedAttrs] = useState({});
   const [userCity, setUserCity] = useState("");
+  // Buy 1 Get 1 is a retail offer. A visitor who has not logged in is shopping
+  // retail too, so the offer shows for them; a partner never sees it.
+  const [userType, setUserType] = useState("customer");
+
+  // B2B only: the couriers this partner can choose from, and the one they
+  // picked. An empty list means the choice is not offered — a retail buyer, a
+  // partner with no PIN code on file, or the courier service not answering —
+  // and the order is then routed by the admin as it always was.
+  const [courierOptions, setCourierOptions] = useState([]);
+  const [courierId, setCourierId] = useState("");
 
   // The PIN code the delivery check is answered for: the buyer's own, or one
   // they typed in. Products the admin has not limited ignore it entirely.
@@ -103,6 +114,10 @@ export default function ProductDetails() {
   // Whether this product reaches that PIN code — see lib/deliveryZones.js
   const delivery = useMemo(() => deliveryStatus(product, pincode), [product, pincode]);
 
+  // Which form the buyer sees. A product the admin marked "B2C only" must never
+  // render the B2B form, even when a stale b2bOptions.enabled is still true on
+  // the record — otherwise a retail buyer gets the B2B layout and Order Name.
+  const showB2BForm = !!product?.b2bOptions?.enabled && product?.productFor !== "b2c";
   // Free delivery either applies everywhere or only at listed PIN codes, so
   // the badge says which one, and for a listed product what this PIN code gets
   const freeHere = useMemo(() => {
@@ -124,15 +139,68 @@ export default function ProductDetails() {
     };
   }, [product, pincode]);
 
+  // The list is asked for once the product is known to be a B2B one, and only
+  // for a logged-in partner — the request answers 403 for anyone else, which
+  // simply leaves the dropdown out.
+  useEffect(() => {
+    if (!showB2BForm) {
+      setCourierOptions([]);
+      setCourierId("");
+      return;
+    }
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const query = isValidPincode(pincode) ? `?pincode=${normalizePincode(pincode)}` : "";
+    axios
+      .get(`/api/couriers/options${query}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        const list = res.data?.couriers || [];
+        setCourierOptions(list);
+        setCourierId((current) => (list.some((c) => c.courierId === current) ? current : ""));
+      })
+      .catch(() => {
+        // Retail buyers and a courier service that cannot answer both land
+        // here. Nothing is shown, and the order is not held up.
+        setCourierOptions([]);
+        setCourierId("");
+      });
+  }, [showB2BForm, pincode]);
+
+  // Retail only: the estimated delivery window for this product. It is asked
+  // again whenever the PIN code changes, and an answer for an older PIN code
+  // is dropped. A failed request simply leaves the line out.
+  const [deliveryEstimate, setDeliveryEstimate] = useState(null);
+  const productId = product?._id;
+  useEffect(() => {
+    if (!productId || showB2BForm || !delivery.serviceable) {
+      setDeliveryEstimate(null);
+      return;
+    }
+    let current = true;
+    const pin = isValidPincode(pincode) ? normalizePincode(pincode) : "";
+    axios
+      .get("/api/delivery/estimate", { params: { productId, pincode: pin } })
+      .then((res) => {
+        if (current) setDeliveryEstimate(res.data?.estimate ? { ...res.data.estimate, pincode: res.data.pincode || "" } : null);
+      })
+      .catch(() => {
+        if (current) setDeliveryEstimate(null);
+      });
+    return () => {
+      current = false;
+    };
+  }, [productId, showB2BForm, pincode, delivery.serviceable]);
+
   // File upload is optional — Add to Cart is available as soon as the product loads.
   // Attributes marked required (e.g. a mandatory upload) are still enforced in validateUploadAttrs().
   // A product that cannot be delivered to the buyer's PIN code cannot be ordered either.
   const canAddToCart = !!product && !isOutOfStock(product) && delivery.serviceable;
 
-  // Which form the buyer sees. A product the admin marked "B2C only" must never
-  // render the B2B form, even when a stale b2bOptions.enabled is still true on
-  // the record — otherwise a retail buyer gets the B2B layout and Order Name.
-  const showB2BForm = !!product?.b2bOptions?.enabled && product?.productFor !== "b2c";
+  // Buy 1 Get 1, as it applies to whoever is looking at this page
+  const bogoOpts = { isPartner: userType === "partner" };
+  const bogoOn = bogoApplies(product, bogoOpts);
+
 
   useEffect(() => {
     if (!slug) return;
@@ -193,6 +261,7 @@ export default function ProductDetails() {
       .get("/api/user/me", { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
         setUserCity(res.data?.city || "");
+        setUserType(res.data?.userType || "customer");
         // The saved profile PIN code answers the delivery check without the
         // buyer typing anything; one they typed themselves is left alone.
         const profilePin = normalizePincode(res.data?.pinCode);
@@ -369,6 +438,13 @@ export default function ProductDetails() {
       toast.error("Please enter an Order Name before adding to cart.");
       return;
     }
+    // The courier is the partner’s to choose, so it has to be chosen. When no
+    // courier could be listed there is nothing to ask for, and the order goes
+    // through with the admin routing it.
+    if (showB2BForm && courierOptions.length > 0 && !courierId) {
+      toast.error("Please select a courier before adding to cart.");
+      return;
+    }
     if (!validateUploadAttrs()) return;
     const token = localStorage.getItem("token");
     if (!token) return toast.error("Please login first");
@@ -380,7 +456,9 @@ export default function ProductDetails() {
       if (Object.keys(uploadedAttrFiles).length > 0) {
         const fd = new FormData();
         const attrMap = {};
-        Object.keys(uploadedAttrFiles).forEach((attrKey) => {
+        // Files are sent in this order and come back in the same order
+        const sentKeys = Object.keys(uploadedAttrFiles);
+        sentKeys.forEach((attrKey) => {
           const file = uploadedAttrFiles[attrKey];
           fd.append(attrKey, file);
           const idx = attrKey.split("__").pop();
@@ -392,12 +470,21 @@ export default function ProductDetails() {
         const uploadRes = await axios.post("/api/upload/save-design", fd, {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
         });
-        uploadedAttrUrls = uploadRes.data.data.map((f) => ({
-          attributeKey: f.attribute,
-          attributeName: f.attributeName || attrMap[f.attribute] || f.attribute,
-          url: f.fileUrl,
-          name: f.fileName,
-        }));
+        // Each file is tied back to its upload field. The position is the
+        // fallback, so a file is never sent to the cart without its field.
+        uploadedAttrUrls = (uploadRes.data.data || []).map((f, i) => {
+          const key = f.attribute || sentKeys[i] || "";
+          return {
+            attributeKey: key,
+            attributeName: f.attributeName || attrMap[key] || key,
+            url: f.fileUrl,
+            name: f.fileName,
+          };
+        });
+        if (uploadedAttrUrls.length !== sentKeys.length || uploadedAttrUrls.some((f) => !f.url)) {
+          toast.error("Your file could not be uploaded. Please try again.");
+          return;
+        }
       }
 
       await axios.post(
@@ -410,6 +497,10 @@ export default function ProductDetails() {
           remarks: specialRemarks,
           // NEW: pass orderName to cart
           orderName: orderName.trim(),
+          // B2B only: the courier the partner picked above
+          preferredCourier: courierId
+            ? courierOptions.find((c) => c.courierId === courierId) || null
+            : null,
           uploadedFiles: uploadedFiles.map((f) => f.url),
           uploadedAttributeFiles: uploadedAttrUrls,
         },
@@ -498,6 +589,19 @@ export default function ProductDetails() {
             <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
             <p className="product-min-order">Minimum Order: {getMinOrderQty(product)}</p>
 
+            {/* Buy 1 Get 1 — the offer, and where this quantity stands in it */}
+            {bogoOn && !showB2BForm && (
+              <div style={{ background: "#eafaf0", border: "1px solid #b7e4c7", borderLeft: "4px solid #1d7044",
+                borderRadius: 8, padding: "10px 14px", margin: "10px 0 14px" }}>
+                <div style={{ color: "#1d7044", fontWeight: 700, fontSize: 14 }}>{bogoLabel(product)}</div>
+                <div style={{ color: "#3f6b50", fontSize: 12.5, marginTop: 2 }}>
+                  {bogoFreeQty(product, qty, bogoOpts) > 0
+                    ? `${bogoFreeQty(product, qty, bogoOpts)} of these ${bogoFreeQty(product, qty, bogoOpts) === 1 ? "is" : "are"} free — the saving is taken off in the cart.`
+                    : `Add ${bogoUnitsToNextFree(product, qty, bogoOpts)} more to get your free one.`}
+                </div>
+              </div>
+            )}
+
             {/* Delivery check — shown only for products the admin limited to
                 certain PIN codes, because everything else delivers everywhere
                 and asking would only get in the buyer's way. */}
@@ -551,6 +655,67 @@ export default function ProductDetails() {
               </div>
             )}
 
+            {/* Estimated delivery, for retail buyers. A product limited to
+                certain PIN codes already has its PIN code box above, so the
+                box is added here only for the others. */}
+            {!showB2BForm && product?.b2cOptions?.enabled && delivery.serviceable && (
+              <div style={{ margin: "10px 0 14px", padding: "12px 14px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <FaTruck size={18} style={{ color: "#15803d", marginTop: 3, flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    {deliveryEstimate?.label ? (
+                      <>
+                        <div style={{ fontSize: 14, color: "#111111" }}>
+                          Estimated delivery <strong>{deliveryEstimate.label}</strong>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2 }}>
+                          {deliveryEstimate.pincode
+                            ? `To PIN code ${deliveryEstimate.pincode}, if you order today.`
+                            : "Enter your PIN code for the date at your address."}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, color: "#64748b" }}>Enter your PIN code to see the estimated delivery date.</div>
+                    )}
+                  </div>
+                </div>
+                {!delivery.restricted && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <input
+                      id="estimate-pincode"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      aria-label="PIN code for delivery estimate"
+                      placeholder="6-digit PIN code"
+                      value={pincodeInput}
+                      onChange={(e) => setPincodeInput(normalizePincode(e.target.value))}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPincode(); } }}
+                      style={{ flex: "1 1 140px", minWidth: 0, maxWidth: 220, height: 38, padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={applyPincode}
+                      disabled={!isValidPincode(pincodeInput)}
+                      style={{
+                        height: 38,
+                        padding: "0 18px",
+                        border: 0,
+                        borderRadius: 8,
+                        background: isValidPincode(pincodeInput) ? "#111111" : "#cbd5e1",
+                        color: "#fff",
+                        fontWeight: 600,
+                        fontSize: 14,
+                        cursor: isValidPincode(pincodeInput) ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      Check
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Delivery is on us for this product, so the buyer is told up front.
                 Where free delivery is limited to certain PIN codes, the badge
                 answers for the PIN code the buyer checked above. */}
@@ -600,6 +765,15 @@ export default function ProductDetails() {
                   This item is made to your order, so it cannot be cancelled once
                   placed, and cannot be returned or refunded after delivery.
                 </span>
+              </div>
+            )}
+
+            {/* Exchange policy, for retail buyers only — said before they pay */}
+            {!showB2BForm && product?.b2cOptions?.enabled && (
+              <div style={{ fontSize: 13, margin: "8px 0 12px", color: product.noExchange ? "#7a1f1c" : "#1d7044", fontWeight: 600 }}>
+                {product.noExchange
+                  ? "This item cannot be exchanged."
+                  : "7-day exchange available after delivery."}
               </div>
             )}
 
@@ -729,6 +903,30 @@ export default function ProductDetails() {
                       <p className={styles.noOptions}>No extra options available</p>
                     )}
                   </div>
+
+                  {courierOptions.length > 0 && (
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>
+                        Select Delivery Option <span className={styles.required}>*</span>
+                      </label>
+                      <select
+                        className={styles.selectField}
+                        value={courierId}
+                        onChange={(e) => setCourierId(e.target.value)}
+                      >
+                        <option value="">Select Courier Option</option>
+                        {courierOptions.map((c) => (
+                          <option key={c.courierId} value={c.courierId}>
+                            {c.name}
+                            {c.etd ? ` — by ${c.etd}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <p style={{ fontSize: 12, color: "#9b8ac4", marginTop: 4 }}>
+                        Choose who carries this order. Delivery is on us, so there is nothing extra to pay.
+                      </p>
+                    </div>
+                  )}
 
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Special Remarks (Optional)</label>
@@ -1075,6 +1273,28 @@ export default function ProductDetails() {
                 </div>
               )}
 
+              {showB2BForm && courierOptions.length > 0 && (
+                <div className="ops-mobile-attr-item">
+                  <label className="ops-mobile-attr-label">
+                    Select Delivery Option <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                  </label>
+                  <select
+                    className={styles.selectField}
+                    style={{ width: "100%" }}
+                    value={courierId}
+                    onChange={(e) => setCourierId(e.target.value)}
+                  >
+                    <option value="">Select Courier Option</option>
+                    {courierOptions.map((c) => (
+                      <option key={c.courierId} value={c.courierId}>
+                        {c.name}
+                        {c.etd ? ` — by ${c.etd}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* On phones the whole B2C block is hidden, so the quantity control
                   for a retail buyer has to live in this panel */}
               {!showB2BForm && (
@@ -1189,7 +1409,9 @@ export default function ProductDetails() {
           <div className="ops-mobile-bottom-row">
             {/* Without this the slide-up panel only ever opened on a failed
                 validation, so a buyer could never reach optional attributes */}
-            {(product.attributes?.length > 0 || (!showB2BForm && quantityLadder.length > 1)) && (
+            {(product.attributes?.length > 0 ||
+              (showB2BForm && courierOptions.length > 0) ||
+              (!showB2BForm && quantityLadder.length > 1)) && (
               <button
                 type="button"
                 className="ops-mobile-options-btn"

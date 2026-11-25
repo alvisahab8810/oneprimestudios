@@ -7,8 +7,9 @@ import {
   couponDiscount,
   couponBlockReason,
   couponEligibleTotal,
-  isProductCoupon,
+  isRestrictedCoupon,
 } from "@/lib/couponRules";
+import { loadCouponScope, itemProductIds } from "@/lib/couponScope";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -36,9 +37,11 @@ export default async function handler(req, res) {
   // A coupon tied to particular products only discounts those products' lines,
   // so the buyer's own cart is read here rather than trusting the total sent
   let eligibleTotal = Number(cartTotal) || 0;
-  if (isProductCoupon(coupon)) {
+  if (isRestrictedCoupon(coupon)) {
     const cart = await Cart.findOne({ user: user._id }).lean();
-    eligibleTotal = couponEligibleTotal(coupon, cart?.items || [], cartTotal);
+    const cartItems = cart?.items || [];
+    const scope = await loadCouponScope(coupon, itemProductIds(cartItems));
+    eligibleTotal = couponEligibleTotal(coupon, cartItems, cartTotal, scope);
   }
 
   // The same checks, in the same order, as the available-offers list

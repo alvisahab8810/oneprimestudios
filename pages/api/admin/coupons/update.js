@@ -30,6 +30,7 @@ export default async function handler(req, res) {
     allowedUserTypes,
     isActive,
     products,
+    categories,
   } = req.body;
 
   if (!id) {
@@ -50,6 +51,8 @@ export default async function handler(req, res) {
         isActive,
         // Left out of the request means "leave the product list alone"
         ...(products === undefined ? {} : { products: parseProducts(products) }),
+        // Same id check as products; these are category ids
+        ...(categories === undefined ? {} : { categories: parseProducts(categories) }),
       },
       { runValidators: true }
     );

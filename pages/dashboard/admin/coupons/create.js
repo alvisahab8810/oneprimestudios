@@ -7,7 +7,7 @@ import Sidebar from "@/components/admin-panel/Sidebar";
 import { useRouter } from "next/router";
 import { FaTags, FaSave, FaArrowLeft } from "react-icons/fa";
 import Link from "next/link";
-import CouponProductPicker from "@/components/admin-panel/CouponProductPicker";
+import CouponScopePicker from "@/components/admin-panel/CouponScopePicker";
 
 export default function CreateCoupon() {
   const router = useRouter();
@@ -35,6 +35,9 @@ export default function CreateCoupon() {
 
   // Products this coupon is limited to. Left empty, the coupon works everywhere.
   const [products, setProducts] = useState([]);
+  // Categories this coupon is limited to; it then works on every product in them
+  const [categories, setCategories] = useState([]);
+  const [scopeMode, setScopeMode] = useState("all");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -64,6 +67,15 @@ export default function CreateCoupon() {
       return;
     }
 
+    if (scopeMode === "products" && products.length === 0) {
+      toast.error("Select at least one product for this coupon");
+      return;
+    }
+    if (scopeMode === "categories" && categories.length === 0) {
+      toast.error("Select at least one category for this coupon");
+      return;
+    }
+
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
@@ -83,6 +95,7 @@ export default function CreateCoupon() {
             : undefined,
           perUserLimit: Number(form.perUserLimit),
           products: products.map((item) => String(item._id)),
+          categories: categories.map((item) => String(item._id)),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -241,7 +254,13 @@ export default function CreateCoupon() {
             {/* PRODUCT RESTRICTION */}
             <div className="mb-3">
               <label className="form-label">Applies To</label>
-              <CouponProductPicker selected={products} onChange={setProducts} />
+              <CouponScopePicker
+                products={products}
+                categories={categories}
+                onProductsChange={setProducts}
+                onCategoriesChange={setCategories}
+                onModeChange={setScopeMode}
+              />
             </div>
 
             {/* USER TYPES */}

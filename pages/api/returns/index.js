@@ -1,13 +1,19 @@
 // pages/api/returns/index.js
-// GET  — customer fetches their own return/refund requests (optional ?orderId=)
-// POST — customer raises a return/refund request with photos of the fault
-// Returns are a B2C-only feature; partner (B2B) orders are rejected here.
+// GET  — customer fetches their own return/exchange/refund requests (?orderId=)
+// POST — customer raises a return, exchange or refund request with photos
+//        of the fault. One open request per order at a time.
+// All three are a B2C-only feature; partner (B2B) orders are rejected here.
 
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import User from "@/models/User";
 import ReturnRequest from "@/models/ReturnRequest";
-import { checkReturnEligibility, OPEN_RETURN_STATUSES, RETURN_REASONS } from "@/lib/returnRules";
+import {
+  checkRequestEligibility,
+  OPEN_RETURN_STATUSES,
+  REQUEST_TYPES,
+  reasonsForType,
+} from "@/lib/returnRules";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -91,13 +97,16 @@ export default async function handler(req, res) {
           const orderId = String(req.body.orderId || "").trim();
           const reason = String(req.body.reason || "").trim();
           const description = String(req.body.description || "").trim();
-          const type = req.body.type === "refund" ? "refund" : "return";
+          const type = REQUEST_TYPES.includes(req.body.type) ? req.body.type : "return";
+          // What the buyer wants instead. Only an exchange carries this.
+          const preference =
+            type === "exchange" ? String(req.body.preference || "").trim().slice(0, 500) : "";
 
           if (!orderId) {
             res.status(400).json({ message: "Order is required" });
             return resolve();
           }
-          if (!reason || !RETURN_REASONS.includes(reason)) {
+          if (!reason || !reasonsForType(type).includes(reason)) {
             res.status(400).json({ message: "Please choose a valid reason" });
             return resolve();
           }
@@ -107,8 +116,9 @@ export default async function handler(req, res) {
             User.findById(decoded.id).select("userType").lean(),
           ]);
 
-          // Eligibility is re-checked on the server — the UI hint is not enough
-          const problem = checkReturnEligibility(order, user);
+          // Eligibility is re-checked on the server — the UI hint is not enough.
+          // An exchange has its own product switch and its own window.
+          const problem = checkRequestEligibility(order, user, type);
           if (problem) {
             res.status(400).json({ message: problem });
             return resolve();
@@ -147,7 +157,10 @@ export default async function handler(req, res) {
             description,
             images,
             status: "Requested",
-            refund: { amount: Number(order.total) || 0 },
+            exchange: type === "exchange" ? { preference } : {},
+            // An exchange sends a replacement, not money, so it starts
+            // with nothing to refund.
+            refund: { amount: type === "exchange" ? 0 : Number(order.total) || 0 },
             history: [{ status: "Requested", remarks: reason, by: "customer", at: new Date() }],
           });
 

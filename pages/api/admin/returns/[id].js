@@ -1,6 +1,7 @@
 // pages/api/admin/returns/[id].js
-// GET   — one return/refund request with its order
-// PATCH — move the request forward: status, remarks, and refund details
+// GET   — one return/exchange/refund request with its order
+// PATCH — move the request forward: status, remarks, refund details, and
+//         on an exchange the replacement shipment that goes back out
 import dbConnect from "@/lib/dbConnect";
 import ReturnRequest from "@/models/ReturnRequest";
 import Order from "@/models/Order";
@@ -9,7 +10,12 @@ import Wallet from "@/models/Wallet";
 import WalletTransaction from "@/models/WalletTransaction";
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission, canViewPayments } from "@/lib/hasPermission";
-import { RETURN_STATUSES } from "@/lib/returnRules";
+import {
+  EXCHANGE_DELIVERED_STATUS,
+  EXCHANGE_SHIPPED_STATUS,
+  RETURN_STATUSES,
+  nextStatusesFor,
+} from "@/lib/returnRules";
 import { isRazorpayConfigured, refundPayment } from "@/lib/razorpay";
 
 const MANUAL_METHODS = ["Bank Transfer", "UPI", "Other"];
@@ -65,6 +71,8 @@ export default async function handler(req, res) {
       const showPayments = canViewPayments(admin);
 
       // What the refund form needs to know, without exposing raw payment ids
+      request.nextStatuses = nextStatusesFor(request);
+
       request.refundContext = {
         canRefundAtGateway: Boolean(
           showPayments && isRazorpayConfigured() && order?.razorpay?.paymentId
@@ -101,12 +109,56 @@ export default async function handler(req, res) {
       if (status && !RETURN_STATUSES.includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
+      // Each type has its own path through the statuses. An exchange ends
+      // with a replacement going out, a return with money going back, and
+      // neither may jump a step.
+      if (status && status !== request.status && !nextStatusesFor(request).includes(status)) {
+        return res.status(400).json({
+          message: `A ${request.type} request cannot go from ${request.status} to ${status}`,
+        });
+      }
       if (status && status !== request.status && !(RETURN_STATUSES.includes(request.status))) {
         return res.status(400).json({ message: "Invalid current status" });
       }
       if (typeof adminRemarks === "string") request.adminRemarks = adminRemarks.trim();
 
       const order = await Order.findById(request.order);
+
+      // ── Exchange: record the replacement that goes back to the buyer ──
+      const { exchangeCourier, exchangeAwb, exchangeNote, exchangePreference } = req.body || {};
+      if (request.type === "exchange") {
+        const current = request.exchange || {};
+        const courier = String(exchangeCourier ?? current.courier ?? "").trim().slice(0, 120);
+        const awb = String(exchangeAwb ?? current.awb ?? "").trim().slice(0, 60);
+
+        if (status === EXCHANGE_SHIPPED_STATUS) {
+          // Nothing is marked as shipped without something to track it by,
+          // or the buyer is told it is on its way with no way to follow it.
+          if (!courier || !awb) {
+            return res.status(400).json({
+              message: "Enter the courier and the tracking (AWB) number for the replacement",
+            });
+          }
+        }
+
+        request.exchange = {
+          ...current,
+          preference: String(
+            exchangePreference ?? current.preference ?? ""
+          ).trim().slice(0, 500),
+          courier,
+          awb,
+          note: String(exchangeNote ?? current.note ?? "").trim().slice(0, 500),
+          shippedAt:
+            status === EXCHANGE_SHIPPED_STATUS && !current.shippedAt
+              ? new Date()
+              : current.shippedAt,
+          deliveredAt:
+            status === EXCHANGE_DELIVERED_STATUS && !current.deliveredAt
+              ? new Date()
+              : current.deliveredAt,
+        };
+      }
 
       if (status === "Refunded") {
         if (!canViewPayments(admin)) {

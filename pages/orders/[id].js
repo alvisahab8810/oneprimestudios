@@ -8,10 +8,13 @@ import { toast } from "react-hot-toast";
 import Offcanvas from "@/components/header/Offcanvas";
 import { canUserCancelOrder, hasNoReturnItem, isDelivered } from "@/lib/orderRules";
 import {
+  canRequestExchange,
   canRequestReturn,
+  checkExchangeEligibility,
   checkReturnEligibility,
   OPEN_RETURN_STATUSES,
-  RETURN_REASONS,
+  REQUEST_TYPE_LABELS,
+  reasonsForType,
   RETURN_STATUS_STYLES,
   RETURN_WINDOW_DAYS,
 } from "@/lib/returnRules";
@@ -22,6 +25,7 @@ import {
   FiDownload, FiStar, FiRepeat,
 } from "react-icons/fi";
 import { downloadFile } from "@/lib/downloadDocument";
+import { orderDeliveryView } from "@/lib/deliveryEstimate";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CFG = {
@@ -195,6 +199,8 @@ export default function OrderDetailPage() {
   const [returnType, setReturnType] = useState("return");
   const [returnReason, setReturnReason] = useState("");
   const [returnDescription, setReturnDescription] = useState("");
+  // What the buyer wants instead — asked only on an exchange
+  const [exchangePreference, setExchangePreference] = useState("");
   const [returnPhotos, setReturnPhotos] = useState([]);
   const [submittingReturn, setSubmittingReturn] = useState(false);
 
@@ -401,6 +407,7 @@ export default function OrderDetailPage() {
       fd.append("type", returnType);
       fd.append("reason", returnReason);
       fd.append("description", returnDescription);
+      if (returnType === "exchange") fd.append("preference", exchangePreference);
       returnPhotos.forEach((f) => fd.append("photos", f));
 
       await axios.post("/api/returns", fd, {
@@ -410,6 +417,7 @@ export default function OrderDetailPage() {
       setShowReturnForm(false);
       setReturnReason("");
       setReturnDescription("");
+      setExchangePreference("");
       setReturnPhotos([]);
       await loadReturnRequests();
     } catch (err) {
@@ -551,7 +559,17 @@ export default function OrderDetailPage() {
   const openReturn = returnRequests.find((r) => OPEN_RETURN_STATUSES.includes(r.status));
   const latestReturn = returnRequests[0] || null;
   const returnBlockReason = checkReturnEligibility(order, order.user);
-  const mayRaiseReturn = canRequestReturn(order, order.user) && !openReturn;
+  const exchangeBlockReason = checkExchangeEligibility(order, order.user);
+  // Return and exchange are two separate promises on a product, so one may
+  // be open to the buyer while the other is not
+  const mayReturn = canRequestReturn(order, order.user) && !openReturn;
+  const mayExchange = canRequestExchange(order, order.user) && !openReturn;
+  const mayRaiseReturn = mayReturn || mayExchange;
+  const openRequestForm = (type) => {
+    setReturnType(type);
+    setReturnReason("");
+    setShowReturnForm(true);
+  };
 
   return (
     <>
@@ -620,6 +638,24 @@ export default function OrderDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* ── Delivery date, retail orders only: the estimate while the order
+              is being prepared, the courier date once shipped, then the day
+              it was delivered ── */}
+          {isRetailOrder && (() => {
+            const view = orderDeliveryView(order);
+            if (!view) return null;
+            const [bg, border, color] = ({ done: ["#f0fdf4", "#bbf7d0", "#15803d"], late: ["#fff7ed", "#fed7aa", "#c2410c"], normal: ["#f0fdf4", "#bbf7d0", "#15803d"] })[view.tone];
+            return (
+              <div style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 16, padding: "14px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <FiTruck size={20} color={color} style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color }}>{view.title}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 600, color: "#111" }}>{view.text}</p>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Order timeline ── */}
           {currentStep >= 0 && order.status !== "Cancelled" && order.status !== "Design Rejected" && (
@@ -739,13 +775,16 @@ export default function OrderDetailPage() {
           {isRetailOrder && (openReturn || latestReturn || order.status === "Order Delivered") && (
             <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #f0f0f0", padding: "20px 22px", marginBottom: 16 }}>
               <p style={{ margin: "0 0 12px", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 7 }}>
-                <FiRotateCcw size={14} /> Return &amp; Refund
+                <FiRotateCcw size={14} /> Return, Exchange &amp; Refund
               </p>
 
               {latestReturn ? (
                 <div style={{ border: "1px solid #f0f0f0", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
                     <span style={{ fontWeight: 700, fontSize: 13 }}>{latestReturn.requestNumber}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                      {REQUEST_TYPE_LABELS[latestReturn.type] || "Return"}
+                    </span>
                     <span style={{ ...(RETURN_STATUS_STYLES[latestReturn.status] || {}), borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
                       {latestReturn.status}
                     </span>
@@ -767,6 +806,14 @@ export default function OrderDetailPage() {
                       {latestReturn.refund.reference ? ` · Ref ${latestReturn.refund.reference}` : ""}
                     </p>
                   )}
+                  {latestReturn.type === "exchange" && latestReturn.exchange?.awb && (
+                    <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: latestReturn.exchange.deliveredAt ? "#15803d" : "#c2410c" }}>
+                      {latestReturn.exchange.deliveredAt
+                        ? `Your replacement was delivered on ${new Date(latestReturn.exchange.deliveredAt).toLocaleDateString("en-IN")}`
+                        : `Your replacement is on its way with ${latestReturn.exchange.courier}`}
+                      {` · Tracking no. ${latestReturn.exchange.awb}`}
+                    </p>
+                  )}
                   {latestReturn.images?.length > 0 && (
                     <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                       {latestReturn.images.map((url) => (
@@ -784,12 +831,31 @@ export default function OrderDetailPage() {
                   <p style={{ margin: "0 0 10px", fontSize: 12, color: "#6b7280" }}>
                     Something wrong with the items? Raise a request within {RETURN_WINDOW_DAYS} days of delivery and attach photos of the issue.
                   </p>
-                  <button
-                    onClick={() => setShowReturnForm(true)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 8, background: "#111827", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-                  >
-                    <FiRotateCcw size={12} /> Request Return / Refund
-                  </button>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {mayExchange && (
+                      <button
+                        onClick={() => openRequestForm("exchange")}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 8, background: "#111827", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                      >
+                        <FiRotateCcw size={12} /> Request Exchange
+                      </button>
+                    )}
+                    {mayReturn && (
+                      <button
+                        onClick={() => openRequestForm("return")}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 8, background: mayExchange ? "#fff" : "#111827", color: mayExchange ? "#111827" : "#fff", border: mayExchange ? "1.5px solid #111827" : "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                      >
+                        <FiRotateCcw size={12} /> Request Return / Refund
+                      </button>
+                    )}
+                  </div>
+                  {/* One of the two is closed for this order — say which, and why */}
+                  {mayExchange && !mayReturn && returnBlockReason && (
+                    <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>{returnBlockReason}. You can still ask for an exchange.</p>
+                  )}
+                  {mayReturn && !mayExchange && exchangeBlockReason && (
+                    <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>{exchangeBlockReason}. You can still ask for a return or refund.</p>
+                  )}
                 </>
               )}
 
@@ -810,11 +876,12 @@ export default function OrderDetailPage() {
                   </label>
                   <select
                     value={returnType}
-                    onChange={(e) => setReturnType(e.target.value)}
+                    onChange={(e) => { setReturnType(e.target.value); setReturnReason(""); }}
                     style={{ width: "100%", height: 40, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "0 12px", fontSize: 13, marginBottom: 12, background: "#fff" }}
                   >
-                    <option value="return">Return the item</option>
-                    <option value="refund">Refund only</option>
+                    {mayExchange && <option value="exchange">Exchange for a replacement</option>}
+                    {mayReturn && <option value="return">Return the item</option>}
+                    {mayReturn && <option value="refund">Refund only</option>}
                   </select>
 
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
@@ -826,10 +893,26 @@ export default function OrderDetailPage() {
                     style={{ width: "100%", height: 40, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "0 12px", fontSize: 13, marginBottom: 12, background: "#fff" }}
                   >
                     <option value="">Select a reason</option>
-                    {RETURN_REASONS.map((r) => (
+                    {reasonsForType(returnType).map((r) => (
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
+
+                  {returnType === "exchange" && (
+                    <>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
+                        What would you like instead (optional)
+                      </label>
+                      <input
+                        id="exchange-preference"
+                        value={exchangePreference}
+                        onChange={(e) => setExchangePreference(e.target.value)}
+                        maxLength={500}
+                        placeholder="Same item, or a different size / variant"
+                        style={{ width: "100%", height: 40, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "0 12px", fontSize: 13, marginBottom: 12, boxSizing: "border-box" }}
+                      />
+                    </>
+                  )}
 
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>
                     Tell us more (optional)

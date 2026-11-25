@@ -1,10 +1,11 @@
-// pages/api/admin/returns/index.js — GET list of return/refund requests
+// pages/api/admin/returns/index.js — GET list of return, exchange and
+// refund requests. They share one panel; ?type= narrows it to one kind.
 import dbConnect from "@/lib/dbConnect";
 import ReturnRequest from "@/models/ReturnRequest";
 import Admin from "@/models/Admin";
 import { verifyJWT } from "@/lib/verifyJWT";
 import { hasPermission } from "@/lib/hasPermission";
-import { OPEN_RETURN_STATUSES } from "@/lib/returnRules";
+import { OPEN_RETURN_STATUSES, REQUEST_TYPES } from "@/lib/returnRules";
 
 const getAdmin = async (req) => {
   const token = req.cookies.admin_auth;
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { status, search, page = 1, limit = 15 } = req.query;
+    const { status, type, search, page = 1, limit = 15 } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -39,12 +40,16 @@ export default async function handler(req, res) {
     if (status === "open") filter.status = { $in: OPEN_RETURN_STATUSES };
     else if (status) filter.status = status;
 
+    if (REQUEST_TYPES.includes(type)) filter.type = type;
+
     if (search && search.trim()) {
       const regex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       filter.$or = [{ requestNumber: regex }, { orderNumber: regex }, { reason: regex }];
     }
 
-    const [requests, total, counts] = await Promise.all([
+    // The stat cards count the whole desk, not the filtered view, so the
+    // "needs action" number does not move when a filter is applied.
+    const [requests, total, counts, typeCounts] = await Promise.all([
       ReturnRequest.find(filter)
         .populate("user", "name email phone userType companyName")
         .sort({ createdAt: -1 })
@@ -53,6 +58,7 @@ export default async function handler(req, res) {
         .lean(),
       ReturnRequest.countDocuments(filter),
       ReturnRequest.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      ReturnRequest.aggregate([{ $group: { _id: "$type", count: { $sum: 1 } } }]),
     ]);
 
     const summary = counts.reduce(
@@ -64,6 +70,11 @@ export default async function handler(req, res) {
       },
       { total: 0, open: 0 }
     );
+
+    summary.byType = typeCounts.reduce((acc, row) => {
+      acc[row._id || "return"] = row.count;
+      return acc;
+    }, {});
 
     return res.status(200).json({
       success: true,
