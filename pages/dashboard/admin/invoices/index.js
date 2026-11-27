@@ -6,7 +6,8 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Sidebar from "@/components/admin-panel/Sidebar";
 import * as XLSX from "xlsx";
-import { FaBell, FaFileExcel } from "react-icons/fa";
+import { saveAs } from "file-saver";
+import { FaBell, FaFileExcel, FaFileArchive } from "react-icons/fa";
 import {
   FiFileText, FiSearch, FiDownload, FiEye,
   FiSend, FiFilter, FiX, FiPlus,
@@ -44,6 +45,9 @@ export default function AdminInvoiceList() {
   const [totalPages, setTotalPages]   = useState(1);
   const [total, setTotal]             = useState(0);
   const [exporting, setExporting]     = useState(false);
+  // Bulk PDF download: invoices ticked in the table (kept across pages)
+  const [selected, setSelected]       = useState(() => new Set());
+  const [zipping, setZipping]         = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -214,6 +218,56 @@ export default function AdminInvoiceList() {
     }
   };
 
+  // ── Bulk PDF download (ZIP) ───────────────────────────────────────────────
+  const toggleOne = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const pageIds = invoices.map((i) => i._id);
+  const allOnPageTicked = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const togglePage = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allOnPageTicked) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+  // Ticked invoices if any, otherwise every invoice matching the filters
+  const downloadZip = async () => {
+    const ids = [...selected];
+    const count = ids.length || total;
+    if (!count) { toast.error("No invoices to download"); return; }
+    if (!ids.length && !confirm(`Download PDFs of all ${count} invoice${count !== 1 ? "s" : ""} matching the current filters?`)) return;
+
+    setZipping(true);
+    const toastId = toast.loading(`Creating ${count} PDF${count !== 1 ? "s" : ""}... this can take a minute`);
+    try {
+      const body = ids.length
+        ? { ids }
+        : { filters: { status: statusFilter, partnerType: typeFilter, search, fromDate, toDate } };
+      const res = await axios.post("/api/admin/invoices/bulk-download", body, { withCredentials: true, responseType: "blob" });
+      const done = Number(res.headers["x-invoice-count"] || count);
+      const failed = Number(res.headers["x-invoice-failed"] || 0);
+      const rangeSuffix = !ids.length && (fromDate || toDate) ? `_${fromDate || "start"}_to_${toDate || "today"}` : "";
+      saveAs(res.data, `invoices${rangeSuffix}-${new Date().toISOString().slice(0, 10)}.zip`);
+      if (failed) toast.success(`Downloaded ${done} PDFs. ${failed} could not be created — see NOT-INCLUDED.txt in the ZIP.`, { id: toastId, duration: 6000 });
+      else toast.success(`Downloaded ${done} invoice PDF${done !== 1 ? "s" : ""}`, { id: toastId });
+    } catch (err) {
+      let message = "Could not create the ZIP";
+      try {
+        const text = await err?.response?.data?.text?.();
+        if (text) message = JSON.parse(text).message || message;
+      } catch {}
+      toast.error(message, { id: toastId });
+    } finally {
+      setZipping(false);
+    }
+  };
+
   return (
     <div className="d-flex bg-light min-vh-100">
       <Sidebar sidebarOpen={sidebarOpen} />
@@ -228,6 +282,11 @@ export default function AdminInvoiceList() {
             <button onClick={exportToExcel} disabled={exporting}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: exporting ? "not-allowed" : "pointer", opacity: exporting ? 0.7 : 1 }}>
               <FaFileExcel size={13} /> {exporting ? "Exporting..." : "Export Excel"}
+            </button>
+            <button onClick={downloadZip} disabled={zipping}
+              title={selected.size ? "Download the ticked invoices as PDFs in one ZIP" : "Download every invoice matching the filters as PDFs in one ZIP"}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E10600", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: zipping ? "not-allowed" : "pointer", opacity: zipping ? 0.7 : 1 }}>
+              <FaFileArchive size={13} /> {zipping ? "Creating ZIP..." : selected.size ? `Download ${selected.size} PDF${selected.size !== 1 ? "s" : ""} (ZIP)` : "Download all PDFs (ZIP)"}
             </button>
             <Link href="/dashboard/admin/invoices/create"
               style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#111", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
@@ -317,13 +376,25 @@ export default function AdminInvoiceList() {
 
               {/* Table */}
               <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                <div style={{ padding: "14px 20px", borderBottom: "1px solid #f0f0f0", fontSize: 13, color: "#9ca3af", fontWeight: 500 }}>
-                  {total} invoice{total !== 1 ? "s" : ""}
+                <div style={{ padding: "14px 20px", borderBottom: "1px solid #f0f0f0", fontSize: 13, color: "#9ca3af", fontWeight: 500, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <span>{total} invoice{total !== 1 ? "s" : ""}</span>
+                  {selected.size > 0 && (
+                    <>
+                      <span style={{ color: "#111", fontWeight: 700 }}>{selected.size} ticked for PDF download</span>
+                      <button onClick={() => setSelected(new Set())}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 4, border: "1px solid #e5e5e5", borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#fff", cursor: "pointer" }}>
+                        <FiX size={11} /> Clear
+                      </button>
+                    </>
+                  )}
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: "#fafafa", borderBottom: "1px solid #f0f0f0" }}>
+                        <th style={{ padding: "10px 0 10px 14px", width: 28 }}>
+                          <input type="checkbox" aria-label="Tick every invoice on this page" checked={allOnPageTicked} onChange={togglePage} disabled={!pageIds.length} />
+                        </th>
                         {["Invoice No","Invoice Date","Order No","Party Name","GST No","Type","Taxable Value","Tax Amt","Grand Total","Status","Actions"].map(h => (
                           <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
@@ -331,14 +402,17 @@ export default function AdminInvoiceList() {
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr><td colSpan={11} style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}>Loading...</td></tr>
+                        <tr><td colSpan={12} style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}>Loading...</td></tr>
                       ) : invoices.length === 0 ? (
-                        <tr><td colSpan={11} style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}>No invoices found</td></tr>
+                        <tr><td colSpan={12} style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}>No invoices found</td></tr>
                       ) : invoices.map((inv, idx) => {
                         const sc = STATUS_CFG[inv.status] || {};
                         const tc = TYPE_CFG[inv.partnerType] || TYPE_CFG.B2C;
                         return (
-                          <tr key={inv._id} style={{ borderBottom: "1px solid #f5f5f5", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
+                          <tr key={inv._id} style={{ borderBottom: "1px solid #f5f5f5", background: selected.has(inv._id) ? "#fef2f2" : idx % 2 === 0 ? "#fff" : "#fafafa" }}>
+                            <td style={{ padding: "11px 0 11px 14px" }}>
+                              <input type="checkbox" aria-label={`Tick invoice ${inv.invoiceNumber}`} checked={selected.has(inv._id)} onChange={() => toggleOne(inv._id)} />
+                            </td>
                             <td style={{ padding: "11px 14px", fontWeight: 700, color: "#6366f1" }}>{inv.invoiceNumber}</td>
                             <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{new Date(inv.createdAt).toLocaleDateString("en-IN")}</td>
                             <td style={{ padding: "11px 14px" }}>#{inv.orderNumber}</td>

@@ -11,6 +11,7 @@ import Sidebar from "@/components/admin-panel/Sidebar";
 import AdminTopbar from "@/components/admin-panel/AdminTopbar";
 import { FaBell } from "react-icons/fa";
 import CategorySelect from "@/components/admin-panel/CategorySelect";
+import OptionImagesField from "@/components/admin-panel/OptionImagesField";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -148,6 +149,7 @@ export default function EditProductPage() {
         label: v.label,
         priceModifier: v.priceModifier ?? 0,
         pricingTiers: Array.isArray(v.pricingTiers) ? v.pricingTiers : [],
+        images: Array.isArray(v.images) ? v.images : [],
       }))
     : [],
 
@@ -404,6 +406,8 @@ export default function EditProductPage() {
     pricingTiers: (o.pricingTiers || [])
       .filter(t => t.minQty !== "" && t.priceModifier !== "")
       .map(t => ({ minQty: Number(t.minQty), priceModifier: Number(t.priceModifier) })),
+    // Option photos only apply to dropdown attributes
+    images: attr.type === "select" && Array.isArray(o.images) ? o.images.filter(Boolean) : [],
   }));
 
   return {
@@ -992,6 +996,15 @@ fd.append("attributes", JSON.stringify(transformedAttributes));
                                   </div>
                                 ))}
                               </div>
+
+                              {/* ── Photos shown when a buyer picks this option ── */}
+                              {attr.type === "select" && (
+                                <OptionImagesField
+                                  images={opt.images || []}
+                                  optionLabel={opt.label}
+                                  onChange={(imgs) => { const o = [...attr.options]; o[j] = { ...o[j], images: imgs }; updateAttribute(i, { options: o }); }}
+                                />
+                              )}
                             </div>
                           ))}
 

@@ -6,6 +6,7 @@ import { Autoplay, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import useSectionMedia from "@/lib/useSectionMedia";
+import { linkTargetProps } from "@/lib/actionMediaRules";
 
 // Shown until pictures are added from the dashboard. Rows saved before this
 // strip took pictures carry wording instead of a file, and still render.
@@ -54,7 +55,7 @@ const PartnerInfoSlider = () => {
               {slide.src ? (
                 <div className="partner-slide partner-slide--image">
                   {slide.link ? (
-                    <Link href={slide.link} className="partner-slide__link">
+                    <Link href={slide.link} {...linkTargetProps(slide.link)} className="partner-slide__link">
                       <img
                         src={slide.src}
                         alt={slide.alt || ""}

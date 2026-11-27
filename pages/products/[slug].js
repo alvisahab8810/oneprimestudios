@@ -16,7 +16,11 @@ import ProductSlider from "@/components/home-page/ProductSlider";
 import Offcanvas from "@/components/header/Offcanvas";
 import ProductFileUpload from "@/components/ProductFileUpload";
 import MeasureField from "@/components/product/MeasureField";
+import TrustBadges, { TrustedPill } from "@/components/product/TrustBadges";
+import OptionSwatches from "@/components/product/OptionSwatches";
 import { priceForQuantity } from "@/lib/productPricing";
+import { applyFlashPrice } from "@/lib/flashPricing";
+import DealCountdown from "@/components/flash-sale/DealCountdown";
 import { findMissingRequiredAttr, missingAttrMessage, attrUploadKey } from "@/lib/productAttrs";
 import { bogoApplies, bogoFreeQty, bogoLabel, bogoUnitsToNextFree } from "@/lib/bogo";
 import { buildQuantityLadder, getMinOrderQty, getStock, isLowStock, isOutOfStock } from "@/lib/stockRules";
@@ -80,6 +84,9 @@ export default function ProductDetails() {
   const { slug } = router.query;
 
   const [product, setProduct] = useState(null);
+  // Flash sale: set once the timer on this page runs out
+  const [dealOver, setDealOver] = useState(false);
+  const [dealOffsetMs, setDealOffsetMs] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Buyer reviews, loaded once the product is known
@@ -212,6 +219,8 @@ export default function ProductDetails() {
         setProduct(p);
         setActiveImage(p.mainImage || p.gallery?.[0] || "");
         setQty(p.minOrderQty || 1);
+        setDealOver(false);
+        setDealOffsetMs(p.flashDeal?.serverNow ? new Date(p.flashDeal.serverNow).getTime() - Date.now() : 0);
       })
       .catch((err) => {
         console.error(err);
@@ -273,8 +282,29 @@ export default function ProductDetails() {
       .catch(() => {});
   }, []);
 
+  // Photos of the picked option of the first dropdown attribute (in the
+  // product's order) whose options have their own images, e.g. Colour.
+  // Empty when nothing like that is picked.
+  const variantImagesFor = (selected) => {
+    for (const attr of product?.attributes || []) {
+      if (attr.type !== "select") continue;
+      const picked = (attr.values || []).find((v) => v.label === selected[attr.name]);
+      const imgs = (picked?.images || []).filter(Boolean);
+      if (imgs.length) return imgs;
+    }
+    return [];
+  };
+
   const handleAttrChange = (name, value) => {
     setSelectedAttrs((prev) => ({ ...prev, [name]: value }));
+
+    // Switch the main photo only when this attribute has option photos, so
+    // other fields never move the photo the buyer is looking at
+    const attr = (product?.attributes || []).find((a) => a.name === name);
+    const hasPhotos = attr?.type === "select" && (attr.values || []).some((v) => v.images?.length);
+    if (!hasPhotos) return;
+    const imgs = variantImagesFor({ ...selectedAttrs, [name]: value });
+    setActiveImage(imgs[0] || product.mainImage || product.gallery?.[0] || "");
   };
 
   const handleFiles = (e) => setFiles(Array.from(e.target.files));
@@ -300,10 +330,21 @@ export default function ProductDetails() {
 
   // Every screen quotes from lib/productPricing.js, so the cart and the
   // partner rate list can never disagree with what is shown here.
-  const finalPrice = useMemo(() => {
+  // A running flash sale lowers the price for retail buyers only. The cart
+  // works the deal price out again on the server.
+  const activeDeal =
+    product?.flashDeal && !dealOver && userType !== "partner" && !showB2BForm ? product.flashDeal : null;
+
+  const regularPrice = useMemo(() => {
     if (!product) return 0;
     return priceForQuantity(product, qty, { selectedAttrs, city: userCity }).total;
   }, [product, qty, selectedAttrs, userCity]);
+
+  const finalPrice = useMemo(() => {
+    if (!product) return 0;
+    if (!activeDeal) return regularPrice;
+    return priceForQuantity(applyFlashPrice(product, activeDeal), qty, { selectedAttrs, city: userCity }).total;
+  }, [product, qty, selectedAttrs, userCity, activeDeal, regularPrice]);
 
   const quantityLadder = useMemo(
     () => (product ? buildQuantityLadder(product, showB2BForm ? "b2b" : "b2c") : []),
@@ -525,7 +566,12 @@ export default function ProductDetails() {
   if (loading) return <p>Loading...</p>;
   if (!product) return <p>Product not found</p>;
 
-  const allImages = [product.mainImage, ...(product.gallery || [])].filter(Boolean);
+  // The picked option's photos replace the product photos; with no such
+  // option picked the gallery is the same as before
+  const variantImages = variantImagesFor(selectedAttrs);
+  const allImages = variantImages.length
+    ? variantImages
+    : [product.mainImage, ...(product.gallery || [])].filter(Boolean);
 
   const handleWhatsapp = () => {
     const message = "Hi, I want to know more about this product.";
@@ -572,7 +618,7 @@ export default function ProductDetails() {
             {/* Live stock — the same number the admin sees in the dashboard.
                 B2B partners are shown nothing about stock at all. */}
             {!showB2BForm && (
-              <div className="mb-2">
+              <div className="mb-2 d-flex flex-wrap align-items-center gap-2">
                 {outOfStock ? (
                   <span className="badge bg-danger">Out of Stock</span>
                 ) : lowStock ? (
@@ -584,9 +630,24 @@ export default function ProductDetails() {
                   // Plenty in hand — no need to publish the exact number
                   <span className="badge bg-success">In Stock</span>
                 )}
+                {/* Retail only: a trust mark, with the buyer rating once there is one */}
+                <TrustedPill rating={reviewSummary.average} reviews={reviewSummary.total} />
               </div>
             )}
-            <div className={styles.price}>₹{finalPrice.toFixed(2)}</div>
+            {activeDeal && (
+              <div style={{ background: "#fff1f0", border: "1px solid #ffd6d3", borderRadius: 10, padding: "10px 14px", margin: "6px 0 10px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <a href={`/flash-sale/${activeDeal.slug}`} style={{ color: "#E10600", fontWeight: 800, textDecoration: "none", fontSize: 14 }}>
+                  ⚡ {activeDeal.title}
+                </a>
+                <DealCountdown endsAt={activeDeal.endsAt} offsetMs={dealOffsetMs} onEnd={() => setDealOver(true)} />
+              </div>
+            )}
+            <div className={styles.price}>
+              ₹{finalPrice.toFixed(2)}
+              {activeDeal && regularPrice > finalPrice && (
+                <s style={{ fontSize: "0.6em", color: "#888", fontWeight: 400, marginLeft: 10 }}>₹{regularPrice.toFixed(2)}</s>
+              )}
+            </div>
             <p className="product-min-order">Minimum Order: {getMinOrderQty(product)}</p>
 
             {/* Buy 1 Get 1 — the offer, and where this quantity stands in it */}
@@ -739,44 +800,6 @@ export default function ProductDetails() {
               </div>
             )}
 
-            {/* Sold as final. Said plainly here so the buyer knows before
-                paying, not after the parcel arrives. */}
-            {product.noReturns && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 8,
-                  background: "#fff5f5",
-                  border: "1px solid #f3c6c4",
-                  borderLeft: "4px solid #E10600",
-                  color: "#7a1f1c",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  fontSize: 13.5,
-                  lineHeight: 1.45,
-                  margin: "12px 0",
-                }}
-              >
-                <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
-                  No returns or refunds.
-                </span>
-                <span>
-                  This item is made to your order, so it cannot be cancelled once
-                  placed, and cannot be returned or refunded after delivery.
-                </span>
-              </div>
-            )}
-
-            {/* Exchange policy, for retail buyers only — said before they pay */}
-            {!showB2BForm && product?.b2cOptions?.enabled && (
-              <div style={{ fontSize: 13, margin: "8px 0 12px", color: product.noExchange ? "#7a1f1c" : "#1d7044", fontWeight: 600 }}>
-                {product.noExchange
-                  ? "This item cannot be exchanged."
-                  : "7-day exchange available after delivery."}
-              </div>
-            )}
-
             {/* ── B2B Section ── */}
             {showB2BForm ? (
               <div className={styles.b2bForm}>
@@ -840,6 +863,7 @@ export default function ProductDetails() {
                                 />
                               )}
                               {attr.type === "select" && (
+                                <>
                                 <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
                                   <option value="">Select {attr.name}</option>
                                   {(attr.values || []).map((val, idx) => (
@@ -849,6 +873,8 @@ export default function ProductDetails() {
                                     </option>
                                   ))}
                                 </select>
+                                <OptionSwatches attr={attr} selected={selectedAttrs[attr.name]} onPick={(v) => handleAttrChange(attr.name, v)} />
+                                </>
                               )}
                               {attr.type === "checkbox" && (
                                 <div className={styles.checkboxGroup}>
@@ -1049,12 +1075,15 @@ export default function ProductDetails() {
                                 />
                               )}
                               {attr.type === "select" && (
+                                <>
                                 <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
                                   <option value="">Select {attr.name}</option>
                                   {(attr.values || []).map((val, idx) => (
                                     <option key={idx} value={val.label}>{val.label}</option>
                                   ))}
                                 </select>
+                                <OptionSwatches attr={attr} selected={selectedAttrs[attr.name]} onPick={(v) => handleAttrChange(attr.name, v)} />
+                                </>
                               )}
                               {attr.type === "checkbox" && (
                                 <div className={styles.checkboxGroup}>
@@ -1123,10 +1152,58 @@ export default function ProductDetails() {
                     </>
                   )}
 
+
                   {/* Description moved to below sidebar — visible on all screen sizes */}
                 </div>
               </div>
             )}
+
+            {/* Retail only: why the buyer can trust this order. Outside the
+                desktop-only block so phones see it too. */}
+            {!showB2BForm && (
+              <TrustBadges whatsappSupport={!!product.b2cOptions?.whatsappSupport} />
+            )}
+
+            {/* Return and exchange terms, below Add to Cart */}
+            <div style={{ marginTop: 16 }}>
+            {/* Sold as final. Said plainly here so the buyer knows before
+                paying, not after the parcel arrives. */}
+            {product.noReturns && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  background: "#fff5f5",
+                  border: "1px solid #f3c6c4",
+                  borderLeft: "4px solid #E10600",
+                  color: "#7a1f1c",
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  fontSize: 13.5,
+                  lineHeight: 1.45,
+                  margin: "12px 0",
+                }}
+              >
+                <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                  No returns or refunds.
+                </span>
+                <span>
+                  This item is made to your order, so it cannot be cancelled once
+                  placed, and cannot be returned or refunded after delivery.
+                </span>
+              </div>
+            )}
+
+            {/* Exchange policy, for retail buyers only — said before they pay */}
+            {!showB2BForm && product?.b2cOptions?.enabled && (
+              <div style={{ fontSize: 13, margin: "8px 0 12px", color: product.noExchange ? "#7a1f1c" : "#1d7044", fontWeight: 600 }}>
+                {product.noExchange
+                  ? "This item cannot be exchanged."
+                  : "7-day exchange available after delivery."}
+              </div>
+            )}
+            </div>
           </aside>
         </div>
 
@@ -1137,7 +1214,7 @@ export default function ProductDetails() {
 
           {reviewSummary.total === 0 ? (
             <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
-              No reviews yet. Buyers can rate this product once their order is delivered.
+              No reviews yet.
             </p>
           ) : (
             <>
@@ -1159,6 +1236,12 @@ export default function ProductDetails() {
                       <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>
                         {r.userName || "Verified buyer"}
                       </span>
+                      {/* Only reviews tied to a delivered order carry this mark */}
+                      {r.source !== "admin" && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#ecfdf3", padding: "1px 6px", borderRadius: 4 }}>
+                          Verified buyer
+                        </span>
+                      )}
                       <span style={{ fontSize: 12, color: "#9ca3af" }}>
                         {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </span>
@@ -1334,12 +1417,15 @@ export default function ProductDetails() {
                       />
                     )}
                     {attr.type === "select" && (
+                      <>
                       <select className={styles.selectField} value={selectedAttrs[attr.name] ?? ""} onChange={(e) => handleAttrChange(attr.name, e.target.value)}>
                         <option value="">Select {attr.name}</option>
                         {(attr.values || []).map((val, idx) => (
                           <option key={idx} value={val.label}>{val.label}</option>
                         ))}
                       </select>
+                      <OptionSwatches attr={attr} selected={selectedAttrs[attr.name]} onPick={(v) => handleAttrChange(attr.name, v)} />
+                      </>
                     )}
                     {attr.type === "checkbox" && (
                       <div className={styles.checkboxGroup}>

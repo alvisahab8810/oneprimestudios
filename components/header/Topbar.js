@@ -475,7 +475,7 @@ export default function Topbar() {
               )}
 
               <li className="nav-item">
-                <Link className="nav-link" href="/contact-us">
+                <Link className="nav-link" href="/blogs">
                   Blog
                 </Link>
               </li>

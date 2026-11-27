@@ -7,6 +7,7 @@ import {
   DEFAULT_SECTION,
   sectionKind,
   cleanLink,
+  LINK_ERROR,
 } from "@/lib/actionMediaRules";
 
 export default async function handler(req, res) {
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
 
     const linkValue = cleanLink(link);
     if (linkValue === null) {
-      return res.status(400).json({ message: "The link has to be a page on this website, such as /products." });
+      return res.status(400).json({ message: LINK_ERROR });
     }
 
     const fields = {

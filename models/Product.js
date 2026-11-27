@@ -144,6 +144,9 @@ const AttributeValueSchema = new mongoose.Schema(
     label:         { type: String, required: true },
     priceModifier: { type: Number, default: 0 },           // flat default (kept for backward compat)
     pricingTiers:  { type: [AttrValueTierSchema], default: [] }, // NEW: qty-based overrides
+    // Photos for this option (e.g. the "Red" colour). Empty means the
+    // product page keeps showing the product's own images.
+    images:        { type: [String], default: [] },
   },
   { _id: false }
 );

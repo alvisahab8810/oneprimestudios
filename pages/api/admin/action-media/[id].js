@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import ActionMedia from "@/models/ActionMedia";
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { cleanLink } from "@/lib/actionMediaRules";
+import { cleanLink, LINK_ERROR } from "@/lib/actionMediaRules";
 
 export default async function handler(req, res) {
   if (req.method !== "PATCH" && req.method !== "DELETE") {
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
       const linkValue = cleanLink(link);
       if (linkValue === null) {
         return res.status(400).json({
-          message: "The link has to be a page on this website, such as /products.",
+          message: LINK_ERROR,
         });
       }
       item.link = linkValue;

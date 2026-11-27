@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff2a1f"/>
+      <stop offset="1" stop-color="#a80400"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <rect width="800" height="800" fill="url(#glow)"/>
+  <g fill="#ffffff" fill-opacity="0.07">
+    <circle cx="90" cy="110" r="150"/>
+    <circle cx="720" cy="700" r="190"/>
+  </g>
+  <path d="M430 70 L330 250 L400 250 L360 380 L480 200 L410 200 Z" fill="#ffd400"/>
+  <text x="400" y="470" text-anchor="middle" font-family="Outfit, Arial Black, Arial, sans-serif" font-size="78" font-weight="700" fill="#ffffff" letter-spacing="6">EVERYTHING AT</text>
+  <text x="400" y="640" text-anchor="middle" font-family="Outfit, Arial Black, Arial, sans-serif" font-size="210" font-weight="800" fill="#ffffff">₹399</text>
+  <rect x="250" y="680" width="300" height="64" rx="32" fill="#111111"/>
+  <text x="400" y="723" text-anchor="middle" font-family="Outfit, Arial, sans-serif" font-size="30" font-weight="700" fill="#ffd400" letter-spacing="4">FLASH DEALS</text>
+</svg>

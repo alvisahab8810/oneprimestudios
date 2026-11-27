@@ -16,6 +16,12 @@ import ProductSlider from "@/components/home-page/ProductSlider";
 import Footer from "@/components/footer/Footer";
 import axios from "axios";
 import { bogoApplies, bogoLabel } from "@/lib/bogo";
+import FlashSale from "@/models/FlashSale";
+import { dealStatus } from "@/lib/flashPricing";
+import { publicSale } from "@/lib/flashSalePublic";
+import DealCountdown from "@/components/flash-sale/DealCountdown";
+import DealProductCard, { useWishlistIds } from "@/components/flash-sale/DealProductCard";
+import { FlashStyles } from "@/components/flash-sale/FlashSaleSection";
 
 // ── serialise Mongoose doc to plain JSON ──────────────────────────────────────
 function serializeDoc(doc) {
@@ -62,6 +68,30 @@ export async function getServerSideProps(context) {
 
   let products = [];
 
+  // A retail category whose link name matches a flash sale shows that deal's
+  // products while it is live, and an "ended" note once the timer is over.
+  let deal = null;
+  if (userType !== "b2b") {
+    const sale = await FlashSale.findOne({ slug: category.slug }).lean();
+    if (sale) {
+      const now = new Date();
+      const status = dealStatus(sale, now);
+      const shaped = status === "live" ? await publicSale(sale) : { ...sale, products: [] };
+      deal = JSON.parse(
+        JSON.stringify({
+          title: shaped.title,
+          slug: shaped.slug,
+          subtitle: shaped.subtitle || "",
+          startsAt: shaped.startsAt,
+          endsAt: shaped.endsAt,
+          status: status === "off" ? "ended" : status,
+          products: shaped.products || [],
+          serverNow: now,
+        })
+      );
+    }
+  }
+
   if (!hasChildren) {
     // ── LEAF CATEGORY: fetch products belonging to this category ─────────────
     // We also include products from any grandchildren just in case
@@ -89,6 +119,7 @@ export async function getServerSideProps(context) {
       products: products.map(serializeDoc),
       hasChildren,
       userType, // pass down so client Links preserve it
+      deal,
     },
   };
 }
@@ -100,7 +131,12 @@ export default function CategoryPage({
   products,
   hasChildren,
   userType,
+  deal = null,
 }) {
+  const wishlist = useWishlistIds();
+  const [dealOffsetMs] = React.useState(() => (deal?.serverNow ? new Date(deal.serverNow).getTime() - Date.now() : 0));
+  const [dealEnded, setDealEnded] = React.useState(false);
+  const dealStatusNow = deal ? (dealEnded ? "ended" : deal.status) : null;
   // Buy 1 Get 1 is a retail offer, so the badge never shows on the partner catalogue
   const bogoOpts = { isPartner: userType === "partner" };
 
@@ -156,6 +192,46 @@ export default function CategoryPage({
         {/* ══════════════════════════════════════════════════════════════════
             CASE A: This is a PARENT category → show subcategory cards
         ══════════════════════════════════════════════════════════════════ */}
+        {deal && (
+          <div className="mb-5">
+            {dealStatusNow === "live" && (
+              <>
+                <div className="fs-head">
+                  <div>
+                    <p className="mb-0" style={{ fontSize: 18, color: "#333" }}>{deal.subtitle || deal.title}</p>
+                    <p className="text-muted mb-0" style={{ fontSize: 14 }}>
+                      {deal.products.length} product{deal.products.length === 1 ? "" : "s"} in this deal. Prices go back to normal when the timer ends.
+                    </p>
+                  </div>
+                  <div className="fs-side">
+                    <DealCountdown endsAt={deal.endsAt} offsetMs={dealOffsetMs} onEnd={() => setDealEnded(true)} size="lg" />
+                  </div>
+                </div>
+                {deal.products.length ? (
+                  <div className="pod-grid">
+                    {deal.products.map((p) => (
+                      <DealProductCard key={p._id} p={p} inWishlist={wishlist.ids.includes(p._id)} onToggleWishlist={wishlist.toggle} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="alert alert-info mb-0">Products for this deal are being added. Check back soon.</div>
+                )}
+              </>
+            )}
+            {dealStatusNow === "scheduled" && (
+              <div className="alert alert-info mb-0">
+                This deal starts on {new Date(deal.startsAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "numeric", minute: "2-digit" })}. Come back then to grab the deal prices.
+              </div>
+            )}
+            {dealStatusNow === "ended" && (
+              <div className="alert alert-secondary mb-0">
+                This deal has ended. Keep an eye on the home page for the next flash sale.
+              </div>
+            )}
+            <FlashStyles />
+          </div>
+        )}
+
         {hasChildren && (
           <>
             <p className="text-muted mb-4">
@@ -204,7 +280,7 @@ export default function CategoryPage({
         {/* ══════════════════════════════════════════════════════════════════
             CASE B: This is a LEAF category → show products
         ══════════════════════════════════════════════════════════════════ */}
-        {!hasChildren && (
+        {!hasChildren && !(deal && products.length === 0) && (
           <>
             <div className="mb-4 d-flex gap-3 align-items-center">
               <div>

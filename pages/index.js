@@ -21,6 +21,7 @@ import Head from "next/head";
 import HeroSectionMobile from "@/components/home-page/HeroSectionMobile.";
 import MobileFeatures from "@/components/home-page/MobileFeatures";
 import Offcanvas from "@/components/header/Offcanvas";
+import FlashSaleSection from "@/components/flash-sale/FlashSaleSection";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -50,6 +51,7 @@ export default function Home() {
           <Features />
           <MobileFeatures/>
         </div>
+        <FlashSaleSection />
         <ImpactStats />
         <Services />
         <PrintOnDemand />

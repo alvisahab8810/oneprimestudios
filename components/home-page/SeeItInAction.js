@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/effect-creative";
 import { EffectCreative } from "swiper/modules";
+import { linkTargetProps } from "@/lib/actionMediaRules";
 
 // Shown until the uploaded media arrives, and if nothing has been uploaded yet
 const FALLBACK = [
@@ -186,6 +187,8 @@ export default function SeeItInAction() {
         >
           {slides.map((slide, index) => (
             <SwiperSlide key={slide.src + index} className="action-slide">
+              {({ isActive }) => (
+              <>
               {slide.type === "video" ? (
                 <video
                   src={slide.src}
@@ -202,6 +205,17 @@ export default function SeeItInAction() {
                   className="action-img"
                   loading="lazy"
                 />
+              )}
+              {/* Only the card in front opens its link; the side cards just slide in */}
+              {slide.link && isActive && (
+                <a
+                  href={slide.link}
+                  {...linkTargetProps(slide.link)}
+                  className="action-slide-link"
+                  aria-label={slide.alt ? `Open: ${slide.alt}` : "Open link"}
+                />
+              )}
+              </>
               )}
             </SwiperSlide>
           ))}

@@ -5268,6 +5268,41 @@ ease;
   object-fit: contain;
 }
 
+/* Social icons row (white SVGs on red circles) */
+.footer-social {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.footer-social-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #E10600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s ease, transform .2s ease;
+}
+
+a.footer-social-btn:hover,
+a.footer-social-btn:focus-visible {
+  background: #B30500;
+  transform: translateY(-2px);
+}
+
+a.footer-social-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.footer-social-btn img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
 .footer-contact-label {
   display: block;
   font-size: 11px;
@@ -5620,6 +5655,19 @@ ease;
 .action-mute svg {
   width: 20px;
   height: 20px;
+}
+
+/* A "See it in Action" card with a link: the whole front card is clickable */
+.action-slide-link {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+}
+
+.action-slide-link:focus-visible {
+  outline: 3px solid #E10600;
+  outline-offset: -3px;
 }
 
 .action-mute svg path {

@@ -54,6 +54,10 @@ export default function Offcanvas({ user, wishlistCount, cartCount, handleLogout
             </li>
 
             <li>
+              <Link href="/blogs">Blog</Link>
+            </li>
+
+            <li>
               <Link href="/contact-us">Contact Us</Link>
             </li>
 

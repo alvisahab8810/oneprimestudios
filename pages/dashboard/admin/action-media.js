@@ -13,6 +13,7 @@ import {
   acceptAttr,
   checkMedia,
   formatBytes,
+  LINK_MAX,
 } from "@/lib/actionMediaRules";
 
 // What the "add the built-in content" button offers in each section
@@ -286,22 +287,20 @@ export default function SiteMediaPage() {
                 />
               </div>
 
-              {kind === "banner" && (
-                <div className="col-md-3">
-                  <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
-                    Opens page (optional)
-                  </label>
-                  <input
-                    className="form-control"
-                    value={link}
-                    onChange={(e) => setLink(e.target.value)}
-                    placeholder="/products"
-                    maxLength={200}
-                  />
-                </div>
-              )}
+              <div className="col-md-3">
+                <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                  Opens link (optional)
+                </label>
+                <input
+                  className="form-control"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="/products or https://..."
+                  maxLength={LINK_MAX}
+                />
+              </div>
 
-              <div className={kind === "banner" ? "col-md-4" : "col-md-6"}>
+              <div className="col-md-4">
                 <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
                   Picture
                 </label>
@@ -347,7 +346,7 @@ export default function SiteMediaPage() {
                     <th style={{ width: 70 }}>Order</th>
                     <th style={{ width: 170 }}>Preview</th>
                     <th>Description</th>
-                    {kind === "banner" && <th style={{ width: 160 }}>Opens page</th>}
+                    <th style={{ width: 200 }}>Opens link</th>
                     <th style={{ width: 100 }}>Size</th>
                     <th style={{ width: 110 }}>Status</th>
                     <th style={{ width: 120 }}>Action</th>
@@ -453,20 +452,19 @@ export default function SiteMediaPage() {
                         )}
                       </td>
 
-                      {kind === "banner" && (
-                        <td>
-                          <input
-                            className="form-control form-control-sm"
-                            defaultValue={item.link || ""}
-                            maxLength={200}
-                            placeholder="/products"
-                            onBlur={(e) => {
-                              const next = e.target.value.trim();
-                              if (next !== (item.link || "")) patchItem(item, { link: next });
-                            }}
-                          />
-                        </td>
-                      )}
+                      <td>
+                        <input
+                          className="form-control form-control-sm"
+                          defaultValue={item.link || ""}
+                          maxLength={LINK_MAX}
+                          placeholder="/products or https://..."
+                          title={item.link || ""}
+                          onBlur={(e) => {
+                            const next = e.target.value.trim();
+                            if (next !== (item.link || "")) patchItem(item, { link: next });
+                          }}
+                        />
+                      </td>
 
                       <td>{item.size ? formatBytes(item.size) : "-"}</td>
 

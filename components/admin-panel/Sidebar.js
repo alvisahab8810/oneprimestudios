@@ -154,6 +154,12 @@ import {
   FaShippingFast,
   FaWallet,
   FaPhotoVideo,
+  FaPrint,
+  FaBolt,
+  FaUniversity,
+  FaExclamationTriangle,
+  FaBlog,
+  FaComments,
 } from "react-icons/fa";
 
 import { canAccess } from "@/lib/canAccess";
@@ -309,6 +315,28 @@ export default function Sidebar({ sidebarOpen }) {
           </Link>
         )}
 
+        {/* ================= NOT DELIVERED (Shiprocket NDR / RTO) ================= */}
+        {canAccess(user, "orders") && (
+          <Link
+            href="/dashboard/admin/non-delivered"
+            className={`ops-item ${isActive("/dashboard/admin/non-delivered") ? "active" : ""}`}
+          >
+            <FaExclamationTriangle className="me-2" /> Not Delivered
+          </Link>
+        )}
+
+        {/* ================= SHIPPING SLIPS ================= */}
+        {canAccess(user, "shipping_slips") && (
+          <Link
+            href="/dashboard/admin/shipping-slips"
+            className={`ops-item ${
+              isActive("/dashboard/admin/shipping-slips") ? "active" : ""
+            }`}
+          >
+            <FaPrint className="me-2" /> Shipping Slips
+          </Link>
+        )}
+
         {/* ================= CATEGORIES ================= */}
         {canAccess(user, "categories") && (
           <Link
@@ -429,6 +457,52 @@ export default function Sidebar({ sidebarOpen }) {
           </Link>
         )}
 
+        {/* ================= FLASH SALES ================= */}
+        {canAccess(user, "flash_sales") && (
+          <Link
+            href="/dashboard/admin/flash-sales"
+            className={`ops-item ${
+              isActive("/dashboard/admin/flash-sales") ? "active" : ""
+            }`}
+          >
+            <FaBolt className="me-2" /> Flash Sales
+          </Link>
+        )}
+
+        {/* ================= REVIEWS ================= */}
+        {canAccess(user, "reviews") && (
+          <Link
+            href="/dashboard/admin/reviews"
+            className={`ops-item ${
+              isActive("/dashboard/admin/reviews") ? "active" : ""
+            }`}
+          >
+            <FaStar className="me-2" /> Reviews
+          </Link>
+        )}
+
+        {/* ================= BLOGS ================= */}
+        {canAccess(user, "blogs") && (
+          <>
+            <Link
+              href="/dashboard/admin/blogs"
+              className={`ops-item ${
+                isActive("/dashboard/admin/blogs") || isActive("/dashboard/admin/blogs/create") ? "active" : ""
+              }`}
+            >
+              <FaBlog className="me-2" /> Blogs
+            </Link>
+            <Link
+              href="/dashboard/admin/blogs/comments"
+              className={`ops-item ${
+                isActive("/dashboard/admin/blogs/comments") ? "active" : ""
+              }`}
+            >
+              <FaComments className="me-2" /> Blog Comments
+            </Link>
+          </>
+        )}
+
 
 
          {canAccess(user, "OPS Users") && (
@@ -471,6 +545,16 @@ export default function Sidebar({ sidebarOpen }) {
             className={`ops-item ${isActive("/dashboard/admin/wallet") ? "active" : ""}`}
           >
             <FaWallet className="me-2" /> Wallet Management
+          </Link>
+        )}
+
+        {/* ================= PAYMENT ACCOUNTS (manual top-up bank / QR) ================= */}
+        {canAccess(user, "wallet") && (
+          <Link
+            href="/dashboard/admin/payment-accounts"
+            className={`ops-item ${isActive("/dashboard/admin/payment-accounts") ? "active" : ""}`}
+          >
+            <FaUniversity className="me-2" /> Bank Accounts &amp; QR
           </Link>
         )}
 

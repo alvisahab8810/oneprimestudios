@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<rect width="600" height="600" fill="#0f766e"/>
+<rect x="60" y="60" width="480" height="480" rx="40" fill="#ffffff" opacity="0.92"/>
+<text x="300" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#111">PRINTED CAP</text>
+<text x="300" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#E10600">FLASH SALE TEST</text>
+<text x="300" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#fff">test image - not a real product</text>
+</svg>

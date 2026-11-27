@@ -10,6 +10,7 @@ import axios from "axios";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { parsePincodeList } from "@/lib/deliveryZones";
+import OptionImagesField from "@/components/admin-panel/OptionImagesField";
 import Link from "next/link";
 import { FaBell } from "react-icons/fa";
 import Sidebar from "@/components/admin-panel/Sidebar";
@@ -148,6 +149,8 @@ export default function AddProduct() {
             pricingTiers: (o.pricingTiers || [])
               .filter(t => t.minQty !== "" && t.priceModifier !== "")
               .map(t => ({ minQty: Number(t.minQty), priceModifier: Number(t.priceModifier) })),
+            // Option photos only apply to dropdown attributes
+            images: attr.type === "select" && Array.isArray(o.images) ? o.images.filter(Boolean) : [],
           }));
 
         return {
@@ -449,6 +452,15 @@ export default function AddProduct() {
                                   </div>
                                 ))}
                               </div>
+
+                              {/* ── Photos shown when a buyer picks this option ── */}
+                              {attr.type === "select" && (
+                                <OptionImagesField
+                                  images={opt.images || []}
+                                  optionLabel={opt.label}
+                                  onChange={(imgs) => { const o = [...attr.options]; o[j] = { ...o[j], images: imgs }; updateAttribute(i, { options: o }); }}
+                                />
+                              )}
                             </div>
                           ))}
 

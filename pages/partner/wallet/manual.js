@@ -56,6 +56,25 @@ export default function ManualWalletTopup() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Bank details come from the dashboard; the built-in ones show until they load
+  const [bank, setBank] = useState(MANUAL_TOPUP_BANK);
+  const [bankReady, setBankReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    axios
+      .get("/api/partner/wallet/bank-details")
+      .then(({ data }) => {
+        if (alive && data?.data) setBank({ ...MANUAL_TOPUP_BANK, ...data.data });
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setBankReady(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -134,13 +153,13 @@ export default function ManualWalletTopup() {
   };
 
   const bankRows = [
-    ["Account Name", MANUAL_TOPUP_BANK.firmName],
-    ["Bank Name", MANUAL_TOPUP_BANK.bankName],
-    ["Account Number", MANUAL_TOPUP_BANK.accountNumber],
-    ["Account Type", MANUAL_TOPUP_BANK.accountType],
-    ["IFSC Code", MANUAL_TOPUP_BANK.ifsc],
-    ["Branch", MANUAL_TOPUP_BANK.branch],
-    ["Branch Address", MANUAL_TOPUP_BANK.branchAddress],
+    ["Account Name", bank.firmName],
+    ["Bank Name", bank.bankName],
+    ["Account Number", bank.accountNumber],
+    ["Account Type", bank.accountType],
+    ["IFSC Code", bank.ifsc],
+    ["Branch", bank.branch],
+    ["Branch Address", bank.branchAddress],
   ].filter(([, value]) => !!value);
 
   return (
@@ -176,6 +195,9 @@ export default function ManualWalletTopup() {
           <div className="mt-card">
             <h3 className="mt-card-title">Our Bank Details</h3>
 
+            {!bankReady ? (
+              <p className="text-muted" style={{ fontSize: 13 }}>Loading bank details...</p>
+            ) : (
             <div className="mt-bank-split">
             <table className="mt-bank-table">
               <tbody>
@@ -194,15 +216,15 @@ export default function ManualWalletTopup() {
                     </td>
                   </tr>
                 ))}
-                {MANUAL_TOPUP_BANK.upiId && (
+                {bank.upiId && (
                   <tr>
                     <th>UPI ID</th>
                     <td>
-                      <span>{MANUAL_TOPUP_BANK.upiId}</span>
+                      <span>{bank.upiId}</span>
                       <button
                         type="button"
                         className="mt-copy"
-                        onClick={() => copy(MANUAL_TOPUP_BANK.upiId, "UPI ID")}
+                        onClick={() => copy(bank.upiId, "UPI ID")}
                       >
                         Copy
                       </button>
@@ -212,12 +234,12 @@ export default function ManualWalletTopup() {
               </tbody>
             </table>
 
-            {MANUAL_TOPUP_BANK.qrImage && (
+            {bank.qrImage && (
               <div className="mt-qr">
                 <h4 className="mt-qr-title">Scan &amp; Pay</h4>
                 <img
-                  src={MANUAL_TOPUP_BANK.qrImage}
-                  alt={`Payment QR code for ${MANUAL_TOPUP_BANK.firmName}`}
+                  src={bank.qrImage}
+                  alt={`Payment QR code for ${bank.firmName}`}
                   className="mt-qr-img"
                 />
                 <p className="mt-qr-note">
@@ -227,6 +249,7 @@ export default function ManualWalletTopup() {
               </div>
             )}
             </div>
+            )}
 
             <div className="mt-info">
               <strong>How it works</strong>
@@ -238,10 +261,10 @@ export default function ManualWalletTopup() {
                   status below.
                 </li>
               </ol>
-              {MANUAL_TOPUP_BANK.whatsappNumber && (
+              {bank.whatsappNumber && (
                 <p className="mt-whatsapp">
                   You may also send the screenshot on WhatsApp to{" "}
-                  <strong>{MANUAL_TOPUP_BANK.whatsappNumber}</strong> with your company name — but
+                  <strong>{bank.whatsappNumber}</strong> with your company name — but
                   submitting the form here is faster and lets you track the status.
                 </p>
               )}

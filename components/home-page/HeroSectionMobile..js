@@ -3,6 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import useSectionMedia from "@/lib/useSectionMedia";
+import { linkTargetProps } from "@/lib/actionMediaRules";
 
 import "swiper/css";
 // import "swiper/css/pagination";
@@ -184,6 +185,7 @@ function MobileBanner({ slide }) {
       {/* Same as desktop: only the button area is clickable, not the whole banner */}
       <Link
         href={slide.link || "/products"}
+        {...linkTargetProps(slide.link)}
         className="mobile-hero-cta-hotspot"
         aria-label={slide.alt || "Explore Corporate Gifts"}
       />

@@ -15,6 +15,14 @@ const SOCIAL_LINKS = [
   { label: "LinkedIn", href: "https://www.linkedin.com" },
 ];
 
+// Icon row under the contact details. Add the Facebook and YouTube page URLs here;
+// an icon without a URL is shown but not clickable.
+const SOCIAL_ICONS = [
+  { label: "Instagram", icon: "/assets/images/icons/instagram.svg", href: "https://www.instagram.com/oneprimestudios" },
+  { label: "Facebook", icon: "/assets/images/icons/facebook.svg", href: "" },
+  { label: "YouTube", icon: "/assets/images/icons/youtube.svg", href: "" },
+];
+
 const POLICY_LINKS = [
   { label: "Terms and Conditions", href: "/policy/terms-and-conditions" },
   { label: "Privacy Policy", href: "/policy/privacy-policy" },
@@ -75,6 +83,20 @@ const Footer = () => {
                 </div>
               </li>
             </ul>
+
+            <div className="footer-social" aria-label="Social media">
+              {SOCIAL_ICONS.map((s) =>
+                s.href ? (
+                  <a key={s.label} href={s.href} className="footer-social-btn" target="_blank" rel="noopener noreferrer" aria-label={s.label} title={s.label}>
+                    <img src={s.icon} alt="" />
+                  </a>
+                ) : (
+                  <span key={s.label} className="footer-social-btn" aria-label={s.label} title={s.label}>
+                    <img src={s.icon} alt="" />
+                  </span>
+                )
+              )}
+            </div>
           </div>
 
           {/* right: link columns */}

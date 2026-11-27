@@ -53,7 +53,12 @@ function fmt(n) {
 
 // The layout is built in one place: the admin route below and the buyer's own
 // download both call this, so both get the same file.
-export async function renderInvoicePdf(invoiceId) {
+//
+// Optional, for bulk downloads:
+//   opts.browser  — an open Puppeteer browser to reuse (it is left open)
+//   opts.toBuffer — return the PDF bytes only, without saving a file or
+//                   touching the invoice record
+export async function renderInvoicePdf(invoiceId, opts = {}) {
     await dbConnect();
 
     const invoice = await Invoice.findById(invoiceId);
@@ -364,6 +369,20 @@ export async function renderInvoicePdf(invoiceId) {
 
 </body>
 </html>`;
+
+    if (opts.toBuffer) {
+      const ownBrowser = !opts.browser;
+      const b = opts.browser || (await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }));
+      const p = await b.newPage();
+      try {
+        await p.setContent(html, { waitUntil: "networkidle0" });
+        const bytes = await p.pdf({ format: "A4", printBackground: true });
+        return { buffer: Buffer.from(bytes), filename: pdfFilename(invoice.invoiceNumber), invoiceNumber: invoice.invoiceNumber };
+      } finally {
+        await p.close().catch(() => {});
+        if (ownBrowser) await b.close().catch(() => {});
+      }
+    }
 
     const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();

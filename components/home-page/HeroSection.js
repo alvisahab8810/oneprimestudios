@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation  } from "swiper/modules";
 import "swiper/css";
 import useSectionMedia from "@/lib/useSectionMedia";
+import { linkTargetProps } from "@/lib/actionMediaRules";
 
 // Shown until a banner is added from the dashboard
 const BUILT_IN = [
@@ -88,6 +89,7 @@ export default function HeroSection() {
                   stays in place when the banner is resized. */}
               <Link
                 href={slide.link || "/products"}
+                {...linkTargetProps(slide.link)}
                 className="hero-cta-hotspot"
                 aria-label={slide.alt || "Explore Corporate Gifts"}
               />

@@ -29,6 +29,8 @@ import {
   verifyCheckoutSignature,
 } from "@/lib/razorpay";
 import mongoose from "mongoose";
+import { priceForQuantity } from "@/lib/productPricing";
+import { getLiveDealMap, getFlashProductIds, priceableProduct } from "@/lib/flashSale";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -211,6 +213,35 @@ export default async function handler(req, res) {
         return res.status(400).json({
           message: `${name} is not available for cash on delivery. Please pay online instead.`,
         });
+      }
+    }
+
+    // FLASH SALE — a line priced while a deal was running must not keep the
+    // deal price after the deal has ended. Only orders that have not been
+    // paid yet are refused; an online payment has already been taken by now.
+    if (normalizedPaymentMethod !== "razorpay") {
+      const flashIds = await getFlashProductIds(productIds.map(String));
+      if (flashIds.size) {
+        const [dealMap, flashDocs] = await Promise.all([
+          getLiveDealMap([...flashIds]),
+          Product.find({ _id: { $in: [...flashIds] } }).lean(),
+        ]);
+        const flashMap = new Map(flashDocs.map((p) => [String(p._id), p]));
+        const stale = items.find((item) => {
+          const p = flashMap.get(String(item.product));
+          if (!p) return false;
+          const due = priceForQuantity(priceableProduct(p, dealMap, fullUser), item.quantity, {
+            selectedAttrs: item.selectedAttrs || {},
+            city: fullUser.city,
+          }).unitPrice;
+          return Number(item.price || 0) < due - 0.01;
+        });
+        if (stale) {
+          const name = flashMap.get(String(stale.product))?.name || "An item";
+          return res.status(409).json({
+            message: `The flash sale for ${name} has ended, so its price has changed. Please open your cart again to see the new total.`,
+          });
+        }
       }
     }
 

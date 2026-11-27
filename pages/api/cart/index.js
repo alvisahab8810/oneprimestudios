@@ -157,6 +157,36 @@ import { checkOrderable } from "@/lib/stockRules";
 import { checkDeliverable } from "@/lib/deliveryZones";
 import { priceForQuantity } from "@/lib/productPricing";
 import { findLiveCourier, LIVE_PREFIX } from "@/lib/courierRates";
+import { getLiveDealMap, getFlashProductIds, priceableProduct } from "@/lib/flashSale";
+
+// The product as this buyer is charged for it now, with any running flash sale
+const pricedFor = async (product, user) =>
+  priceableProduct(product, await getLiveDealMap([product._id]), user);
+
+// A line for a flash sale product may have been priced while the deal was
+// running. It is priced again whenever the cart is opened, so a deal that has
+// ended cannot keep its price, and one that has started applies at once.
+async function repriceFlashLines(cart, user) {
+  const ids = cart.items.map((it) => it.product?._id).filter(Boolean);
+  const flashIds = await getFlashProductIds(ids);
+  if (!flashIds.size) return;
+  const dealMap = await getLiveDealMap([...flashIds]);
+  for (const it of cart.items) {
+    const p = it.product;
+    if (!p?._id || !flashIds.has(String(p._id))) continue;
+    const unit = priceForQuantity(priceableProduct(p, dealMap, user), it.quantity, {
+      selectedAttrs: it.selectedAttrs,
+      city: user.city,
+    }).unitPrice;
+    if (Math.abs(unit - Number(it.price || 0)) < 0.0001) continue;
+    it.price = unit;
+    await Cart.updateOne(
+      { _id: cart._id },
+      { $set: { "items.$[line].price": unit } },
+      { arrayFilters: [{ "line._id": it._id }], timestamps: false }
+    );
+  }
+}
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -173,6 +203,7 @@ export default async function handler(req, res) {
         cart = await Cart.create({ user: user._id, items: [] });
         cart = await cart.populate("items.product");
       }
+      await repriceFlashLines(cart, user);
       return res.json(cart.items);
     }
 
@@ -221,7 +252,8 @@ export default async function handler(req, res) {
 
       // The price is worked out here, never taken from the browser, and stored
       // per unit so a line's subtotal is simply unit price times quantity.
-      const unitPrice = priceForQuantity(product, quantity, {
+      const pricedProduct = await pricedFor(product, user);
+      const unitPrice = priceForQuantity(pricedProduct, quantity, {
         selectedAttrs,
         city: user.city,
       }).unitPrice;
@@ -322,7 +354,7 @@ export default async function handler(req, res) {
 
       existingLine.quantity = mergedQty;
       // The merged quantity may reach a cheaper slab, so the line is priced again
-      existingLine.price = priceForQuantity(product, mergedQty, {
+      existingLine.price = priceForQuantity(pricedProduct, mergedQty, {
         selectedAttrs,
         city: user.city,
       }).unitPrice;
@@ -393,7 +425,7 @@ export default async function handler(req, res) {
       cart.items[itemIndex].quantity = Number(quantity);
       // Quantity pricing only works if the line is priced again for the new
       // quantity — otherwise the slab the buyer first landed on is kept forever.
-      cart.items[itemIndex].price = priceForQuantity(itemProduct, quantity, {
+      cart.items[itemIndex].price = priceForQuantity(await pricedFor(itemProduct, user), quantity, {
         selectedAttrs: cart.items[itemIndex].selectedAttrs,
         city: user.city,
       }).unitPrice;

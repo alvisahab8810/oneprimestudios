@@ -37,22 +37,34 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Invalid product id" });
     }
 
-    const reviews = await Review.find({ product: productId, status: "Published" })
-      .select("rating comment userName createdAt")
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+    // Buyer reviews and the ones added by the admin, newest first. The
+    // summary counts every published review, not only the 50 listed.
+    const productObjectId = new mongoose.Types.ObjectId(String(productId));
+    const [reviews, counts] = await Promise.all([
+      Review.find({ product: productId, status: "Published" })
+        .select("rating comment userName source createdAt")
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(),
+      Review.aggregate([
+        { $match: { product: productObjectId, status: "Published" } },
+        { $group: { _id: { $round: ["$rating", 0] }, count: { $sum: 1 } } },
+      ]),
+    ]);
 
-    const total = reviews.length;
-    const sum = reviews.reduce((acc, r) => acc + Number(r.rating || 0), 0);
+    let total = 0;
+    let sum = 0;
     const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    reviews.forEach((r) => {
-      const star = Math.round(Number(r.rating) || 0);
-      if (breakdown[star] !== undefined) breakdown[star] += 1;
+    counts.forEach((row) => {
+      const star = Number(row._id);
+      if (breakdown[star] === undefined) return;
+      breakdown[star] += row.count;
+      total += row.count;
+      sum += star * row.count;
     });
 
     return res.json({
-      reviews,
+      reviews: reviews.map((r) => ({ ...r, source: r.source === "admin" ? "admin" : "customer" })),
       summary: {
         total,
         average: total ? Math.round((sum / total) * 10) / 10 : 0,
